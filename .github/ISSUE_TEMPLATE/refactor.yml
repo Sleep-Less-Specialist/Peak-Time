@@ -1,0 +1,31 @@
+name: Refactor
+description: 기능 변경 없는 구조 개선
+title: "[REFACTOR] "
+labels: ["refactor"]
+assignees: []
+
+body:
+  - type: textarea
+    attributes:
+      label: 리팩토링 요약
+      description: 무엇을 왜 개선하는지 한두 문장으로 작성해주세요.
+      placeholder: ex) UserService 책임 분리 및 의존성 정리
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 범위
+      description: 영향 범위나 대상 모듈을 적어주세요. (선택)
+      placeholder: ex) user-domain, auth, api layer
+    validations:
+      required: false
+
+  - type: checkboxes
+    attributes:
+      label: 확인 사항
+      options:
+        - label: 기능 동작 변경 없음
+          required: true
+        - label: 테스트 보강 또는 유지
+          required: false

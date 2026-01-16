@@ -1,0 +1,32 @@
+name: Bug
+description: 버그 제보 및 수정
+title: "[BUG] "
+labels: ["bug"]
+assignees: []
+
+body:
+  - type: textarea
+    attributes:
+      label: 버그 요약
+      description: 어떤 문제가 발생했는지 한두 문장으로 적어주세요.
+      placeholder: ex) 로그인 후 마이페이지 진입 시 500 에러 발생
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 재현 방법
+      description: 가능하면 간단히 단계만 적어주세요. (선택)
+      placeholder: |
+        1. 로그인
+        2. 마이페이지 클릭
+        3. 에러 발생
+    validations:
+      required: false
+
+  - type: textarea
+    attributes:
+      label: 참고
+      description: 스크린샷/로그/환경 등 (선택)
+    validations:
+      required: false
