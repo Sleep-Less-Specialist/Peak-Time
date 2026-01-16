@@ -1,0 +1,29 @@
+name: Test
+description: 테스트 추가 및 보강
+title: "[TEST] "
+labels: ["test"]
+assignees: []
+
+body:
+  - type: textarea
+    attributes:
+      label: 테스트 요약
+      description: 어떤 테스트를 추가하거나 개선하는지 작성해주세요.
+      placeholder: ex) OrderService 단위 테스트 및 예외 케이스 보강
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 대상 범위
+      description: 테스트 대상 클래스, API, 시나리오 등 (선택)
+      placeholder: ex) POST /orders, PaymentValidator
+    validations:
+      required: false
+
+  - type: textarea
+    attributes:
+      label: 참고
+      description: 관련 이슈, 리그레션 맥락, 커버리지 목표 등 (선택)
+    validations:
+      required: false
