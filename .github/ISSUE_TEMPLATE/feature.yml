@@ -1,6 +1,6 @@
 name: Feature
 description: 새로운 기능 개발 요청
-title: "[FEAT] "
+title: "[feat] "
 labels: ["feature"]
 assignees: []
 

@@ -1,6 +1,6 @@
 name: Refactor
 description: 기능 변경 없는 구조 개선
-title: "[REFACTOR] "
+title: "[refactor] "
 labels: ["refactor"]
 assignees: []
 
