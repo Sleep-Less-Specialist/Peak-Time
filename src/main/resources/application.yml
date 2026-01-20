@@ -1,0 +1,49 @@
+spring:
+  application:
+    name: peaktime
+
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        show_sql: true
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${GMAIL_ID}
+    password: ${SMTP_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+server:
+  port: ${SERVER_PORT:8080}
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    # Boot 3/Hibernate 6일 때 파라미터 값 로그가 필요하면 아래 사용 고려
+    # org.hibernate.orm.jdbc.bind: TRACE
+
+jwt:
+  secret: ${JWT_SECRET_KEY}
+  accessTokenExpirationMs: 3600000
+  refreshTokenExpirationMs: 604800000
+

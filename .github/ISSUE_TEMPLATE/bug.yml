@@ -1,6 +1,6 @@
 name: Bug
 description: 버그 제보 및 수정
-title: "[BUG] "
+title: "[bug] "
 labels: ["bug"]
 assignees: []
 

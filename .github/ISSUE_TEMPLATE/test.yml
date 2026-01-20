@@ -1,6 +1,6 @@
 name: Test
 description: 테스트 추가 및 보강
-title: "[TEST] "
+title: "[test] "
 labels: ["test"]
 assignees: []
 
