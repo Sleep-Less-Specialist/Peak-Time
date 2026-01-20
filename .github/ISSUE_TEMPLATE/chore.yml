@@ -1,0 +1,46 @@
+name: Chore
+description: 설정/인프라/공통 작업(기능 개발 외)
+title: "[chore] "
+labels: ["chore"]
+assignees: []
+
+body:
+  - type: textarea
+    attributes:
+      label: 작업 요약
+      description: 무엇을, 왜 하는지 한두 문장으로 작성해주세요.
+      placeholder: ex) 전역 예외 처리 포맷 통일 및 공통 에러코드 적용
+    validations:
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: 작업 성격
+      description: 해당 작업의 범주를 선택해주세요.
+      options:
+        - infra (환경/설정/배포)
+        - common (공통 모듈/설계)
+        - docs (문서/가이드)
+        - build (빌드/의존성)
+        - ci (CI/CD)
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 작업 항목
+      description: 체크리스트 형태로 작성해주세요.
+      placeholder: |
+        - [ ] 적용 범위 정의
+        - [ ] 구현
+        - [ ] 테스트
+        - [ ] 문서/가이드 업데이트
+    validations:
+      required: false
+
+  - type: textarea
+    attributes:
+      label: 참고
+      description: 관련 문서/스펙, API 문서, ERD, 와이어프레임 링크 등 (선택)
+    validations:
+      required: false
