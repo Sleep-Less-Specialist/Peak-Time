@@ -26,10 +26,10 @@ public final class ErrorResponse {
 	private final boolean success = false;
 	private final String code;
 	private final String message;
-	private final List<FieldError> errors;
+	private final List<ValidationFieldError> errors;
 	private final LocalDateTime timestamp;
 
-	private ErrorResponse(String code, String message, List<FieldError> errors) {
+	private ErrorResponse(String code, String message, List<ValidationFieldError> errors) {
 		this.code = code;
 		this.message = message;
 
@@ -56,7 +56,7 @@ public final class ErrorResponse {
 	/**
 	 * Validation 오류를 포함한 실패 응답
 	 */
-	public static ErrorResponse of(ErrorCode errorCode, List<FieldError> errors) {
+	public static ErrorResponse of(ErrorCode errorCode, List<ValidationFieldError> errors) {
 
 		return new ErrorResponse(
 			errorCode.getCode(),

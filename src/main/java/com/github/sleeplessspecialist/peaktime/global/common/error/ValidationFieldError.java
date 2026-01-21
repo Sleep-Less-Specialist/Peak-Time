@@ -17,7 +17,7 @@ import lombok.RequiredArgsConstructor;
  */
 @Getter
 @RequiredArgsConstructor
-public final class FieldError {
+public final class ValidationFieldError {
 
 	private final String field;
 	private final String reason;
