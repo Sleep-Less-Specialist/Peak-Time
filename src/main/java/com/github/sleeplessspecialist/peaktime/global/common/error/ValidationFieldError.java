@@ -21,4 +21,16 @@ public final class ValidationFieldError {
 
 	private final String field;
 	private final String reason;
+
+	/**
+	 * Spring Validation FieldError를 API 응답용 ValidationFieldError로 변환합니다.
+	 */
+	public static ValidationFieldError from(
+		org.springframework.validation.FieldError fieldError) {
+
+		return new ValidationFieldError(
+			fieldError.getField(),
+			fieldError.getDefaultMessage()
+		);
+	}
 }
