@@ -9,6 +9,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -35,6 +36,7 @@ import lombok.NoArgsConstructor;
  */
 @Entity
 @Getter
+@Table(name = "chat_rooms")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ChatRoom extends BaseTimeEntity {
 
@@ -43,7 +45,7 @@ public class ChatRoom extends BaseTimeEntity {
 	private Long id;
 
 	@Column(nullable = false)
-	private String content;
+	private String description;
 
 	@Column(nullable = false)
 	@Enumerated(EnumType.STRING)
@@ -53,8 +55,8 @@ public class ChatRoom extends BaseTimeEntity {
 	private boolean isGroupChat;
 
 	@Builder
-	public ChatRoom(String content) {
-		this.content = content;
+	public ChatRoom(String description) {
+		this.description = description;
 		this.chatRoomStatus = ChatRoomStatus.OPEN;
 		this.isGroupChat = false;
 	}
