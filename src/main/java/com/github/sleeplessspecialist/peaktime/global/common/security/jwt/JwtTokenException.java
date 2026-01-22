@@ -28,4 +28,13 @@ public class JwtTokenException extends RuntimeException {
 		super(errorCode.getMessage(), cause);
 		this.errorCode = errorCode;
 	}
+
+	/**
+	 * 원인(cause) 없이 JWT 토큰 예외를 생성합니다.
+	 *
+	 * @param errorCode JWT 토큰 오류 코드
+	 */
+	public JwtTokenException(JwtTokenErrorCode errorCode) {
+		this(errorCode, null);
+	}
 }

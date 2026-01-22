@@ -33,7 +33,10 @@ public enum JwtTokenErrorCode implements ErrorCode {
 	MALFORMED("JWT_003", "토큰 형식이 올바르지 않습니다.", HttpStatus.UNAUTHORIZED),
 	UNSUPPORTED("JWT_004", "지원하지 않는 토큰 형식입니다.", HttpStatus.UNAUTHORIZED),
 	EMPTY("JWT_005", "토큰이 비어있습니다.", HttpStatus.UNAUTHORIZED),
-	INVALID("JWT_006", "유효하지 않은 토큰입니다.", HttpStatus.UNAUTHORIZED);
+	INVALID("JWT_006", "유효하지 않은 토큰입니다.", HttpStatus.UNAUTHORIZED),
+	INVALID_SUBJECT("JWT_007", "토큰 subject(userId) 형식이 올바르지 않습니다.", HttpStatus.UNAUTHORIZED),
+	INVALID_SECRET("JWT_008", "JWT secret 설정이 올바른 Base64 형식이 아닙니다. "
+		+ "설정 값(jwt.secret 또는 환경변수 JWT_SECRET_KEY)을 확인해주세요.", HttpStatus.INTERNAL_SERVER_ERROR);
 
 	private final String code;
 	private final String message;

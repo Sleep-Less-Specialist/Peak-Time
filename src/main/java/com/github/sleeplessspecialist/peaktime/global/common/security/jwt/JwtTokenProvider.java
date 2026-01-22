@@ -95,7 +95,7 @@ public class JwtTokenProvider {
      * </p>
      *
      * @param token JWT 문자열
-     * @throws IllegalArgumentException 토큰이 유효하지 않은 경우
+     * @throws JwtTokenException 토큰이 유효하지 않은 경우(만료/서명오류/형식오류 등)
      */
     public void validateToken(String token) {
         verifyAndParse(token);
@@ -120,28 +120,34 @@ public class JwtTokenProvider {
 
     /**
      * 토큰의 subject(sub)를 Long 타입의 userId로 반환합니다.
+     *
+     * @throws JwtTokenException subject(userId)가 숫자 형식이 아닌 경우
      */
     public Long getUserId(String token) {
         try {
             return Long.valueOf(getSubject(token));
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("토큰 subject(userId)가 숫자 형식이 아닙니다.", e);
+            throw new JwtTokenException(JwtTokenErrorCode.INVALID_SUBJECT, e);
         }
     }
 
-    /**
-     * JWT 토큰을 파싱하여 검증합니다.
-     * <p>
-     * 서명, 만료시간, 형식을 검증하며 문제가 있을 경우 IllegalArgumentException으로 변환합니다.
-     * </p>
-     */
+    private String requireToken(String token) {
+        if (token == null || token.isBlank()) {
+            throw new JwtTokenException(JwtTokenErrorCode.EMPTY);
+        }
+        return token.trim();
+    }
+
     private Claims verifyAndParse(String token) {
+        String normalizedToken = requireToken(token);
+
         try {
             return Jwts.parser()
                 .verifyWith(jwtKeyProvider.getSigningKey())
                 .build()
-                .parseSignedClaims(token)
+                .parseSignedClaims(normalizedToken)
                 .getPayload();
+
         } catch (ExpiredJwtException e) {
             throw new JwtTokenException(JwtTokenErrorCode.EXPIRED, e);
         } catch (SecurityException e) {
@@ -150,9 +156,7 @@ public class JwtTokenProvider {
             throw new JwtTokenException(JwtTokenErrorCode.MALFORMED, e);
         } catch (UnsupportedJwtException e) {
             throw new JwtTokenException(JwtTokenErrorCode.UNSUPPORTED, e);
-        } catch (IllegalArgumentException e) {
-            throw new JwtTokenException(JwtTokenErrorCode.EMPTY, e);
-        } catch (JwtException e) {
+        } catch (JwtException | IllegalArgumentException e) {
             throw new JwtTokenException(JwtTokenErrorCode.INVALID, e);
         }
     }

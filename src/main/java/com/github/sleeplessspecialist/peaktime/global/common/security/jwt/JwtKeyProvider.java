@@ -5,6 +5,7 @@ import javax.crypto.SecretKey;
 import org.springframework.stereotype.Component;
 
 import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.io.DecodingException;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 
@@ -37,18 +38,16 @@ public class JwtKeyProvider {
 	 * JWT 서명 키를 초기화합니다.
 	 *
 	 * @param jwtProperties JWT 설정 프로퍼티
-	 * @throws IllegalStateException secret이 올바른 Base64 형식이 아닌 경우
+	 * @throws JwtTokenException secret이 올바른 Base64 형식이 아닌 경우
 	 */
 	public JwtKeyProvider(JwtProperties jwtProperties) {
 		byte[] keyBytes;
 
 		try {
 			keyBytes = Decoders.BASE64.decode(jwtProperties.getSecret());
-		} catch (IllegalArgumentException e) {
-			throw new IllegalStateException(
-				"JWT secret 설정이 올바른 Base64 형식이 아닙니다. 설정 값(jwt.secret 또는 환경변수 JWT_SECRET_KEY)을 확인해주세요.",
-				e
-			);
+		} catch (IllegalArgumentException | DecodingException e) {
+			// 서버 설정(jwt.secret)이 잘못된 경우로, 프로젝트 표준 예외로 일관 변환합니다.
+			throw new JwtTokenException(JwtTokenErrorCode.INVALID_SECRET, e);
 		}
 
 		this.signingKey = Keys.hmacShaKeyFor(keyBytes);
