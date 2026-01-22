@@ -50,7 +50,6 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
 
-    implementation 'me.paulschwarz:spring-dotenv:4.0.0'
     // AWS S3 연동을 위한 라이브러리 (Spring Cloud AWS v3)
     implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3:3.1.0'
 
