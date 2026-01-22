@@ -14,12 +14,12 @@ import lombok.NoArgsConstructor;
  *
  * @author 주우재
  * @version 1.0
- * @since
+ * @since 2026.01.22
  */
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-public class ChatMessageReqDto {
+public class ChatMessageReq {
 
     private String message;
     private String email;
