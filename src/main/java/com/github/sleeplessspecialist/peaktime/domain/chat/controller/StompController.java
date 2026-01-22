@@ -1,6 +1,6 @@
-package com.github.sleeplessspecialist.peaktime.chat.controller;
+package com.github.sleeplessspecialist.peaktime.domain.chat.controller;
 
-import com.github.sleeplessspecialist.peaktime.chat.dto.ChatMessageReqDto;
+import com.github.sleeplessspecialist.peaktime.domain.chat.dto.ChatMessageReqDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.DestinationVariable;

@@ -1,8 +1,7 @@
 package com.github.sleeplessspecialist.peaktime.global.config.websocket;
 
-import com.github.sleeplessspecialist.peaktime.chat.handler.SimpleWebSocketHandler;
+import com.github.sleeplessspecialist.peaktime.domain.chat.handler.SimpleWebSocketHandler;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;

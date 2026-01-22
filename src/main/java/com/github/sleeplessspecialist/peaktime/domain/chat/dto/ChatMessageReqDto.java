@@ -1,4 +1,4 @@
-package com.github.sleeplessspecialist.peaktime.chat.dto;
+package com.github.sleeplessspecialist.peaktime.domain.chat.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

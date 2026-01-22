@@ -1,4 +1,4 @@
-package com.github.sleeplessspecialist.peaktime.chat.handler;
+package com.github.sleeplessspecialist.peaktime.domain.chat.handler;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
