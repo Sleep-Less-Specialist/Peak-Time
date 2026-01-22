@@ -25,6 +25,8 @@ import lombok.RequiredArgsConstructor;
 public enum GlobalErrorCode implements ErrorCode {
 
 	INVALID_REQUEST("G400", "INVALID_REQUEST", HttpStatus.BAD_REQUEST),
+	UNAUTHORIZED("G401", "UNAUTHORIZED", HttpStatus.UNAUTHORIZED),
+	ACCESS_DENIED("G403", "ACCESS_DENIED", HttpStatus.FORBIDDEN),
 	INTERNAL_SERVER_ERROR("G500", "INTERNAL_SERVER_ERROR", HttpStatus.INTERNAL_SERVER_ERROR);
 
 	private final String code;
