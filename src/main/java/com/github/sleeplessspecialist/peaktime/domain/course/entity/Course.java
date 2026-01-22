@@ -49,7 +49,7 @@ public class Course {
 	private String category;
 
 	@Column(nullable = false)
-	private int price;
+	private BigDecimal price;
 
 	private String thumbnailUrl;
 
