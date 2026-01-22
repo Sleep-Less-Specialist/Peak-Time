@@ -1,5 +1,6 @@
 package com.github.sleeplessspecialist.peaktime.domain.course.entity;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
@@ -61,7 +62,8 @@ public class Course {
 	private LocalDateTime updatedAt;
 
 	@Builder
-	public Course(String title, String description, String category, int price, String thumbnailUrl, User lecturer) {
+	public Course(String title, String description, String category, BigDecimal price, String thumbnailUrl,
+		User lecturer) {
 		this.title = title;
 		this.description = description;
 		this.category = category;

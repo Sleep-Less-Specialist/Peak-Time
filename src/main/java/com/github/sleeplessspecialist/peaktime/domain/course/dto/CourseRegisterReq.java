@@ -1,5 +1,7 @@
 package com.github.sleeplessspecialist.peaktime.domain.course.dto;
 
+import java.math.BigDecimal;
+
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -21,10 +23,10 @@ public class CourseRegisterReq {
 	private String title;
 	private String description;
 	private String category;
-	private int price;
+	private BigDecimal price;
 	private String thumbnailUrl;
 
-	public CourseRegisterReq(String title, String description, String category, int price, String thumbnailUrl) {
+	public CourseRegisterReq(String title, String description, String category, BigDecimal price, String thumbnailUrl) {
 		this.title = title;
 		this.description = description;
 		this.category = category;
