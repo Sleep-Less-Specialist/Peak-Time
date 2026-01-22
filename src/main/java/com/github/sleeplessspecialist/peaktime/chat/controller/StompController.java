@@ -1,9 +1,11 @@
 package com.github.sleeplessspecialist.peaktime.chat.controller;
 
+import com.github.sleeplessspecialist.peaktime.chat.dto.ChatMessageReqDto;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.handler.annotation.SendTo;
+import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.stereotype.Controller;
 
 /**
@@ -30,16 +32,17 @@ import org.springframework.stereotype.Controller;
  */
 @Slf4j
 @Controller
+@RequiredArgsConstructor
 class StompController {
 
+    private final SimpMessageSendingOperations messageTemplate;
     /**
      * stomp 메시지 브로커 의 내부 동작 선언 메서드
      */
-    @MessageMapping("/{roomId}")
-    @SendTo("/topic/{roomId}")
-    public String sendMessage(@DestinationVariable Long roomId, String message){
 
-        log.info("roomId: {}, message: {}", roomId, message);
-        return message;
+    @MessageMapping("/{roomId}")
+    public void sendMessage(@DestinationVariable Long roomId, ChatMessageReqDto chatMessageReqDto) {
+        log.info("message: {}", chatMessageReqDto.getMessage());
+        messageTemplate.convertAndSend("/topic/"+roomId, chatMessageReqDto);
     }
 }
