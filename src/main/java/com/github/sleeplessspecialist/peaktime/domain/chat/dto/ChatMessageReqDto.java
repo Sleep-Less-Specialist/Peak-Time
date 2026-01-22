@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
  *
  * 프론트로 보내는 메시지 json 데이터
  * <p>
- * message, 메시지를 보낸 사용자 name
+ * message, 메시지를 보낸 사용자 email
  * 차후 필드 확장 가능
  * </p>
  *
@@ -22,5 +22,5 @@ import lombok.NoArgsConstructor;
 public class ChatMessageReqDto {
 
     private String message;
-    private String name;
+    private String email;
 }
