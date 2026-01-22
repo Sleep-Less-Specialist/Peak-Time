@@ -45,11 +45,11 @@ public class ChatMessage extends BaseTimeEntity {
 	@JoinColumn(name = "user_id", nullable = false)
 	private User user;
 
-	@Column(nullable = false, length = 500)
+	@Column(nullable = false, length = 255)
 	private String content;
 
 	@Column(nullable = false)
-	private boolean isRead = false;
+	private boolean isRead;
 
 	@Builder
 	public ChatMessage(ChatRoom chatRoom, User user, String content) {
