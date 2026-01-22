@@ -51,7 +51,7 @@ public class SecurityConfig {
 	 * @throws Exception 보안 설정 과정에서 발생할 수 있는 예외
 	 */
 	@Bean
-	public SecurityFilterChain springSecurityFilterChain(HttpSecurity http) throws Exception {
+	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
 		http
 			.csrf(csrf -> csrf.disable())
