@@ -21,7 +21,7 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
  * @since
  */
 
-@Configuration
+//@Configuration
 @EnableWebSocket
 @RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketConfigurer {
