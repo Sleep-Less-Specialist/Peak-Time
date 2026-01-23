@@ -7,3 +7,10 @@ Content-Type: application/json
 {
   "description": "안녕하세요"
 }
+
+### 채팅방 목록 조회 1
+GET {{host}}/api/v1/chat/room?page=0&size=5
+Accept: application/json
+### 채팅방 목록 조회 2
+GET {{host}}/api/v1/chat/room?page=0&size=10&sort=createdAt,ASC
+Accept: application/json
