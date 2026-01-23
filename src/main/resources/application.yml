@@ -21,17 +21,36 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
 
-#  mail:
-#    host: smtp.gmail.com
-#    port: 587
-#    username: ${GMAIL_ID}
-#    password: ${SMTP_PASSWORD}
-#    properties:
-#      mail:
-#        smtp:
-#          auth: true
-#          starttls:
-#            enable: true
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${GMAIL_ID}
+    password: ${SMTP_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  # 파일 업로드 용량 설정 (테스트 영상 업로드용 50MB)
+  # 실제 운영 환경에선 500MB로 늘릴 예정
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+  #AWS S3 설정
+  cloud:
+    aws:
+      s3:
+        bucket: ${AWS_S3_BUCKET}
+      region:
+        static: ap-northeast-2
+      credentials:
+        access-key: ${AWS_ACCESS_KEY}
+        secret-key: ${AWS_SECRET_KEY}
+
 
 server:
   port: ${SERVER_PORT:8080}
@@ -46,4 +65,3 @@ jwt:
   secret: ${JWT_SECRET_KEY}
   accessTokenExpirationMs: 3600000
   refreshTokenExpirationMs: 604800000
-
