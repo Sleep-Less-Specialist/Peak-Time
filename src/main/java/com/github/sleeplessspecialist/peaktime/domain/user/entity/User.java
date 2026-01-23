@@ -1,5 +1,6 @@
 package com.github.sleeplessspecialist.peaktime.domain.user.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -32,6 +33,8 @@ public class User {
 
 	private String name;
 
+	@Column(unique = true,  nullable = false)
+	private String email;
 	// 테스트용 생성자 (필요 시 사용)
 	public User(String name) {
 		this.name = name;

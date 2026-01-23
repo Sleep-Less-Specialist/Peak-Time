@@ -1,4 +1,4 @@
-package com.github.sleeplessspecialist.peaktime.chat.dto;
+package com.github.sleeplessspecialist.peaktime.domain.chat.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -8,19 +8,19 @@ import lombok.NoArgsConstructor;
  *
  * 프론트로 보내는 메시지 json 데이터
  * <p>
- * message, 메시지를 보낸 사용자 name
+ * message, 메시지를 보낸 사용자 email
  * 차후 필드 확장 가능
  * </p>
  *
  * @author 주우재
  * @version 1.0
- * @since
+ * @since 2026.01.22
  */
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-public class ChatMessageReqDto {
+public class ChatMessageReq {
 
     private String message;
-    private String name;
+    private String email;
 }

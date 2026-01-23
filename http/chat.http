@@ -1,0 +1,9 @@
+### 채팅방 생성
+@host = http://localhost:8080
+POST {{host}}/api/v1/chat/room
+Content-Type: application/json
+#Authorization: Bearer {{token}}
+
+{
+  "description": "안녕하세요"
+}
