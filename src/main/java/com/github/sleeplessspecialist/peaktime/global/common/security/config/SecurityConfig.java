@@ -6,7 +6,9 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import com.github.sleeplessspecialist.peaktime.global.common.security.filter.JwtAuthenticationFilter;
 import com.github.sleeplessspecialist.peaktime.global.common.security.handler.RestAccessDeniedHandler;
 import com.github.sleeplessspecialist.peaktime.global.common.security.handler.RestAuthenticationEntryPoint;
 import com.github.sleeplessspecialist.peaktime.global.common.security.policy.SecurityPathPolicy;
@@ -37,6 +39,7 @@ public class SecurityConfig {
 
 	private final RestAuthenticationEntryPoint authenticationEntryPoint;
 	private final RestAccessDeniedHandler accessDeniedHandler;
+	private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
 	/**
 	 * Spring Security 필터 체인을 정의합니다.
@@ -64,6 +67,8 @@ public class SecurityConfig {
 				.authenticationEntryPoint(authenticationEntryPoint)
 				.accessDeniedHandler(accessDeniedHandler)
 			)
+
+			.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 
 			.authorizeHttpRequests(auth -> auth
 				.anyRequest().permitAll()
