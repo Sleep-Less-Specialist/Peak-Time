@@ -1,5 +1,9 @@
 package com.github.sleeplessspecialist.peaktime.domain.chat.controller;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -7,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.github.sleeplessspecialist.peaktime.domain.chat.dto.CreateChatRoomReq;
 import com.github.sleeplessspecialist.peaktime.domain.chat.dto.CreateChatRoomRes;
+import com.github.sleeplessspecialist.peaktime.domain.chat.dto.GetChatRoomListRes;
 import com.github.sleeplessspecialist.peaktime.domain.chat.service.ChatService;
 import com.github.sleeplessspecialist.peaktime.global.common.response.ApiResponse;
 import com.github.sleeplessspecialist.peaktime.global.common.response.SuccessCode;
@@ -38,10 +43,26 @@ public class ChatController {
 	 * 인증, 인가 미구현으로 임시 하드코딩
 	 */
 	@PostMapping("/room")
-	public ApiResponse<CreateChatRoomRes> createRoom(@RequestBody @Valid CreateChatRoomReq createChatRoomReq){
+	public ApiResponse<CreateChatRoomRes> createRoom(@RequestBody @Valid CreateChatRoomReq createChatRoomReq) {
 
 		Long userId = 1L;
 		CreateChatRoomRes response = chatService.createRoom(userId, createChatRoomReq);
-		return ApiResponse.of(SuccessCode.CREATED,response);
+		return ApiResponse.of(SuccessCode.CREATED, response);
+	}
+
+	/**
+	 * 채팅방 전체 조회 API
+	 * 인증 필요 X
+	 */
+	@GetMapping("/room")
+	public ApiResponse<GetChatRoomListRes> getRooms(
+		@PageableDefault(
+			size = 10,
+			sort = "createdAt",
+			direction = Sort.Direction.DESC
+		) Pageable pageable
+	) {
+		GetChatRoomListRes response = chatService.getChatRooms(pageable);
+		return ApiResponse.of(SuccessCode.OK, response);
 	}
 }

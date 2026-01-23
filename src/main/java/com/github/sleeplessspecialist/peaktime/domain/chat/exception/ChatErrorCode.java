@@ -24,7 +24,9 @@ public enum ChatErrorCode implements ErrorCode {
 
 	USER_NOT_FOUND("CHAT-001", "존재하지 않는 사용자입니다.", HttpStatus.NOT_FOUND),
 	CHAT_ROOM_NOT_FOUND("CHAT-001", "존재하지 않는 채팅방입니다.", HttpStatus.NOT_FOUND),
-	UNAUTHORIZED_ACCESS("CHAT-002", "사용자 권한이 부족합니다.", HttpStatus.FORBIDDEN);
+	UNAUTHORIZED_ACCESS("CHAT-002", "사용자 권한이 부족합니다.", HttpStatus.FORBIDDEN),
+	BAD_PAGING_CONDITION("CHAT-004", "페이징 형식이 올바르지 않습니다.", HttpStatus.BAD_REQUEST);
+
 
 	private final String code;
 	private final String message;
