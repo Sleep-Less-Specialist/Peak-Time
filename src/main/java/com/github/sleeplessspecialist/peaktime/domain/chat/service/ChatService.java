@@ -1,6 +1,7 @@
 package com.github.sleeplessspecialist.peaktime.domain.chat.service;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.github.sleeplessspecialist.peaktime.domain.chat.dto.ChatMessageReq;
 import com.github.sleeplessspecialist.peaktime.domain.chat.dto.CreateChatRoomReq;
@@ -49,6 +50,7 @@ public class ChatService {
 	 * 3. 메시지 저장하기
 	 *  isRead - false (API 호출후 읽음 상태로 전환)
 	 */
+	@Transactional
 	public void saveMessage(Long roomId, ChatMessageReq chatMessageReq) {
 
 		ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(
@@ -76,6 +78,7 @@ public class ChatService {
 	 *  roleInRoom 상태 - Host
 	 */
 
+	@Transactional
 	public CreateChatRoomRes createRoom(Long userId, CreateChatRoomReq createChatRoomReq) {
 
 		User user = userRepository.findById(userId).orElseThrow(
