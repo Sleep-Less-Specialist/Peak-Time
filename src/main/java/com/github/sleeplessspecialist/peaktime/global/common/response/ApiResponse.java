@@ -58,6 +58,19 @@ public final class ApiResponse<T> {
 	}
 
 	/**
+	 * 리소스 생성 성공 응답 (201 Created)\
+	 */
+	public static <T> ApiResponse<T> created(T data) {
+		return new ApiResponse<>(
+			true,
+			SuccessCode.CREATED.getCode(),
+			SuccessCode.CREATED.getMessage(),
+			data,
+			LocalDateTime.now()
+		);
+	}
+
+	/**
 	 * 커스텀 성공 코드 (데이터 없음)
 	 */
 	public static <T> ApiResponse<T> of(SuccessCode successCode) {

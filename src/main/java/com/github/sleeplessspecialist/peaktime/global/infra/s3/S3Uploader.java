@@ -2,6 +2,8 @@ package com.github.sleeplessspecialist.peaktime.global.infra.s3;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -77,5 +79,30 @@ public class S3Uploader {
 	private String getFileUrl(String fileName) {
 		// ap-northeast-2 (서울) 기준 URL 형식
 		return "https://" + bucket + ".s3.ap-northeast-2.amazonaws.com/" + fileName;
+	}
+
+	/**
+	 * S3에 저장된 파일을 삭제합니다.
+	 * (DB 저장 실패 시 롤백용, 혹은 파일 삭제 API용)
+	 *
+	 * @param fileUrl 삭제할 파일의 전체 URL (예: https://bucket.s3.../video/uuid_file.mp4)
+	 */
+	public void deleteFile(String fileUrl) {
+		try {
+			// 1. URL에서 파일 키(Key) 추출 (예: video/uuid_file.mp4)
+			String splitStr = ".com/";
+			String fileName = fileUrl.substring(fileUrl.lastIndexOf(splitStr) + splitStr.length());
+
+			// 2. 한글 파일명 등을 대비해 디코딩
+			String decodedFileName = URLDecoder.decode(fileName, StandardCharsets.UTF_8);
+
+			// 3. S3에서 삭제
+			s3Template.deleteObject(bucket, decodedFileName);
+			log.info("S3 파일 삭제 성공: {}", decodedFileName);
+
+		} catch (Exception e) {
+			// 삭제 실패는 치명적인 에러로 보지 않고 로그만 남김 (나중에 배치로 지울 수도 있음)
+			log.error("S3 파일 삭제 실패: url={}, error={}", fileUrl, e.getMessage());
+		}
 	}
 }

@@ -47,6 +47,6 @@ public class LectureController {
 		@Valid @ModelAttribute LectureCreateReq req) {
 
 		Long lectureId = lectureService.createLecture(courseId, req);
-		return ApiResponse.ok(lectureId);
+		return ApiResponse.created(lectureId);
 	}
 }
