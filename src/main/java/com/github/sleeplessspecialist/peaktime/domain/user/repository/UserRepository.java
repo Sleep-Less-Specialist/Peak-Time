@@ -1,5 +1,7 @@
 package com.github.sleeplessspecialist.peaktime.domain.user.repository;
 
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
@@ -15,4 +17,6 @@ import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
  * @since 2026. 1. 22.
  */
 public interface UserRepository extends JpaRepository<User, Long> {
+
+	Optional<User> findByEmail(String email);
 }
