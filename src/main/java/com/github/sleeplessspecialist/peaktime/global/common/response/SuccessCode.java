@@ -24,7 +24,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum SuccessCode {
 
-	OK("S000", "OK");
+	OK("S000", "OK"),
+	CREATED("S001", "Created");
 
 	private final String code;
 	private final String message;
