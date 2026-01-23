@@ -11,6 +11,7 @@ import com.github.sleeplessspecialist.peaktime.domain.chat.service.ChatService;
 import com.github.sleeplessspecialist.peaktime.global.common.response.ApiResponse;
 import com.github.sleeplessspecialist.peaktime.global.common.response.SuccessCode;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -37,10 +38,10 @@ public class ChatController {
 	 * 인증, 인가 미구현으로 임시 하드코딩
 	 */
 	@PostMapping("/room")
-	public ApiResponse<CreateChatRoomRes> createRoom(@RequestBody CreateChatRoomReq createChatRoomReq){
+	public ApiResponse<CreateChatRoomRes> createRoom(@RequestBody @Valid CreateChatRoomReq createChatRoomReq){
 
 		Long userId = 1L;
 		CreateChatRoomRes response = chatService.createRoom(userId, createChatRoomReq);
-		return ApiResponse.of(SuccessCode.OK,response);
+		return ApiResponse.of(SuccessCode.CREATED,response);
 	}
 }
