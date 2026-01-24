@@ -4,6 +4,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -64,5 +65,17 @@ public class ChatController {
 	) {
 		GetChatRoomListRes response = chatService.getChatRooms(pageable);
 		return ApiResponse.of(SuccessCode.OK, response);
+	}
+
+	/**
+	 * 채팅방 참여
+	 * 인증, 인가 미구현으로 임시 하드코딩
+	 */
+	@PostMapping("/room/{roomId}/join")
+	public ApiResponse<?> joinRoom(@PathVariable Long roomId){
+
+		Long userId = 2L;
+		chatService.addParticipantToChat(userId, roomId);
+		return ApiResponse.ok();
 	}
 }
