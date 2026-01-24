@@ -12,7 +12,8 @@ package com.github.sleeplessspecialist.peaktime.domain.chat.entity;
  * @since 2026.01.22
  */
 public enum ChatRoomStatus {
+
 	OPEN,
 	CLOSED,
-	ARCHIVED
+	MATCHED
 }
