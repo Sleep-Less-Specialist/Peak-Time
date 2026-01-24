@@ -60,4 +60,8 @@ public class ChatRoom extends BaseTimeEntity {
 		this.chatRoomStatus = ChatRoomStatus.OPEN;
 		this.isGroupChat = false;
 	}
+
+	public void updateStatus(ChatRoomStatus chatRoomStatus){
+		this.chatRoomStatus = chatRoomStatus;
+	}
 }

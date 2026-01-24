@@ -26,6 +26,7 @@ import com.github.sleeplessspecialist.peaktime.domain.user.repository.UserReposi
 import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 커피쳇(Chat) 도메인의 핵심 비즈니스 로직을 처리하는 서비스 클래스입니다.
@@ -39,6 +40,7 @@ import lombok.RequiredArgsConstructor;
  * @since 2026.01.22
  */
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ChatService {
@@ -115,7 +117,7 @@ public class ChatService {
 	}
 
 	/**
-	 * 커피쳇 방 목록을 페이지네이션과 정렬 조건에 따라 조회합니다.
+	 * 커피쳇 방 목록을 페이지네이션과 정렬 조건에 따라 조회
 	 *
 	 * <p>
 	 * CLOSED 상태가 아닌 커피쳇 방을 대상으로 하며,
@@ -165,6 +167,50 @@ public class ChatService {
 	}
 
 	/**
+	 * 커피쳇 참여
+	 *
+	 * <p>
+	 *    1. 참여 하고자하는 roomId -> room 이 존재하는지 검증
+	 * 	  2. 현재 인증 userId 가 DB 에 존재하는 user 인지 검증
+	 * 	  3. 채팅방이 OPEN 상태인지 검증 (CLOSED, MATCHED) 이면 참여 불가능
+	 * 	  	- 정책 에서 이미 MATCHED 라면 participant.size() = 2 임을 보장
+	 * 	  4. chatRoom 에 연관된 participant 에 user 가 존재하는지 검증
+	 * 	  	- 정책 에서 참여자 상태가 host 여야 하지만 room 이 현재 user 를 포함하는지 검증이 더 포괄적인 검증
+	 * 	  5. 참가자 저장 + 상태 전이(MATCHED)
+	 * </p>
+	 *
+	 */
+	@Transactional
+	public void addParticipantToChat(Long userId, Long roomId) {
+
+		ChatRoom chatRoom = chatRoomRepository.findById(roomId)
+			.orElseThrow(() -> new CustomException(ChatErrorCode.CHAT_ROOM_NOT_FOUND));
+
+		User user = userRepository.findById(userId)
+			.orElseThrow(() -> new CustomException(ChatErrorCode.USER_NOT_FOUND));
+
+		if (chatRoom.getChatRoomStatus() != ChatRoomStatus.OPEN) {
+			log.warn("Join rejected: room not open. roomId={}, status={}, userId={}",
+				roomId, chatRoom.getChatRoomStatus(), userId);
+			throw new CustomException(ChatErrorCode.CHAT_ROOM_NOT_OPEN);
+		}
+
+		if (chatParticipantRepository.existsByChatRoomAndUser(chatRoom, user)) {
+			log.warn("Join rejected: already participant. roomId={}, userId={}", roomId, userId);
+			throw new CustomException(ChatErrorCode.ALREADY_PARTICIPANT);
+		}
+
+		ChatParticipant chatParticipant = ChatParticipant.builder()
+			.chatRoom(chatRoom)
+			.user(user)
+			.roleInRoom(RoleInRoom.GUEST)
+			.build();
+		chatParticipantRepository.save(chatParticipant);
+
+		chatRoom.updateStatus(ChatRoomStatus.MATCHED);
+	}
+
+	/**
 	 * 페이지 쿼리 파라미터 변수를 검증하는 메서드
 	 * 1. page > 0
 	 * 2. size >= 0 or size < 50 (정책)
@@ -175,13 +221,14 @@ public class ChatService {
 		int size = pageable.getPageSize();
 
 		if (page < 0) {
+
 			throw new CustomException(ChatErrorCode.BAD_PAGING_CONDITION);
 		}
 
 		if (size < 1 || size > 50) {
 			throw new CustomException(ChatErrorCode.BAD_PAGING_CONDITION);
 		}
-
 	}
+
 }
 
