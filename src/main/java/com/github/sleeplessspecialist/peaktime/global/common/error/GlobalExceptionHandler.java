@@ -3,6 +3,8 @@ package com.github.sleeplessspecialist.peaktime.global.common.error;
 import java.util.List;
 
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -41,15 +43,27 @@ public class GlobalExceptionHandler {
 		log.warn("요청 값 검증 실패: {}건의 오류 발생",
 			e.getBindingResult().getErrorCount());
 
-        List<ValidationFieldError> errors = e.getBindingResult()
-                .getFieldErrors()
-                .stream()
-				.map(ValidationFieldError::from)
-                .toList();
+		List<ValidationFieldError> errors = e.getBindingResult()
+			.getFieldErrors()
+			.stream()
+			.map(ValidationFieldError::from)
+			.toList();
 
 		return ResponseEntity
 			.status(GlobalErrorCode.INVALID_REQUEST.getHttpStatus())
 			.body(ErrorResponse.of(GlobalErrorCode.INVALID_REQUEST, errors));
+	}
+
+	@ExceptionHandler(DataIntegrityViolationException.class)
+	public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(
+		DataIntegrityViolationException e) {
+
+		log.warn("DB 무결성 제약 위반 발생");
+		log.debug("DB 무결성 제약 위반 상세 원인: {}", e.getMostSpecificCause().getMessage());
+
+		return ResponseEntity
+			.status(GlobalErrorCode.DATA_INTEGRITY_VIOLATION.getHttpStatus())
+			.body(ErrorResponse.from(GlobalErrorCode.DATA_INTEGRITY_VIOLATION));
 	}
 
 	@ExceptionHandler(Exception.class)
