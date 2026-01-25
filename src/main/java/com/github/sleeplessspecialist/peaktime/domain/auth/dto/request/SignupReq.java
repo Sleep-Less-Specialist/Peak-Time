@@ -30,8 +30,8 @@ public class SignupReq {
 	@NotBlank
 	@Size(min = 8, max = 64)
 	@Pattern(
-		regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*()_+\\-=[\\]{};':\"\\\\|,.<>/?]).+$",
-		message = "비밀번호는 대문자, 소문자, 특수문자를 각각 1개 이상 포함해야 합니다."
+		regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*]).+$",
+		message = "비밀번호는 대문자, 소문자, 숫자, 특수문자를 각각 1자 이상 포함해야 합니다."
 	)
 	private String password;
 
