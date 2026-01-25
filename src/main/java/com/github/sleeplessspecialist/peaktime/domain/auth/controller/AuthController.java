@@ -1,6 +1,5 @@
 package com.github.sleeplessspecialist.peaktime.domain.auth.controller;
 
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -8,6 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.request.SignupReq;
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.response.SignupRes;
+import com.github.sleeplessspecialist.peaktime.domain.auth.service.AuthService;
 import com.github.sleeplessspecialist.peaktime.global.common.response.ApiResponse;
 
 import jakarta.validation.Valid;
@@ -29,6 +29,8 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 
+	private final AuthService authService;
+
 	/**
 	 * 회원가입을 처리합니다.
 	 * <p>
@@ -41,7 +43,7 @@ public class AuthController {
 	 */
 	@PostMapping("/signup")
 	public ApiResponse<SignupRes> signup(@Valid @RequestBody SignupReq request) {
-		SignupRes response = new SignupRes(null, request.getEmail(), request.getName());
+		SignupRes response = authService.signup(request);
 		return ApiResponse.created(response);
 	}
 }
