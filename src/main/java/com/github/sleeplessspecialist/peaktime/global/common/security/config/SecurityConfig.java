@@ -5,6 +5,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -74,5 +76,20 @@ public class SecurityConfig {
 				.anyRequest().permitAll()
 			);
 		return http.build();
+	}
+
+	/**
+	 * 비밀번호 해싱에 사용할 {@link PasswordEncoder} 빈을 등록합니다.
+	 *
+	 * <p>
+	 * 회원가입/로그인 기능에서 비밀번호 암호화를 위해 사용하며,
+	 * 현재는 {@link BCryptPasswordEncoder}를 기본 구현체로 사용합니다.
+	 * </p>
+	 *
+	 * @return BCrypt 기반 {@link PasswordEncoder}
+	 */
+	@Bean
+	public PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
 	}
 }
