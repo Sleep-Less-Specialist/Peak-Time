@@ -10,8 +10,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.request.LoginReq;
+import com.github.sleeplessspecialist.peaktime.domain.auth.dto.request.RefreshReq;
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.request.SignupReq;
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.response.LoginRes;
+import com.github.sleeplessspecialist.peaktime.domain.auth.dto.response.RefreshRes;
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.response.SignupRes;
 import com.github.sleeplessspecialist.peaktime.domain.auth.exception.AuthErrorCode;
 import com.github.sleeplessspecialist.peaktime.domain.point.service.PointService;
@@ -158,6 +160,85 @@ public class AuthService {
 			}
 			throw e;
 		}
+	}
+
+	public RefreshRes refreshToken(final RefreshReq request) {
+		final String refreshToken = request.getRefreshToken();
+
+		validateRefreshToken(refreshToken);
+
+		final User user = validateUserByRefreshToken(refreshToken);
+
+		validateRefreshTokenWhitelisted(user.getId(), refreshToken);
+
+		return rotateAndIssueTokens(user, refreshToken);
+	}
+
+	private void validateRefreshToken(final String refreshToken) {
+		try {
+			jwtTokenProvider.validateToken(refreshToken);
+		} catch (Exception e) {
+			throw new CustomException(AuthErrorCode.INVALID_REFRESH_TOKEN);
+		}
+	}
+
+	private User validateUserByRefreshToken(final String refreshToken) {
+		final Long userId;
+		try {
+			userId = jwtTokenProvider.getUserId(refreshToken);
+		} catch (Exception e) {
+			throw new CustomException(AuthErrorCode.INVALID_REFRESH_TOKEN);
+		}
+
+		final User user = userRepository.findById(userId)
+			.orElseThrow(() -> new CustomException(AuthErrorCode.INVALID_REFRESH_TOKEN));
+
+		if (user.getStatus() != UserStatus.ACTIVE) {
+			throw new CustomException(AuthErrorCode.INVALID_REFRESH_TOKEN);
+		}
+
+		return user;
+	}
+
+	private void validateRefreshTokenWhitelisted(final Long userId, final String refreshToken) {
+		final String refreshKey = buildRefreshWhitelistKey(userId, refreshToken);
+		try {
+			final Boolean exists = stringRedisTemplate.hasKey(refreshKey);
+			if (!Boolean.TRUE.equals(exists)) {
+				throw new CustomException(AuthErrorCode.INVALID_REFRESH_TOKEN);
+			}
+		} catch (RedisConnectionFailureException e) {
+			log.error("Redis 장애로 RefreshToken 화이트리스트 검증에 실패했습니다. userId={}, key={}", userId, refreshKey, e);
+			throw e;
+		}
+	}
+
+	private void revokeRefreshTokenWhitelist(final Long userId, final String refreshToken) {
+		final String refreshKey = buildRefreshWhitelistKey(userId, refreshToken);
+		try {
+			stringRedisTemplate.delete(refreshKey);
+		} catch (RedisConnectionFailureException e) {
+			log.error("Redis 장애로 RefreshToken 화이트리스트 삭제에 실패했습니다. userId={}, key={}", userId, refreshKey, e);
+			throw e;
+		}
+	}
+
+	private RefreshRes rotateAndIssueTokens(final User user, final String oldRefreshToken) {
+		final Long userId = user.getId();
+		final String role = resolveRole(user.getRole());
+
+		final String newAccessToken = jwtTokenProvider.createAccessToken(userId, role);
+		final String newRefreshToken = jwtTokenProvider.createRefreshToken(userId);
+
+		revokeRefreshTokenWhitelist(userId, oldRefreshToken);
+		saveRefreshTokenWhitelist(userId, newRefreshToken);
+
+		return new RefreshRes(
+			newAccessToken,
+			newRefreshToken,
+			"Bearer",
+			accessTokenExpiresInSeconds()
+		);
 	}
 
 	private void validateEmailNotExists(final String email) {
