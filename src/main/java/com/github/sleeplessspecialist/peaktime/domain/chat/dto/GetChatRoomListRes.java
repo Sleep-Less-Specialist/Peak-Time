@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
 /**
  * 커피쳇 방 목록 조회 응답 DTO입니다.
@@ -27,17 +28,16 @@ import lombok.NoArgsConstructor;
  * @since 2026.01.23
  */
 @Getter
-@NoArgsConstructor
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Builder
 public class GetChatRoomListRes {
 
-	private List<ChatRoomListItem> rooms;
-	private int page;
-	private int size;
-	private long totalElements;
-	private int totalPages;
-	private boolean hasNext;
-	private String sort;
+	private final List<ChatRoomListItem> rooms;
+	private final int page;
+	private final int size;
+	private final long totalElements;
+	private final int totalPages;
+	private final boolean hasNext;
+	private final String sort;
 
 }
