@@ -27,6 +27,12 @@ Content-Type: {{contentType}}
     client.global.set("accessToken", response.body.accessToken);
     client.global.set("refreshToken", response.body.refreshToken);
 %}
+### 2-1) (공개) 커피챗 전체 조회 - 토큰 없이 200이어야 함
+GET {{baseUrl}}/api/v1/chat/room?page=0&size=10&sort=createAt,ASC
+
+
+
+
 
 ### 3) 로그인 실패 (401) - 비밀번호 틀림
 POST {{baseUrl}}/api/v1/auth/login
