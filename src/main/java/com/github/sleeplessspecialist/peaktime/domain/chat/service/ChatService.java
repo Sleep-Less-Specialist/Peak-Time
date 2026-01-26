@@ -213,11 +213,13 @@ public class ChatService {
 	 * 방이 open 상태 임과 동시에 방 정원보다 작은지 검증
 	 */
 	private void validateJoinableRoom(ChatRoom chatRoom, Long roomId, Long userId) {
-		if (chatRoom.getChatRoomStatus() != ChatRoomStatus.OPEN &&
-			chatParticipantRepository.countByChatRoomId(roomId) < ROOM_CAPACITY
+
+		long participantNum = chatParticipantRepository.countByChatRoomId(roomId);
+
+		if (chatRoom.getChatRoomStatus() != ChatRoomStatus.OPEN || participantNum >= ROOM_CAPACITY
 		) {
-			log.warn("Join rejected: room not open. roomId={}, status={}, userId={}",
-				roomId, chatRoom.getChatRoomStatus(), userId);
+			log.warn("채팅방 참가 거절: 방이 OPEN 상태가 아닙니다 (현재 참여자: {}). roomId={}, status={}, userId={}",
+				participantNum, roomId, chatRoom.getChatRoomStatus(), userId);
 
 			throw new CustomException(ChatErrorCode.CHAT_ROOM_NOT_OPEN);
 		}
@@ -228,10 +230,13 @@ public class ChatService {
 	 */
 	private void validateNotAlreadyParticipant(ChatRoom chatRoom, User user, Long roomId, Long userId) {
 		if (chatParticipantRepository.existsByChatRoomAndUser(chatRoom, user)) {
-			log.warn("Join rejected: already participant. roomId={}, userId={}", roomId, userId);
+			log.warn("채팅방 참가 거절: 이미 참가한 사용자입니다. roomId={}, userId={}",
+				roomId, userId);
+
 			throw new CustomException(ChatErrorCode.ALREADY_PARTICIPANT);
 		}
 	}
+
 
 
 	/**

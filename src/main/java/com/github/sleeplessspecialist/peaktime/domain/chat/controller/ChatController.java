@@ -72,7 +72,7 @@ public class ChatController {
 	 * 인증, 인가 미구현으로 임시 하드코딩
 	 */
 	@PostMapping("/room/{roomId}/join")
-	public ApiResponse<?> joinRoom(@PathVariable Long roomId){
+	public ApiResponse<Void> joinRoom(@PathVariable Long roomId){
 
 		Long userId = 2L;
 		chatService.addParticipantToChat(userId, roomId);
