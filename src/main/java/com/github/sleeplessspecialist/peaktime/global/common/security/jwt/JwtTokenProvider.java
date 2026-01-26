@@ -131,6 +131,25 @@ public class JwtTokenProvider {
         }
     }
 
+    /**
+     * Access Token에 포함된 role Claim 값을 반환합니다.
+     * <p>
+     * role Claim은 Access Token 전용이며, Refresh Token에는 포함되지 않습니다.
+     * </p>
+     *
+     * @param token JWT 문자열
+     * @return role 문자열 (예: ROLE_ADMIN, ROLE_LECTURER, ROLE_STUDENT)
+     * @throws JwtTokenException role Claim이 누락된 경우
+     */
+    public String getRole(String token) {
+        String role = parseClaims(token).get(CLAIM_ROLE, String.class);
+        if (role == null || role.isBlank()) {
+            throw new JwtTokenException(JwtTokenErrorCode.MISSING_ROLE);
+        }
+        return role;
+    }
+
+
     private String requireToken(String token) {
         if (token == null || token.isBlank()) {
             throw new JwtTokenException(JwtTokenErrorCode.EMPTY);
