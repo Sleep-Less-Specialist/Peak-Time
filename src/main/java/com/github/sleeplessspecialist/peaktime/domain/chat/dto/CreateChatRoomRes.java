@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
 /**
  * 채팅방 생성 응답 dto
@@ -17,15 +18,14 @@ import lombok.NoArgsConstructor;
  * @since 2026.01.22
  */
 @Getter
-@NoArgsConstructor
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Builder
 public class CreateChatRoomRes {
 
-	private Long roomId;
-	private Long userId;
-	private ChatRoomStatus chatRoomStatus;
-	private String description;
-	private LocalDateTime createdAt;
-	private LocalDateTime updatedAt;
+	private final Long roomId;
+	private final Long userId;
+	private final ChatRoomStatus chatRoomStatus;
+	private final String description;
+	private final LocalDateTime createdAt;
+	private final LocalDateTime updatedAt;
 }
