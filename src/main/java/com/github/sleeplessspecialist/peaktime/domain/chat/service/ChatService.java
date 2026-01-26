@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +45,8 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @RequiredArgsConstructor
 public class ChatService {
+
+	private static final int ROOM_CAPACITY = 2;
 
 	private final ChatRoomRepository chatRoomRepository;
 
@@ -91,8 +94,7 @@ public class ChatService {
 	@Transactional
 	public CreateChatRoomRes createRoom(Long userId, CreateChatRoomReq createChatRoomReq) {
 
-		User user = userRepository.findById(userId).orElseThrow(
-			() -> new CustomException(ChatErrorCode.USER_NOT_FOUND));
+		User user = getUser(userId);
 
 		ChatRoom chatRoom = ChatRoom.builder()
 			.description(createChatRoomReq.getDescription())
@@ -143,13 +145,7 @@ public class ChatService {
 			chatRoomRepository.findByChatRoomStatusNot(ChatRoomStatus.CLOSED, pageable);
 
 		List<ChatRoomListItem> rooms = roomPage.getContent().stream()
-			.map(room -> ChatRoomListItem.builder()
-				.roomId(room.getId())
-				.status(room.getChatRoomStatus())
-				.description(room.getDescription())
-				.createdAt(room.getCreatedAt())
-				.build()
-			)
+			.map(ChatRoomListItem::from)
 			.toList();
 
 		return GetChatRoomListRes.builder()
@@ -159,10 +155,7 @@ public class ChatService {
 			.totalElements(roomPage.getTotalElements())
 			.totalPages(roomPage.getTotalPages())
 			.hasNext(roomPage.hasNext())
-			.sort(roomPage.getSort().stream()
-				.map(order -> order.getProperty() + "," + order.getDirection())
-				.findFirst()
-				.orElse(null))
+			.sort(toSortString(roomPage.getSort()))
 			.build();
 	}
 
@@ -183,22 +176,11 @@ public class ChatService {
 	@Transactional
 	public void addParticipantToChat(Long userId, Long roomId) {
 
-		ChatRoom chatRoom = chatRoomRepository.findById(roomId)
-			.orElseThrow(() -> new CustomException(ChatErrorCode.CHAT_ROOM_NOT_FOUND));
+		ChatRoom chatRoom = getChatRoom(roomId);
+		User user = getUser(userId);
 
-		User user = userRepository.findById(userId)
-			.orElseThrow(() -> new CustomException(ChatErrorCode.USER_NOT_FOUND));
-
-		if (chatRoom.getChatRoomStatus() != ChatRoomStatus.OPEN) {
-			log.warn("Join rejected: room not open. roomId={}, status={}, userId={}",
-				roomId, chatRoom.getChatRoomStatus(), userId);
-			throw new CustomException(ChatErrorCode.CHAT_ROOM_NOT_OPEN);
-		}
-
-		if (chatParticipantRepository.existsByChatRoomAndUser(chatRoom, user)) {
-			log.warn("Join rejected: already participant. roomId={}, userId={}", roomId, userId);
-			throw new CustomException(ChatErrorCode.ALREADY_PARTICIPANT);
-		}
+		validateJoinableRoom(chatRoom, roomId, userId);
+		validateNotAlreadyParticipant(chatRoom, user, roomId, userId);
 
 		ChatParticipant chatParticipant = ChatParticipant.builder()
 			.chatRoom(chatRoom)
@@ -211,6 +193,48 @@ public class ChatService {
 	}
 
 	/**
+	 * Room 이 DB 에 존재 하는지 검증
+	 */
+	private ChatRoom getChatRoom(Long roomId) {
+		return chatRoomRepository.findById(roomId)
+			.orElseThrow(() -> new CustomException(ChatErrorCode.CHAT_ROOM_NOT_FOUND));
+	}
+
+	/**
+	 * User 가 DB 에 존재 하는지 검증
+	 */
+	private User getUser(Long userId) {
+		return userRepository.findById(userId)
+			.orElseThrow(() -> new CustomException(ChatErrorCode.USER_NOT_FOUND));
+	}
+
+	/**
+	 * 참가 가능한 방 상태인지 검증합니다. (OPEN만 허용)
+	 * 방이 open 상태 임과 동시에 방 정원보다 작은지 검증
+	 */
+	private void validateJoinableRoom(ChatRoom chatRoom, Long roomId, Long userId) {
+		if (chatRoom.getChatRoomStatus() != ChatRoomStatus.OPEN &&
+			chatParticipantRepository.countByChatRoomId(roomId) < ROOM_CAPACITY
+		) {
+			log.warn("Join rejected: room not open. roomId={}, status={}, userId={}",
+				roomId, chatRoom.getChatRoomStatus(), userId);
+
+			throw new CustomException(ChatErrorCode.CHAT_ROOM_NOT_OPEN);
+		}
+	}
+
+	/**
+	 * 이미 참가자인지 검증합니다.
+	 */
+	private void validateNotAlreadyParticipant(ChatRoom chatRoom, User user, Long roomId, Long userId) {
+		if (chatParticipantRepository.existsByChatRoomAndUser(chatRoom, user)) {
+			log.warn("Join rejected: already participant. roomId={}, userId={}", roomId, userId);
+			throw new CustomException(ChatErrorCode.ALREADY_PARTICIPANT);
+		}
+	}
+
+
+	/**
 	 * 페이지 쿼리 파라미터 변수를 검증하는 메서드
 	 * 1. page > 0
 	 * 2. size >= 0 or size < 50 (정책)
@@ -221,13 +245,22 @@ public class ChatService {
 		int size = pageable.getPageSize();
 
 		if (page < 0) {
-
 			throw new CustomException(ChatErrorCode.BAD_PAGING_CONDITION);
 		}
 
 		if (size < 1 || size > 50) {
 			throw new CustomException(ChatErrorCode.BAD_PAGING_CONDITION);
 		}
+	}
+
+	/**
+	 * 정렬 정보를 문자열로 나타내는 메서드
+	 */
+	private String toSortString(Sort sort) {
+		return sort.stream()
+			.map(order -> order.getProperty() + "," + order.getDirection())
+			.findFirst()
+			.orElse(null);
 	}
 
 }
