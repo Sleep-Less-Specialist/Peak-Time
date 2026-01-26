@@ -47,8 +47,7 @@ public class SecurityConfig {
 	 * Spring Security 필터 체인을 정의합니다.
 	 *
 	 * <p>
-	 * 초기 개발 단계에서는 기능 개발을 막지 않기 위해 모든 요청을 허용합니다.
-	 * 다만, 인증 인가 정책이 적용되는 시점에 대비하여 401,403 공통 처리 핸들러는 미리 연결합니다.
+	 * 인증 관련 엔드포인트(/api/v1/auth/**)는 허용하며, 그 외 요청은 JWT 인증을 요구하도록 구성합니다.
 	 * </p>
 	 *
 	 * @param http HttpSecurity 설정 객체
@@ -73,7 +72,10 @@ public class SecurityConfig {
 			.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 
 			.authorizeHttpRequests(auth -> auth
-				.anyRequest().permitAll()
+				// 인증 엔드포인트는 공개
+				.requestMatchers(SecurityPathPolicy.PUBLIC_ENDPOINTS).permitAll()
+				// 그 외는 인증 필요
+				.anyRequest().authenticated()
 			);
 		return http.build();
 	}
