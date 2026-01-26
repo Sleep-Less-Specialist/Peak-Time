@@ -18,6 +18,7 @@ import com.github.sleeplessspecialist.peaktime.global.common.response.ApiRespons
 import com.github.sleeplessspecialist.peaktime.global.common.response.SuccessCode;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -68,14 +69,25 @@ public class ChatController {
 	}
 
 	/**
-	 * 채팅방 참여
+	 * 채팅방 참여 API
 	 * 인증, 인가 미구현으로 임시 하드코딩
 	 */
 	@PostMapping("/room/{roomId}/join")
-	public ApiResponse<Void> joinRoom(@PathVariable Long roomId){
+	public ApiResponse<Void> joinRoom(@PathVariable @Positive Long roomId){
 
 		Long userId = 2L;
 		chatService.addParticipantToChat(userId, roomId);
+		return ApiResponse.ok();
+	}
+
+	/**
+	 * 커피챗 종료 API
+	 */
+	@PostMapping("/room/{roomId}/close")
+	public ApiResponse<Void> closeRoom(@PathVariable @Positive Long roomId){
+
+		Long userId = 1L;
+		chatService.closeRoom(roomId, userId);
 		return ApiResponse.ok();
 	}
 }
