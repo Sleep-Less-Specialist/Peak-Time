@@ -59,8 +59,10 @@ public class AuthControllerTest {
 
 
 	/**
+	 * 회원가입 요청이 정상 입력값으로 전달되었을 때,
+	 * 컨트롤러가 HTTP 200(OK)을 반환하고 서비스의 {@code signup} 메서드에 위임하는지 검증합니다.
 	 *
-	 * @throws Exception
+	 * @throws Exception MockMvc 수행 중 예외가 발생할 수 있습니다.
 	 */
 	@Test
 	@DisplayName("회원가입 요청 성공 시 응답 검증")
