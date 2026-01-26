@@ -5,7 +5,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.github.sleeplessspecialist.peaktime.domain.auth.dto.request.LoginReq;
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.request.SignupReq;
+import com.github.sleeplessspecialist.peaktime.domain.auth.dto.response.LoginRes;
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.response.SignupRes;
 import com.github.sleeplessspecialist.peaktime.domain.auth.service.AuthService;
 import com.github.sleeplessspecialist.peaktime.global.common.response.ApiResponse;
@@ -45,5 +47,17 @@ public class AuthController {
 	public ApiResponse<SignupRes> signup(@Valid @RequestBody SignupReq request) {
 		SignupRes response = authService.signup(request);
 		return ApiResponse.created(response);
+	}
+
+	/**
+	 * 로그인을 처리합니다.
+	 *
+	 * @param request 로그인 요청 정보 (이메일, 비밀번호)
+	 * @return JWT 토큰 정보 응답
+	 */
+	@PostMapping("/login")
+	public ApiResponse<LoginRes> login(@Valid @RequestBody LoginReq request) {
+		LoginRes response = authService.login(request);
+		return ApiResponse.ok(response);
 	}
 }
