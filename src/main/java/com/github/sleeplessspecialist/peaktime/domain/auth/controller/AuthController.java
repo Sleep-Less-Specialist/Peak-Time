@@ -6,8 +6,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.request.LoginReq;
+import com.github.sleeplessspecialist.peaktime.domain.auth.dto.request.RefreshReq;
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.request.SignupReq;
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.response.LoginRes;
+import com.github.sleeplessspecialist.peaktime.domain.auth.dto.response.RefreshRes;
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.response.SignupRes;
 import com.github.sleeplessspecialist.peaktime.domain.auth.service.AuthService;
 import com.github.sleeplessspecialist.peaktime.global.common.response.ApiResponse;
@@ -45,7 +47,7 @@ public class AuthController {
 	 */
 	@PostMapping("/signup")
 	public ApiResponse<SignupRes> signup(@Valid @RequestBody SignupReq request) {
-		SignupRes response = authService.signup(request);
+		final SignupRes response = authService.signup(request);
 		return ApiResponse.created(response);
 	}
 
@@ -57,7 +59,23 @@ public class AuthController {
 	 */
 	@PostMapping("/login")
 	public ApiResponse<LoginRes> login(@Valid @RequestBody LoginReq request) {
-		LoginRes response = authService.login(request);
+		final LoginRes response = authService.login(request);
+		return ApiResponse.ok(response);
+	}
+
+	/**
+	 * Refresh Token을 기반으로 Access Token(및 Refresh Token)을 재발급합니다.
+	 * <p>
+	 * 클라이언트가 전달한 Refresh Token의 유효성(서명/만료)과 Redis 화이트리스트 존재 여부를 검증한 뒤,
+	 * 새 토큰을 발급합니다.
+	 * </p>
+	 *
+	 * @param request 토큰 재발급 요청 정보 (refreshToken)
+	 * @return 새로 발급된 토큰 정보 응답
+	 */
+	@PostMapping("/refresh")
+	public ApiResponse<RefreshRes> refresh(@Valid @RequestBody RefreshReq request) {
+		final RefreshRes response = authService.refreshToken(request);
 		return ApiResponse.ok(response);
 	}
 }
