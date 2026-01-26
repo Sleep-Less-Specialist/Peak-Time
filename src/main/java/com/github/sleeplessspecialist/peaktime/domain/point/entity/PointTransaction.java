@@ -5,6 +5,8 @@ import com.github.sleeplessspecialist.peaktime.global.domain.BaseTimeEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -51,8 +53,9 @@ public class PointTransaction extends BaseTimeEntity {
 	@Column(nullable = false)
 	private Long amount;
 
+	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 30)
-	private String type;
+	private PointTransactionType type;
 
 	@Column(name = "balance_after", nullable = false)
 	private Long balanceAfter;
@@ -63,7 +66,7 @@ public class PointTransaction extends BaseTimeEntity {
 	@Column(name = "dedup_key", nullable = false, length = 100)
 	private String dedupKey;
 
-	private PointTransaction(User user, Long amount, String type, Long balanceAfter, String memo, String dedupKey) {
+	private PointTransaction(User user, Long amount, PointTransactionType type, Long balanceAfter, String memo, String dedupKey) {
 		this.user = user;
 		this.amount = amount;
 		this.type = type;
@@ -85,7 +88,7 @@ public class PointTransaction extends BaseTimeEntity {
 		return new PointTransaction(
 			user,
 			bonusAmount,
-			"SIGNUP_BONUS",
+			PointTransactionType.SIGNUP_BONUS,
 			balanceAfter,
 			"회원가입 보너스",
 			dedupKey
@@ -103,14 +106,14 @@ public class PointTransaction extends BaseTimeEntity {
 	 *
 	 * @param user         포인트 변동 대상 사용자
 	 * @param amount       포인트 증감량(적립: +, 차감: -)
-	 * @param type         포인트 변동 타입 (예: SIGNUP_BONUS, EARN, SPEND, REFUND)
+	 * @param type         포인트 변동 타입
 	 * @param balanceAfter 반영 후 잔액(users.point)
 	 * @param memo         변동 사유 메모
 	 * @param dedupKey     중복 처리를 위한 키
 	 * @return 생성된 포인트 이력 엔티티
 	 */
 	public static PointTransaction of(
-		User user, Long amount, String type, Long balanceAfter, String memo, String dedupKey
+		User user, Long amount, PointTransactionType type, Long balanceAfter, String memo, String dedupKey
 	) {
 		return new PointTransaction(user, amount, type, balanceAfter, memo, dedupKey);
 	}

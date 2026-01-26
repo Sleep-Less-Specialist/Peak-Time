@@ -1,0 +1,47 @@
+### 0) 환경 변수 (원하는 값으로 바꿔도 됨)
+@baseUrl = http://localhost:8080
+@contentType = application/json
+
+### 1) 회원가입 (정규화 확인용: 대문자 이메일로 가입)
+POST {{baseUrl}}/api/v1/auth/signup
+Content-Type: {{contentType}}
+
+{
+  "name": "테스트유저",
+  "email": "Test@Example.com",
+  "password": "P@ssw0rd!234",
+  "phoneNumber": "010-1234-5678"
+}
+
+### 2) 로그인 성공 (200) - 대문자 이메일로 보내도 정상 조회되어야 함(정규화 검증)
+POST {{baseUrl}}/api/v1/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "Test@Example.com",
+  "password": "P@ssw0rd!234"
+}
+
+> {%
+    // accessToken, refreshToken 저장
+    client.global.set("accessToken", response.body.accessToken);
+    client.global.set("refreshToken", response.body.refreshToken);
+%}
+
+### 3) 로그인 실패 (401) - 비밀번호 틀림
+POST {{baseUrl}}/api/v1/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "test@example.com",
+  "password": "wrong-password"
+}
+
+### 브루트포스(429) 유도 - 형식은 통과, 값은 틀린 비밀번호
+POST {{baseUrl}}/api/v1/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "test@example.com",
+  "password": "WrongP@ss1!"
+}
