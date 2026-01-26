@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
 /**
  * 채팅방 메시지 목록 조회 응답 dto
@@ -17,14 +18,13 @@ import lombok.NoArgsConstructor;
  * @since 2025. 12. 22.
  */
 @Getter
+@RequiredArgsConstructor
 @Builder
-@AllArgsConstructor
-@NoArgsConstructor
 public class GetMessageListRes {
 
-	private Long chatRoomId;
-	private int size;
-	private boolean hasNext;
-	private Long nextCursor;
-	private List<ChatMessageListItem> messageList;
+	private final Long chatRoomId;
+	private final int size;
+	private final boolean hasNext;
+	private final Long nextCursor;
+	private final List<ChatMessageListItem> messageList;
 }
