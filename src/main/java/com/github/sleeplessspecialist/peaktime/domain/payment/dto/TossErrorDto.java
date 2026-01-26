@@ -1,7 +1,7 @@
 package com.github.sleeplessspecialist.peaktime.domain.payment.dto;
 
 import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
 /**
  * 토스 페이먼츠 API 에러 응답 DTO입니다.
@@ -15,8 +15,9 @@ import lombok.NoArgsConstructor;
  * @since 2026. 1. 26.
  */
 @Getter
-@NoArgsConstructor
+@RequiredArgsConstructor
 public class TossErrorDto {
-	private String code;
-	private String message;
+
+	private final String code;
+	private final String message;
 }

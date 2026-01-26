@@ -2,11 +2,9 @@ package com.github.sleeplessspecialist.peaktime.domain.payment.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
 /**
  * 토스 페이먼츠 API로부터 결제 승인 요청에 대한 성공 응답을 수신하는 응답 DTO입니다.
@@ -19,19 +17,17 @@ import lombok.NoArgsConstructor;
  * @version 1.0
  * @since 2026. 1. 23.
  */
-
 @Getter
 @Builder
-@AllArgsConstructor
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@RequiredArgsConstructor
 public class TossPaymentConfirmReq {
 
 	@NotBlank(message = "paymentKey는 필수입니다.")
-	private String paymentKey; // 토스가 발급한 결제 고유 ID
+	private final String paymentKey; // 토스가 발급한 결제 고유 ID
 
 	@NotBlank(message = "orderId는 필수입니다.")
-	private String orderId;    // 우리 서비스에서 만든 주문 ID
+	private final String orderId;    // 우리 서비스에서 만든 주문 ID
 
 	@NotNull(message = "amount는 필수입니다.")
-	private Long amount;       // 결제 금액 (KRW는 정수형 사용)
+	private final Long amount;       // 결제 금액 (KRW는 정수형 사용)
 }
