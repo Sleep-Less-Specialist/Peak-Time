@@ -3,6 +3,7 @@ package com.github.sleeplessspecialist.peaktime.domain.chat.repository;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -31,14 +32,28 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
 	 * </p>
 	 */
 	@Query("""
-    SELECT m
-    FROM ChatMessage m JOIN FETCH m.user
-    WHERE m.chatRoom.id = :roomId
-      AND (:lastId IS NULL OR m.id < :lastId)
-    ORDER BY m.id DESC""")
+		SELECT m
+		FROM ChatMessage m JOIN FETCH m.user
+		WHERE m.chatRoom.id = :roomId
+		  AND (:lastId IS NULL OR m.id < :lastId)
+		ORDER BY m.id DESC""")
 	Slice<ChatMessage> findMessagesByCursor(
 		@Param("roomId") Long roomId,
 		@Param("lastId") Long lastId,
 		Pageable pageable
 	);
+
+	/**
+	 * bulk update 를 이용하여 하나의 update 쿼리로 영속성 컨텍스트를 사용하지 않고
+	 * roomId 에 있는 모든 message 의 isRead 를 true 로 읽음 표시
+	 */
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("""
+		    UPDATE ChatMessage m
+		    SET m.isRead = true
+		    WHERE m.chatRoom.id = :roomId
+		      AND m.isRead = false
+		""")
+	void bulkReadAll(@Param("roomId") Long roomId);
+
 }

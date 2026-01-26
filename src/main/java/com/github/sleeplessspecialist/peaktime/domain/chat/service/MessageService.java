@@ -14,10 +14,12 @@ import com.github.sleeplessspecialist.peaktime.domain.chat.entity.ChatMessage;
 import com.github.sleeplessspecialist.peaktime.domain.chat.exception.ChatErrorCode;
 import com.github.sleeplessspecialist.peaktime.domain.chat.repository.ChatMessageRepository;
 import com.github.sleeplessspecialist.peaktime.domain.chat.repository.ChatParticipantRepository;
+import com.github.sleeplessspecialist.peaktime.domain.chat.repository.ChatRoomRepository;
 import com.github.sleeplessspecialist.peaktime.domain.user.repository.UserRepository;
 import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 채팅방 메시지 조회 관련 비즈니스 로직을 처리하는 서비스 클래스입니다.
@@ -35,32 +37,30 @@ import lombok.RequiredArgsConstructor;
  * @version 1.0
  * @since 2026. 1. 25.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MessageService {
-
-	private static final int MIN_SIZE = 1;
-
-	private static final int MAX_SIZE = 50;
 
 	private final UserRepository userRepository;
 
 	private final ChatParticipantRepository chatParticipantRepository;
 
 	private final ChatMessageRepository chatMessageRepository;
+	private final ChatRoomRepository chatRoomRepository;
 
 	/**
-	 * 1. roomId, lastId, size 값 유효성 검사
-	 * 2. userId 유효성 검사
-	 * 3. roomId 권한 검사
+	 * 1. userId 유효성 검사
+	 * 2. roomId 유효성 검사
+	 * 3. user 의 room 에 대한 권한 검사
 	 * 4. 응답 dto 리턴
 	 */
 	@Transactional(readOnly = true)
 	public GetMessageListRes findMessagePageByCursor(Long userId, Long roomId, Long lastId, int size) {
 
-		validateRequest(roomId, lastId, size);
-
 		validateUser(userId);
+
+		validateRoom(roomId);
 
 		validateAccess(roomId, userId);
 
@@ -85,37 +85,50 @@ public class MessageService {
 			.build();
 	}
 
+	/**
+	 * 1. user 유효성 검사
+	 * 2. room 권한 검사
+	 * 3. user 의 room 에 대한 권한 검사
+	 * 4. roomId의 모든 메시지에서 isRead = True
+	 */
+	@Transactional
+	public void readAllMessages(Long userId, Long roomId) {
+
+		validateUser(userId);
+
+		validateRoom(roomId);
+
+		validateAccess(roomId, userId);
+
+		chatMessageRepository.bulkReadAll(roomId);
+	}
+
 	private void validateUser(Long userId) {
 		if (!userRepository.existsById(userId)) {
+			log.warn(" 존재하지 않는 사용자입니다. userId={}", userId);
 			throw new CustomException(ChatErrorCode.USER_NOT_FOUND);
+		}
+	}
+
+	private void validateRoom(Long roomId) {
+		if (!chatRoomRepository.existsById(roomId)) {
+			log.warn(" 존재하지 않는 채팅방입니다. roomId={}", roomId);
+			throw new CustomException(ChatErrorCode.CHAT_ROOM_NOT_FOUND);
 		}
 	}
 
 	private void validateAccess(Long roomId, Long userId) {
 		boolean isParticipant = chatParticipantRepository.existsByChatRoomIdAndUserId(roomId, userId);
 		if (!isParticipant) {
+			log.warn(
+				"채팅방 접근 권한이 없습니다. roomId={}, userId={}",
+				roomId, userId
+			);
 			throw new CustomException(ChatErrorCode.UNAUTHORIZED_ACCESS);
 		}
 	}
 
-	/**
-	 *  cursor(lastId) 검증: null 허용, 값이 있으면 양수여야 함
-	 *  size 정책 (1~50)
-	 */
-	private void validateRequest(Long roomId, Long lastId, int size) {
 
-		if (roomId != null && roomId <= 0) {
-			throw new CustomException(ChatErrorCode.INVALID_ROOM_ID);
-		}
-
-		if (lastId != null && lastId <= 0) {
-			throw new CustomException(ChatErrorCode.BAD_PAGING_CONDITION);
-		}
-
-		if (size < MIN_SIZE || size > MAX_SIZE) {
-			throw new CustomException(ChatErrorCode.BAD_PAGING_CONDITION);
-		}
-	}
 	/**
 	 * 다음 페이지 커서(nextCursor) 계산
 	 */
