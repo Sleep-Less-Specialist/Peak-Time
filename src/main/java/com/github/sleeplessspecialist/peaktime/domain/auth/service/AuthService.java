@@ -3,6 +3,7 @@ package com.github.sleeplessspecialist.peaktime.domain.auth.service;
 import java.time.Duration;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -50,6 +51,10 @@ public class AuthService {
 	private final StringRedisTemplate stringRedisTemplate;
 	private final JwtProperties jwtProperties;
 
+	private static final int MAX_LOGIN_ATTEMPTS = 5;
+	private static final Duration LOGIN_ATTEMPT_WINDOW_TTL = Duration.ofMinutes(10);
+	private static final Duration LOGIN_LOCK_TTL = Duration.ofMinutes(10);
+
 	/**
 	 * 회원가입을 처리합니다.
 	 * <p>
@@ -65,19 +70,20 @@ public class AuthService {
 	@Transactional
 	public SignupRes signup(SignupReq request) {
 
-		validateEmailNotExists(request.getEmail());
+		final String email = normalizeEmail(request.getEmail());
+		validateEmailNotExists(email);
 
 		String encodedPassword = passwordEncoder.encode(request.getPassword());
 		String normalizedPhoneNumber = normalizePhoneNumber(request.getPhoneNumber());
 
 		User user = User.createForSignup(
 			request.getName(),
-			request.getEmail(),
+			email,
 			encodedPassword,
 			normalizedPhoneNumber
 		);
 
-		final User saved = saveUserOrThrowDuplicateEmail(user, request.getEmail());
+		final User saved = saveUserOrThrowDuplicateEmail(user, email);
 
 		pointService.grantSignupBonus(saved);
 		log.info("회원가입 완료 - email: {}, userId: {}", saved.getEmail(), saved.getId());
@@ -111,34 +117,47 @@ public class AuthService {
 	 * </p>
 	 *
 	 * <p>
-	 * 인증 실패(이메일 없음/비밀번호 불일치) 는 401로 통일하여 반환합니다.
-	 * 브루트포스 방지 등 보안 정책 위반은 400으로 통합 처리합니다.
+	 * 인증 실패(이메일 없음/비밀번호 불일치)는 401로 통일하여 반환합니다.
+	 * 로그인 시도 횟수 제한(브루트포스 방지) 위반은 429로 처리합니다.
+	 * 멀티 디바이스/동시 로그인 제어(단일 세션 강제 등)는 MVP 범위에서 제외하고, RefreshToken을 화이트리스트로 누적 관리합니다.
 	 * </p>
 	 *
 	 * @param request 로그인 요청 DTO
 	 * @return 토큰 정보를 포함한 응답 DTO
 	 * @throws CustomException 인증 실패 또는 보안 정책 위반 시
 	 */
-	@Transactional
 	public LoginRes login(final LoginReq request) {
-		final User user = findUserOrThrowInvalidCredentials(request.getEmail());
-		validateUserIsActive(user);
-		validatePasswordMatches(request.getPassword(), user.getPasswordHash());
+		final String email = normalizeEmail(request.getEmail());
 
-		final Long userId = user.getId();
-		final String role = resolveRole(user.getRole());
+		validateLoginAttemptAllowed(email);
 
-		final String accessToken = jwtTokenProvider.createAccessToken(userId, role);
-		final String refreshToken = jwtTokenProvider.createRefreshToken(userId);
+		try {
+			final User user = findUserOrThrowInvalidCredentials(email);
+			validateUserIsActive(user);
+			validatePasswordMatches(request.getPassword(), user.getPasswordHash());
 
-		saveRefreshTokenWhitelist(userId, refreshToken);
+			final Long userId = user.getId();
+			final String role = resolveRole(user.getRole());
 
-		return new LoginRes(
-			accessToken,
-			refreshToken,
-			"Bearer",
-			accessTokenExpiresInSeconds()
-		);
+			final String accessToken = jwtTokenProvider.createAccessToken(userId, role);
+			final String refreshToken = jwtTokenProvider.createRefreshToken(userId);
+
+			saveRefreshTokenWhitelist(userId, refreshToken);
+
+			clearLoginAttempts(email);
+
+			return new LoginRes(
+				accessToken,
+				refreshToken,
+				"Bearer",
+				accessTokenExpiresInSeconds()
+			);
+		} catch (CustomException e) {
+			if (e.getErrorCode() == AuthErrorCode.INVALID_CREDENTIALS) {
+				recordLoginFailure(email);
+			}
+			throw e;
+		}
 	}
 
 	private void validateEmailNotExists(final String email) {
@@ -162,7 +181,6 @@ public class AuthService {
 	}
 
 	private void validateUserIsActive(final User user) {
-		// 계정 상태 검증 (보안 정책 노출 최소화를 위해 인증 실패로 통일 처리)
 		if (user.getStatus() != UserStatus.ACTIVE) {
 			throw new CustomException(AuthErrorCode.INVALID_CREDENTIALS);
 		}
@@ -180,19 +198,80 @@ public class AuthService {
 
 	private void saveRefreshTokenWhitelist(final Long userId, final String refreshToken) {
 		final String refreshKey = buildRefreshWhitelistKey(userId, refreshToken);
-		stringRedisTemplate.opsForValue().set(
-			refreshKey,
-			"1",
-			Duration.ofMillis(jwtProperties.getRefreshTokenExpirationMs())
-		);
+		try {
+			stringRedisTemplate.opsForValue().set(
+				refreshKey,
+				"1",
+				Duration.ofMillis(jwtProperties.getRefreshTokenExpirationMs())
+			);
+		} catch (RedisConnectionFailureException e) {
+			log.error("Redis 장애로 RefreshToken 화이트리스트 저장에 실패했습니다. userId={}, key={}", userId, refreshKey, e);
+			throw e;
+		}
 	}
 
 	private int accessTokenExpiresInSeconds() {
 		final long accessTokenExpirationMs = jwtProperties.getAccessTokenExpirationMs();
-		return (int) (accessTokenExpirationMs / 1000);
+		return (int)(accessTokenExpirationMs / 1000);
 	}
 
 	private String buildRefreshWhitelistKey(final Long userId, final String refreshToken) {
 		return "refresh:" + userId + ":" + refreshToken;
 	}
+
+	private void validateLoginAttemptAllowed(final String email) {
+		final String lockKey = buildLoginLockKey(email);
+		try {
+			final Boolean locked = stringRedisTemplate.hasKey(lockKey);
+			if (Boolean.TRUE.equals(locked)) {
+				throw new CustomException(AuthErrorCode.TOO_MANY_ATTEMPTS);
+			}
+		} catch (RedisConnectionFailureException e) {
+			log.warn("Redis 장애로 로그인 시도 제한을 건너뜁니다. email={}, key={}", email, lockKey);
+		}
+	}
+
+	private void recordLoginFailure(final String email) {
+		final String attemptKey = buildLoginAttemptKey(email);
+		try {
+			final Long attempts = stringRedisTemplate.opsForValue().increment(attemptKey);
+
+			if (attempts != null && attempts == 1L) {
+				stringRedisTemplate.expire(attemptKey, LOGIN_ATTEMPT_WINDOW_TTL);
+			}
+
+			if (attempts != null && attempts >= MAX_LOGIN_ATTEMPTS) {
+				final String lockKey = buildLoginLockKey(email);
+				final Boolean locked = stringRedisTemplate.opsForValue().setIfAbsent(lockKey, "1", LOGIN_LOCK_TTL);
+				if (Boolean.TRUE.equals(locked)) {
+					log.warn("로그인 시도 횟수 초과로 계정을 잠금 처리했습니다. email={}, attempts={}", email, attempts);
+				}
+				throw new CustomException(AuthErrorCode.TOO_MANY_ATTEMPTS);
+			}
+		} catch (RedisConnectionFailureException e) {
+			log.warn("Redis 장애로 로그인 실패 카운트를 기록하지 못했습니다. email={}, key={}", email, attemptKey);
+		}
+	}
+
+	private void clearLoginAttempts(final String email) {
+		try {
+			stringRedisTemplate.delete(buildLoginAttemptKey(email));
+			stringRedisTemplate.delete(buildLoginLockKey(email));
+		} catch (RedisConnectionFailureException e) {
+			log.warn("Redis 장애로 로그인 시도 카운트를 초기화하지 못했습니다. email={}", email);
+		}
+	}
+
+	private String normalizeEmail(final String email) {
+		return (email == null) ? null : email.trim().toLowerCase();
+	}
+
+	private String buildLoginAttemptKey(final String email) {
+		return "login:attempt:" + email;
+	}
+
+	private String buildLoginLockKey(final String email) {
+		return "login:lock:" + email;
+	}
+
 }
