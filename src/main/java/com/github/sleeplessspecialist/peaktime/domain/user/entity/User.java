@@ -6,6 +6,8 @@ import com.github.sleeplessspecialist.peaktime.global.domain.BaseTimeEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -64,11 +66,13 @@ public class User extends BaseTimeEntity {
 	@Column(nullable = false)
 	private Long point;
 
+	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 20)
-	private String role;
+	private UserRole role;
 
+	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 20)
-	private String status;
+	private UserStatus status;
 
 	/**
 	 * 회원가입용 사용자 엔티티를 생성합니다.
@@ -91,8 +95,8 @@ public class User extends BaseTimeEntity {
 		user.passwordHash = passwordHash;
 		user.phoneNumber = phoneNumber;
 		user.point = 0L;
-		user.role = "STUDENT";
-		user.status = "ACTIVE";
+		user.role = UserRole.STUDENT;
+		user.status = UserStatus.ACTIVE;
 
 		return user;
 	}
