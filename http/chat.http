@@ -16,8 +16,14 @@ GET {{host}}/api/v1/chat/room?page=0&size=10&sort=createdAt,ASC
 Accept: application/json
 
 ### 채팅방 참여
-@roomId = 4
+@roomId = 1
 
 POST {{host}}/api/v1/chat/room/{{roomId}}/join
+Content-Type: application/json
+#Authorization: Bearer {{token}}
+
+### 채팅방 닫기
+
+POST {{host}}/api/v1/chat/room/{{roomId}}/close
 Content-Type: application/json
 #Authorization: Bearer {{token}}

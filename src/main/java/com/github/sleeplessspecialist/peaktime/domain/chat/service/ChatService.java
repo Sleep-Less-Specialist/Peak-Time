@@ -189,7 +189,24 @@ public class ChatService {
 			.build();
 		chatParticipantRepository.save(chatParticipant);
 
-		chatRoom.updateStatus(ChatRoomStatus.MATCHED);
+		chatRoom.matched();
+	}
+
+	/**
+	 * 커피챗 종료하기
+	 * 1. roomId DB 존재 여부 확인
+	 * 2. userId DB 존재 여부 확인
+	 * 3. 방의 참여자이면서 Host 인지 검증
+	 * 4. 상태 전이(OPEN, MATCHED -> CLOSED)
+	 */
+	@Transactional
+	public void closeRoom(Long roomId, Long userId) {
+
+		ChatRoom chatRoom = getChatRoom(roomId);
+		User user = getUser(userId);
+
+		validateHostPermission(roomId, userId);
+		chatRoom.close();
 	}
 
 	/**
@@ -237,7 +254,18 @@ public class ChatService {
 		}
 	}
 
+	/**
+	 * 참가자인지 검증과 동시에 RoleInRoom 이 RoleInRoom.HOST 인지 검증합니다.
+	 */
+	private void validateHostPermission(Long roomId, Long userId) {
+		boolean isHost = chatParticipantRepository
+			.existsByChatRoomIdAndUserIdAndRoleInRoom(roomId, userId, RoleInRoom.HOST);
 
+		if (!isHost) {
+			log.warn("채팅방 닫기 실패: roomId={}, userId={}", roomId, userId);
+			throw new CustomException(ChatErrorCode.UNAUTHORIZED_ACCESS);
+		}
+	}
 
 	/**
 	 * 페이지 쿼리 파라미터 변수를 검증하는 메서드
