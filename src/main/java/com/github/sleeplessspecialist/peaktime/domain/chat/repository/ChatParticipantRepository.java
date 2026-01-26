@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.github.sleeplessspecialist.peaktime.domain.chat.entity.ChatParticipant;
 import com.github.sleeplessspecialist.peaktime.domain.chat.entity.ChatRoom;
+import com.github.sleeplessspecialist.peaktime.domain.chat.entity.RoleInRoom;
 import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
 
 /**
@@ -25,4 +26,6 @@ public interface ChatParticipantRepository extends JpaRepository<ChatParticipant
 	boolean existsByChatRoomIdAndUserId(Long roomId, Long userId);
 
 	long countByChatRoomId(Long roomId);
+
+	boolean existsByChatRoomIdAndUserIdAndRoleInRoom(Long roomId, Long userId, RoleInRoom roleInRoom);
 }

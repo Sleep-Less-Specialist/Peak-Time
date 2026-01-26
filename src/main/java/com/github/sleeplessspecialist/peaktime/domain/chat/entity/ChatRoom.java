@@ -1,5 +1,7 @@
 package com.github.sleeplessspecialist.peaktime.domain.chat.entity;
 
+import java.time.LocalDateTime;
+
 import com.github.sleeplessspecialist.peaktime.global.domain.BaseTimeEntity;
 
 import jakarta.persistence.Column;
@@ -54,6 +56,8 @@ public class ChatRoom extends BaseTimeEntity {
 	@Column(nullable = false)
 	private boolean isGroupChat;
 
+	private LocalDateTime closedAt;
+
 	@Builder
 	public ChatRoom(String description) {
 		this.description = description;
@@ -61,7 +65,12 @@ public class ChatRoom extends BaseTimeEntity {
 		this.isGroupChat = false;
 	}
 
-	public void updateStatus(ChatRoomStatus chatRoomStatus){
-		this.chatRoomStatus = chatRoomStatus;
+	public void matched() {
+		this.chatRoomStatus = ChatRoomStatus.MATCHED;
+	}
+
+	public void close() {
+		this.chatRoomStatus = ChatRoomStatus.CLOSED;
+		this.closedAt = LocalDateTime.now();
 	}
 }
