@@ -32,7 +32,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
 	 */
 	@Query("""
     SELECT m
-    FROM ChatMessage m
+    FROM ChatMessage m JOIN FETCH m.user
     WHERE m.chatRoom.id = :roomId
       AND (:lastId IS NULL OR m.id < :lastId)
     ORDER BY m.id DESC""")
