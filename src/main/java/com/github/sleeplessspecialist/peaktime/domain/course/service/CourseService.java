@@ -3,10 +3,13 @@ package com.github.sleeplessspecialist.peaktime.domain.course.service;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseDetailRes;
+import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseListRes;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseRegisterReq;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseRegisterRes;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CurriculumDto;
@@ -107,5 +110,28 @@ public class CourseService {
 			curriculumList,
 			course.getUpdatedAt()
 		);
+	}
+
+	/**
+	 * 강의 전체 목록을 페이징하여 조회합니다.
+	 *
+	 * @param pageable 페이징 정보 (page, size, sort)
+	 * @return 페이징된 강의 목록 DTO
+	 */
+	public Page<CourseListRes> getCourseList(Pageable pageable) {
+
+		Page<Course> coursePage = courseRepository.findAllWithLecturer(pageable);
+
+		return coursePage.map(course -> new CourseListRes(
+			course.getId(),
+			course.getTitle(),
+			course.getDescription(),
+			course.getCategory(),
+			course.getPrice(),
+			course.getThumbnailUrl(),
+			course.getRatingAvg(),
+			course.getReviewCount(),
+			course.getLecturer().getName()
+		));
 	}
 }
