@@ -2,6 +2,8 @@ package com.github.sleeplessspecialist.peaktime.domain.course.repository;
 
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -26,4 +28,13 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 		"LEFT JOIN FETCH c.lectures " +
 		"WHERE c.id = :courseId")
 	Optional<Course> findByIdWithDetail(@Param("courseId") Long courseId);
+
+	/**
+	 * 강의 목록을 페이징하여 조회합니다.
+	 * N+1 문제를 방지하기 위해 Lecturer(지식공유자)를 Fetch Join 합니다.
+	 * * countQuery: 페이징을 위해서는 전체 개수를 세는 쿼리가 별도로 필요합니다.
+	 */
+	@Query(value = "SELECT c FROM Course c JOIN FETCH c.lecturer",
+		countQuery = "SELECT COUNT(c) FROM Course c")
+	Page<Course> findAllWithLecturer(Pageable pageable);
 }
