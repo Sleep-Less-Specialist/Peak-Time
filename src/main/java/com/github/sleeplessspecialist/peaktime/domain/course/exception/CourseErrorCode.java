@@ -22,7 +22,8 @@ import lombok.RequiredArgsConstructor;
 public enum CourseErrorCode implements ErrorCode {
 
 	USER_NOT_FOUND("C001", "존재하지 않는 사용자입니다.", HttpStatus.NOT_FOUND),
-	UNAUTHORIZED_ACCESS("C002", "강의를 등록할 권한이 없습니다.", HttpStatus.FORBIDDEN);
+	UNAUTHORIZED_ACCESS("C002", "강의를 등록할 권한이 없습니다.", HttpStatus.FORBIDDEN),
+	COURSE_NOT_FOUND("C003", "존재하지 않는 강의입니다.", HttpStatus.NOT_FOUND);
 
 	private final String code;
 	private final String message;
