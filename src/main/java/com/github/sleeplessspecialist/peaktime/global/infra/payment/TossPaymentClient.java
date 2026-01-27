@@ -16,8 +16,6 @@ import com.github.sleeplessspecialist.peaktime.domain.payment.dto.TossPaymentCon
 import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
 import com.github.sleeplessspecialist.peaktime.global.common.error.GlobalErrorCode;
 
-import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -32,23 +30,24 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class TossPaymentClient {
 
 	private final ObjectMapper objectMapper;
-	private RestClient restClient;
+	private final RestClient restClient;
 
-	@Value("${payment.toss.url}")
-	private String baseUrl;
+	// 생성자 주입
+	public TossPaymentClient(
+		RestClient.Builder builder,
+		ObjectMapper objectMapper,
+		@Value("${payment.toss.url}") String baseUrl,
+		@Value("${payment.toss.secret-key}") String secretKey
+	) {
+		this.objectMapper = objectMapper;
 
-	@Value("${payment.toss.secret-key}")
-	private String secretKey;
-
-	@PostConstruct
-	public void init() {
+		// 생성자 내부에서 암호화 및 RestClient 초기화 수행
 		String encodedKey = Base64.getEncoder().encodeToString((secretKey + ":").getBytes(StandardCharsets.UTF_8));
 
-		this.restClient = RestClient.builder()
+		this.restClient = builder
 			.baseUrl(baseUrl)
 			.defaultHeader(HttpHeaders.AUTHORIZATION, "Basic " + encodedKey)
 			.defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
