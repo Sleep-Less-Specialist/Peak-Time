@@ -162,6 +162,25 @@ public class AuthService {
 		}
 	}
 
+	/**
+	 * Refresh Token을 이용해 Access Token과 Refresh Token을 재발급합니다.
+	 *
+	 * <p>
+	 * 전달받은 Refresh Token의 서명 및 만료 여부를 검증한 뒤,
+	 * Redis 화이트리스트에 등록된 토큰인지 확인합니다.
+	 * 검증이 완료되면 기존 Refresh Token을 폐기하고
+	 * 새로운 Access / Refresh Token을 발급합니다. (Refresh Token Rotation)
+	 * </p>
+	 *
+	 * <p>
+	 * 유효하지 않거나 화이트리스트에 존재하지 않는 Refresh Token은
+	 * 재발급이 허용되지 않습니다.
+	 * </p>
+	 *
+	 * @param request 재발급에 사용할 Refresh Token을 포함한 요청 DTO
+	 * @return 새로 발급된 Access / Refresh Token 정보
+	 * @throws CustomException 유효하지 않거나 만료된 Refresh Token인 경우
+	 */
 	public RefreshRes refreshToken(final RefreshReq request) {
 		final String refreshToken = request.getRefreshToken();
 
@@ -180,6 +199,27 @@ public class AuthService {
 		} catch (Exception e) {
 			throw new CustomException(AuthErrorCode.INVALID_REFRESH_TOKEN);
 		}
+	}
+
+	/**
+	 * Refresh Token 기반 로그아웃을 처리합니다.
+	 * <p>
+	 * 전달받은 Refresh Token 유효성 검증 이후 Redis 화이트리스트에서 해당 토큰을 삭제하여 토큰 재발급을 차단합니다.
+	 * Access Token은 Stateless(JWT) 특성상 서버에 저장되지 않으므로, 로그아웃 이후에도 만료 시점까지는 유효할 수 있습니다.
+	 * </p>
+	 *
+	 * @param refreshToken 로그아웃 대상 Refresh Token
+	 * @throws CustomException 유효하지 않은 Refresh Token 인 경우
+	 */
+	public void logout(final String refreshToken) {
+		validateRefreshToken(refreshToken);
+
+		final User user = validateUserByRefreshToken(refreshToken);
+		final Long userId = user.getId();
+
+		validateRefreshTokenWhitelisted(userId, refreshToken);
+
+		revokeRefreshTokenWhitelist(userId, refreshToken);
 	}
 
 	private User validateUserByRefreshToken(final String refreshToken) {
