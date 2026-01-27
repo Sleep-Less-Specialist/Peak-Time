@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8"/>
+    <script src="https://js.tosspayments.com/v2/standard"></script>
+</head>
+<body>
+<div>
+    <input type="checkbox" id="coupon-box"/>
+    <label for="coupon-box"> 100원 쿠폰 적용 </label>
+</div>
+<div id="payment-method"></div>
+<div id="agreement"></div>
+<button class="button" id="payment-button" style="margin-top: 30px">결제하기</button>
+
+<script>
+    main();
+
+    async function main() {
+        const button = document.getElementById("payment-button");
+        const coupon = document.getElementById("coupon-box");
+        // ------  결제위젯 초기화 ------
+        const clientKey = "test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm";
+        const tossPayments = TossPayments(clientKey);
+        // 회원 결제
+        const customerKey = "oXWHeo1gUCwx-FikAAUCGF";
+        const widgets = tossPayments.widgets({
+            customerKey,
+        });
+
+        // ------ 주문의 결제 금액 설정 ------
+        await widgets.setAmount({
+            currency: "KRW",
+            value: 1000,
+        });
+
+        await Promise.all([
+            // ------  결제 UI 렌더링 ------
+            widgets.renderPaymentMethods({
+                selector: "#payment-method",
+                variantKey: "DEFAULT",
+            }),
+            // ------  이용약관 UI 렌더링 ------
+            widgets.renderAgreement({selector: "#agreement", variantKey: "AGREEMENT"}),
+        ]);
+
+        // ------  주문서의 결제 금액이 변경되었을 경우 결제 금액 업데이트 ------
+        coupon.addEventListener("change", async function () {
+            ㅌ
+            if (coupon.checked) {
+                await widgets.setAmount({
+                    currency: "KRW",
+                    value: 1000 - 100,
+                });
+
+                return;
+            }
+
+            await widgets.setAmount({
+                currency: "KRW",
+                value: 1000,
+            });
+        });
+
+        // ------ '결제하기' 버튼 누르면 결제창 띄우기 ------
+        button.addEventListener("click", async function () {
+            // 결제 버튼을 누를 때마다 새로운 orderId를 생성합니다.
+            const newOrderId = "ORDER-" + generateRandomString();
+
+            await widgets.requestPayment({
+                orderId: newOrderId, // 여기서 랜덤 ID 사용
+                orderName: "토스 티셔츠 외 2건",
+                successUrl: window.location.origin + "/success.html",
+                failUrl: window.location.origin + "/fail.html",
+                customerEmail: "customer123@gmail.com",
+                customerName: "김토스",
+                customerMobilePhone: "01012341234",
+            });
+        });
+    }
+
+    // 랜덤 문자열 생성 함수 (UUID 역할)
+    function generateRandomString() {
+        return window.btoa(Math.random()).slice(0, 20); // 랜덤한 문자열 생성
+    }
+</script>
+</body>
+</html>

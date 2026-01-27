@@ -1,7 +1,7 @@
 package com.github.sleeplessspecialist.peaktime.domain.course.dto;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 /**
  * 강의 등록 성공 시 반환되는 응답 DTO입니다.
@@ -15,7 +15,8 @@ import lombok.Getter;
  * @since 2026. 1. 22.
  */
 @Getter
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class CourseRegisterRes {
-	private Long courseId;
+
+	private final Long courseId;
 }

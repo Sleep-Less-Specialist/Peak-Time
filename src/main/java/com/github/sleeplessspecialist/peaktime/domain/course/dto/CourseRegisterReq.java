@@ -2,9 +2,8 @@ package com.github.sleeplessspecialist.peaktime.domain.course.dto;
 
 import java.math.BigDecimal;
 
-import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
 /**
  * 강의 등록 요청 시 클라이언트로부터 전달받는 데이터를 담는 DTO입니다.
@@ -17,20 +16,12 @@ import lombok.NoArgsConstructor;
  * @since 2026. 1. 22.
  */
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@RequiredArgsConstructor
 public class CourseRegisterReq {
 
-	private String title;
-	private String description;
-	private String category;
-	private BigDecimal price;
-	private String thumbnailUrl;
-
-	public CourseRegisterReq(String title, String description, String category, BigDecimal price, String thumbnailUrl) {
-		this.title = title;
-		this.description = description;
-		this.category = category;
-		this.price = price;
-		this.thumbnailUrl = thumbnailUrl;
-	}
+	private final String title;
+	private final String description;
+	private final String category;
+	private final BigDecimal price;
+	private final String thumbnailUrl;
 }
