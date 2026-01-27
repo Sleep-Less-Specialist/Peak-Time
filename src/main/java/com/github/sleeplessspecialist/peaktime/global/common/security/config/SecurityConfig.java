@@ -2,6 +2,7 @@ package com.github.sleeplessspecialist.peaktime.global.common.security.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -18,7 +19,7 @@ import com.github.sleeplessspecialist.peaktime.global.common.security.policy.Sec
 import lombok.RequiredArgsConstructor;
 
 /**
- * Spring Security의 기본 필터 체인을 구성하는 설정 클래스입니다.
+ * Spring Security 설정에서 사용하는 경로 정책을 정의합니다.
  *
  * <p>
  * 초기 개발 단계에서는 모든 요청을 허용하며,
@@ -72,8 +73,11 @@ public class SecurityConfig {
 			.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 
 			.authorizeHttpRequests(auth -> auth
-				// 인증 엔드포인트는 공개
+				// 명세 기반 공개 엔드포인트 + 공개 조회(GET)는 permitAll
 				.requestMatchers(SecurityPathPolicy.PUBLIC_ENDPOINTS).permitAll()
+				.requestMatchers(HttpMethod.GET, SecurityPathPolicy.PUBLIC_GET_ENDPOINTS).permitAll()
+				.requestMatchers(SecurityPathPolicy.ADMIN_ENDPOINTS).hasRole("ADMIN")
+				.requestMatchers(SecurityPathPolicy.LECTURER_ENDPOINTS).hasRole("LECTURER")
 				// 그 외는 인증 필요
 				.anyRequest().authenticated()
 			);
