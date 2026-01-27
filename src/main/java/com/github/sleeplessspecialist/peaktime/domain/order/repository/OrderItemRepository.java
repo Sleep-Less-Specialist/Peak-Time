@@ -1,6 +1,10 @@
 package com.github.sleeplessspecialist.peaktime.domain.order.repository;
 
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import com.github.sleeplessspecialist.peaktime.domain.order.entity.OrderItem;
 
@@ -15,4 +19,13 @@ import com.github.sleeplessspecialist.peaktime.domain.order.entity.OrderItem;
  * @since
  */
 public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
+
+	@Query("""
+    select oi
+    from OrderItem oi
+    join fetch oi.course c
+    where oi.order.id = :orderId
+""")
+	List<OrderItem> findAllByOrderId(@Param("orderId") Long orderId);
+
 }
