@@ -80,6 +80,7 @@ public class CourseService {
 	 * @param courseId 조회할 강의 ID
 	 * @return 강의 상세 응답 DTO (Curriculum 포함)
 	 */
+	@Transactional(readOnly = true)
 	public CourseDetailRes getCourseDetail(Long courseId) {
 
 		Course course = courseRepository.findByIdWithDetail(courseId)
@@ -118,6 +119,7 @@ public class CourseService {
 	 * @param pageable 페이징 정보 (page, size, sort)
 	 * @return 페이징된 강의 목록 DTO
 	 */
+	@Transactional(readOnly = true)
 	public Page<CourseListRes> getCourseList(Pageable pageable) {
 
 		Page<Course> coursePage = courseRepository.findAllWithLecturer(pageable);

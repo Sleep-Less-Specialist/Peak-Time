@@ -1,10 +1,11 @@
 package com.github.sleeplessspecialist.peaktime.domain.course;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
-import static org.mockito.Mockito.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
@@ -13,9 +14,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseDetailRes;
+import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseListRes;
 import com.github.sleeplessspecialist.peaktime.domain.course.entity.Course;
 import com.github.sleeplessspecialist.peaktime.domain.course.exception.CourseErrorCode;
 import com.github.sleeplessspecialist.peaktime.domain.course.repository.CourseRepository;
@@ -106,5 +112,57 @@ class CourseServiceTest {
 			.isInstanceOf(CustomException.class)
 			.extracting("errorCode")
 			.isEqualTo(CourseErrorCode.COURSE_NOT_FOUND);
+	}
+
+	@Test
+	@DisplayName("성공: 강의 목록을 페이징하여 조회하면, CourseListRes Page가 반환된다.")
+	void getCourseList_Success() {
+		// given
+		// 1. 페이징 요청 객체 생성 (0페이지, 10개씩)
+		Pageable pageable = PageRequest.of(0, 10);
+
+		// 2. 강사 및 강의 데이터 생성
+		User lecturer = User.createForSignup("이자바", "java@test.com", "hash", "01011112222");
+
+		Course course1 = Course.builder()
+			.title("자바의 정석")
+			.description("기초")
+			.category("BACKEND")
+			.price(BigDecimal.valueOf(10000))
+			.lecturer(lecturer)
+			.build();
+		ReflectionTestUtils.setField(course1, "id", 1L);
+
+		Course course2 = Course.builder()
+			.title("JPA 프로그래밍")
+			.description("심화")
+			.category("BACKEND")
+			.price(BigDecimal.valueOf(20000))
+			.lecturer(lecturer)
+			.build();
+		ReflectionTestUtils.setField(course2, "id", 2L);
+
+		// 3. Mock Page 객체 생성 (DB에서 반환될 예상 결과)
+		List<Course> courseList = List.of(course1, course2);
+		Page<Course> mockPage = new PageImpl<>(courseList, pageable, 2);
+
+		// 4. Mocking: Repository 호출 시 mockPage 반환
+		given(courseRepository.findAllWithLecturer(any(Pageable.class))).willReturn(mockPage);
+
+		// when
+		Page<CourseListRes> result = courseService.getCourseList(pageable);
+
+		// then
+		// 1. 페이지 크기 및 내용 검증
+		assertThat(result.getContent()).hasSize(2);
+		assertThat(result.getTotalElements()).isEqualTo(2);
+
+		// 2. 데이터 매핑 검증 (Entity -> DTO 변환 확인)
+		assertThat(result.getContent().get(0).getTitle()).isEqualTo("자바의 정석");
+		assertThat(result.getContent().get(0).getLecturerName()).isEqualTo("이자바"); // 강사 이름 확인
+		assertThat(result.getContent().get(1).getPrice()).isEqualTo(BigDecimal.valueOf(20000));
+
+		// 3. 호출 검증
+		verify(courseRepository).findAllWithLecturer(any(Pageable.class));
 	}
 }

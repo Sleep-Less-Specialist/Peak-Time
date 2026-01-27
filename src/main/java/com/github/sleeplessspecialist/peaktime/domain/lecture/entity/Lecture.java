@@ -45,7 +45,7 @@ public class Lecture extends BaseTimeEntity {
 	private String videoUrl;
 
 	@Column(nullable = false)
-	private Integer duration;
+	private Integer duration = 0;
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "course_id", nullable = false)
