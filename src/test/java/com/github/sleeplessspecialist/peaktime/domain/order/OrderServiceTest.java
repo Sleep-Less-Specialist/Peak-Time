@@ -21,8 +21,10 @@ import com.github.sleeplessspecialist.peaktime.domain.course.repository.CourseRe
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.CreateOrderItemReq;
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.CreateOrderReq;
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.CreateOrderRes;
+import com.github.sleeplessspecialist.peaktime.domain.order.dto.GetOrderDetailRes;
 import com.github.sleeplessspecialist.peaktime.domain.order.entity.Order;
 import com.github.sleeplessspecialist.peaktime.domain.order.entity.OrderItem;
+import com.github.sleeplessspecialist.peaktime.domain.order.entity.OrderStatus;
 import com.github.sleeplessspecialist.peaktime.domain.order.exception.OrderErrorCode;
 import com.github.sleeplessspecialist.peaktime.domain.order.repository.OrderItemRepository;
 import com.github.sleeplessspecialist.peaktime.domain.order.repository.OrderRepository;
@@ -139,7 +141,7 @@ class OrderServiceTest {
 
 	@Test
 	@DisplayName("createOrder: 보유 포인트 부족이면 예외")
-	void createOrder_insufficientPoint() {
+void createOrder_insufficientPoint() {
 		// given
 		Long userId = 1L;
 		User user = User.createForSignup("tester", "test@test.com", "encoded", "010-0000-0000");
@@ -161,4 +163,111 @@ class OrderServiceTest {
 		verify(orderItemRepository, never()).save(any(OrderItem.class));
 	}
 
+	@Test
+	@DisplayName("getOrder: 주문 상세 조회 성공")
+	void getOrder_success() {
+		// given
+		Long userId = 1L;
+		Long orderId = 100L;
+
+		User user = User.createForSignup("tester", "test@test.com", "encoded", "010-0000-0000");
+		ReflectionTestUtils.setField(user, "id", userId);
+
+		Course course1 = Course.builder()
+			.title("course-1")
+			.description("desc-1")
+			.category("cat-1")
+			.price(new BigDecimal("10000"))
+			.thumbnailUrl("thumb-1")
+			.lecturer(user)
+			.build();
+		ReflectionTestUtils.setField(course1, "id", 11L);
+
+		Course course2 = Course.builder()
+			.title("course-2")
+			.description("desc-2")
+			.category("cat-2")
+			.price(new BigDecimal("15000"))
+			.thumbnailUrl("thumb-2")
+			.lecturer(user)
+			.build();
+		ReflectionTestUtils.setField(course2, "id", 12L);
+
+		Order order = Order.builder()
+			.user(user)
+			.totalAmount(new BigDecimal("25000"))
+			.usePoint(new BigDecimal("1000"))
+			.build();
+		ReflectionTestUtils.setField(order, "id", orderId);
+		ReflectionTestUtils.setField(order, "status", OrderStatus.PENDING_PAYMENT);
+		ReflectionTestUtils.setField(order, "createdAt", java.time.LocalDateTime.of(2026, 1, 27, 10, 0));
+		ReflectionTestUtils.setField(order, "updatedAt", java.time.LocalDateTime.of(2026, 1, 27, 10, 5));
+
+		OrderItem item1 = OrderItem.builder()
+			.order(order)
+			.course(course1)
+			.price(course1.getPrice())
+			.build();
+		ReflectionTestUtils.setField(item1, "id", 1011L);
+
+		OrderItem item2 = OrderItem.builder()
+			.order(order)
+			.course(course2)
+			.price(course2.getPrice())
+			.build();
+		ReflectionTestUtils.setField(item2, "id", 1012L);
+
+		when(userRepository.findById(userId)).thenReturn(java.util.Optional.of(user));
+		when(orderRepository.findById(orderId)).thenReturn(java.util.Optional.of(order));
+		when(orderItemRepository.findAllByOrderId(orderId)).thenReturn(List.of(item1, item2));
+
+		// when
+		GetOrderDetailRes response = orderService.getOrder(userId, orderId);
+
+		// then
+		assertThat(response.getOrderId()).isEqualTo(orderId);
+		assertThat(response.getUserId()).isEqualTo(userId);
+		assertThat(response.getTotalAmount()).isEqualByComparingTo("25000");
+		assertThat(response.getUsePoint()).isEqualByComparingTo("1000");
+		assertThat(response.getOrderStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT);
+		assertThat(response.getCreateTime()).isEqualTo(java.time.LocalDateTime.of(2026, 1, 27, 10, 0));
+		assertThat(response.getUpdateTime()).isEqualTo(java.time.LocalDateTime.of(2026, 1, 27, 10, 5));
+		assertThat(response.getItems()).hasSize(2);
+		assertThat(response.getItems().get(0).getOrderItemId()).isEqualTo(1011L);
+		assertThat(response.getItems().get(0).getCourseId()).isEqualTo(11L);
+		assertThat(response.getItems().get(0).getPrice()).isEqualByComparingTo("10000");
+		assertThat(response.getItems().get(1).getOrderItemId()).isEqualTo(1012L);
+		assertThat(response.getItems().get(1).getCourseId()).isEqualTo(12L);
+		assertThat(response.getItems().get(1).getPrice()).isEqualByComparingTo("15000");
+	}
+
+	@Test
+	@DisplayName("getOrder: 다른 사용자 주문 조회 시 예외")
+	void getOrder_unauthorizedAccess() {
+		// given
+		Long userId = 1L;
+		Long orderId = 100L;
+
+		User user = User.createForSignup("tester", "test@test.com", "encoded", "010-0000-0000");
+		ReflectionTestUtils.setField(user, "id", userId);
+
+		User otherUser = User.createForSignup("other", "other@test.com", "encoded", "010-0000-0001");
+		ReflectionTestUtils.setField(otherUser, "id", 2L);
+
+		Order order = Order.builder()
+			.user(otherUser)
+			.totalAmount(new BigDecimal("25000"))
+			.usePoint(new BigDecimal("1000"))
+			.build();
+		ReflectionTestUtils.setField(order, "id", orderId);
+
+		when(userRepository.findById(userId)).thenReturn(java.util.Optional.of(user));
+		when(orderRepository.findById(orderId)).thenReturn(java.util.Optional.of(order));
+
+		// when / then
+		assertThatThrownBy(() -> orderService.getOrder(userId, orderId))
+			.isInstanceOf(CustomException.class)
+			.satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
+				.isEqualTo(OrderErrorCode.UNAUTHORIZED_ACCESS));
+	}
 }
