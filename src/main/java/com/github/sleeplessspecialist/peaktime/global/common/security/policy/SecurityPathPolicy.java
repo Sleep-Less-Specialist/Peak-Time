@@ -1,12 +1,11 @@
 package com.github.sleeplessspecialist.peaktime.global.common.security.policy;
 
 /**
- * 보안 경로 정책을 관리하는 클래스입니다.
+ * Spring Security 설정에서 사용하는 경로 정책을 정의합니다.
+ *
  * <p>
- * Spring Security 설정에서 공개 API(permitAll)와
- * 보호 API(authenticated)의 경계를 명확히 하기 위한 경로 정책 값을 한 곳에서 관리합니다.
- * 현재는 기능 개발 병행을 위해 전체 API를 공개(permitAll)로 두되,
- * 이후 인증/인가 적용 시 공개 경로(/api/v1/auth/** 등)와 보호 경로를 점진적으로 분리합니다.
+ * 명세 기준으로 비로그인 허용(permitAll) 범위와
+ * 역할(ROLE) 기반 보호 경로를 한 곳에서 관리합니다.
  * </p>
  *
  * @author 재원
@@ -18,23 +17,43 @@ public final class SecurityPathPolicy {
 	/**
 	 * 공개(permitAll) 엔드포인트 목록입니다.
 	 * <p>
-	 * 현재는 기능 개발 병행을 위해 전체 API를 공개 처리합니다. ("/**")
-	 * 이후 단계에서 아래 {@link #AUTH_ENDPOINTS} 등으로 좁혀갈 예정입니다.
+	 * 인증/인가(비로그인 가능)
 	 * </p>
 	 */
-	public static final String[] PUBLIC_ENDPOINTS = {"/**"};
+	public static final String[] PUBLIC_ENDPOINTS = {
+		"/error",
+
+		// 인증/인가(비로그인 가능)
+		"/api/v1/auth/signup",
+		"/api/v1/auth/login",
+		"/api/v1/auth/refresh",
+		"/api/v1/auth/logout",
+		"/api/v1/auth/password/**",
+
+		// OAuth 시작/콜백
+		"/api/v1/oauth2/**"
+	};
 
 	/**
-	 * 인증 관련 엔드포인트 목록입니다.
+	 * 공개 조회(GET) 엔드포인트 목록입니다.
 	 * <p>
-	 * 인가 적용 단계에서 공개 경로를 아래 목록으로 축소하는 것을 기본값으로 가정합니다.
+	 * 명세에서 "공통(비로그인)"으로 정의된 조회 API만 포함합니다.
+	 * (중요) POST/PATCH/DELETE까지 열리지 않도록 SecurityConfig에서 HttpMethod.GET와 함께 사용해야 합니다.
 	 * </p>
 	 */
-	public static final String[] AUTH_ENDPOINTS = {
-		"/api/v1/auth/login",
-		"/api/v1/auth/signup",
-		"/api/v1/auth/**"
+	public static final String[] PUBLIC_GET_ENDPOINTS = {
+		"/api/v1/courses",
+		"/api/v1/courses/*",
+		"/api/v1/reviews",
+		"/api/v1/reviews/*",
+		"/api/v1/chat/room" // 커피챗 전체 조회(비로그인)
 	};
+
+	// 관리자
+	public static final String ADMIN_ENDPOINTS = "/api/v1/admin/**";
+
+	// 강의자
+	public static final String LECTURER_ENDPOINTS = "/api/v1/lecturer/**";
 
 	private SecurityPathPolicy() {
 	}

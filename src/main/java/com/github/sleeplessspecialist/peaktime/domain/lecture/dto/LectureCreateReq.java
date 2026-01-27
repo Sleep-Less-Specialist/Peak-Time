@@ -5,7 +5,7 @@ import org.springframework.web.multipart.MultipartFile;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.NoArgsConstructor;
 
 /**
  * 강의 영상 등록 요청 시 클라이언트로부터 전달받는 데이터를 담는 DTO입니다.
@@ -19,12 +19,13 @@ import lombok.RequiredArgsConstructor;
  * @since 2026. 1. 22.
  */
 @Getter
-@RequiredArgsConstructor
+@NoArgsConstructor
 public class LectureCreateReq {
 
 	@NotBlank(message = "강의 제목은 필수입니다.")
-	private final String title;
+	private String title;
 
 	@NotNull(message = "영상 파일은 필수입니다.")
-	private final MultipartFile videoFile;
+	private MultipartFile videoFile;
+
 }

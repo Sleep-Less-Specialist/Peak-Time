@@ -1,10 +1,16 @@
 package com.github.sleeplessspecialist.peaktime.domain.course.service;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseDetailRes;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseRegisterReq;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseRegisterRes;
+import com.github.sleeplessspecialist.peaktime.domain.course.dto.CurriculumDto;
+import com.github.sleeplessspecialist.peaktime.domain.course.dto.LecturerDto;
 import com.github.sleeplessspecialist.peaktime.domain.course.entity.Course;
 import com.github.sleeplessspecialist.peaktime.domain.course.exception.CourseErrorCode;
 import com.github.sleeplessspecialist.peaktime.domain.course.repository.CourseRepository;
@@ -21,7 +27,7 @@ import lombok.RequiredArgsConstructor;
  * </p>
  *
  * @author 기섭
- * @version 1.0
+ * @version 1.1
  * @since 2026. 1. 22.
  */
 @Service
@@ -59,5 +65,47 @@ public class CourseService {
 		Course savedCourse = courseRepository.save(course);
 
 		return new CourseRegisterRes(savedCourse.getId());
+	}
+
+	/**
+	 * 강의 상세 정보를 조회합니다.
+	 * <p>
+	 * 강의 기본 정보뿐만 아니라 지식공유자(Lecturer) 정보와
+	 * 커리큘럼(Lecture List)을 함께 반환합니다.
+	 * </p>
+	 *
+	 * @param courseId 조회할 강의 ID
+	 * @return 강의 상세 응답 DTO (Curriculum 포함)
+	 */
+	public CourseDetailRes getCourseDetail(Long courseId) {
+
+		Course course = courseRepository.findByIdWithDetail(courseId)
+			.orElseThrow(() -> new CustomException(CourseErrorCode.COURSE_NOT_FOUND));
+
+		LecturerDto lecturerDto = new LecturerDto(
+			course.getLecturer().getId(),
+			course.getLecturer().getName()
+		);
+
+		List<CurriculumDto> curriculumList = course.getLectures().stream()
+			.map(lecture -> new CurriculumDto(
+				lecture.getId(),
+				lecture.getTitle(),
+				lecture.getDuration()
+			))
+			.collect(Collectors.toList());
+
+		return new CourseDetailRes(
+			course.getId(),
+			course.getTitle(),
+			course.getDescription(),
+			course.getPrice(),
+			course.getThumbnailUrl(),
+			course.getRatingAvg(),
+			course.getReviewCount(),
+			lecturerDto,
+			curriculumList,
+			course.getUpdatedAt()
+		);
 	}
 }

@@ -101,11 +101,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	 * 토큰의 role claim을 기반으로 권한 정보를 생성합니다.
 	 */
 	private List<GrantedAuthority> extractAuthorities(String token) {
-		String role = jwtTokenProvider.parseClaims(token).get("role", String.class);
+		String role = jwtTokenProvider.getRole(token);
 		if (role == null || role.isBlank()) {
 			return List.of();
 		}
-		return List.of(new SimpleGrantedAuthority(role));
+		return List.of(new SimpleGrantedAuthority("ROLE_" + role));
 	}
 
 	/**

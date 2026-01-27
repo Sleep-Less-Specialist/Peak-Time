@@ -71,7 +71,25 @@ public final class ApiResponse<T> {
 	}
 
 	/**
-	 * 커스텀 성공 코드 (데이터 없음)
+	 * 데이터가 없는 성공 응답 (204 No Content)
+	 *
+	 * <p>
+	 * 응답 바디를 포함하지 않는 성공 응답이 필요한 경우 사용합니다.
+	 * (예: 로그아웃, 상태 변경 API 등)
+	 * </p>
+	 */
+	public static <T> ApiResponse<T> noContent() {
+		return new ApiResponse<>(
+			true,
+			SuccessCode.NO_CONTENT.getCode(),
+			SuccessCode.NO_CONTENT.getMessage(),
+			null,
+			LocalDateTime.now()
+		);
+	}
+
+	/**
+	 * 커스텀 성공 코드 ( 데이터 없음)
 	 */
 	public static <T> ApiResponse<T> of(SuccessCode successCode) {
 		return new ApiResponse<>(

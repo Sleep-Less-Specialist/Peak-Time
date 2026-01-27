@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.request.LoginReq;
+import com.github.sleeplessspecialist.peaktime.domain.auth.dto.request.LogoutReq;
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.request.RefreshReq;
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.request.SignupReq;
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.response.LoginRes;
@@ -77,5 +78,26 @@ public class AuthController {
 	public ApiResponse<RefreshRes> refresh(@Valid @RequestBody RefreshReq request) {
 		final RefreshRes response = authService.refreshToken(request);
 		return ApiResponse.ok(response);
+	}
+
+	/**
+	 * 로그아웃을 수행합니다.
+	 *
+	 * <p>
+	 * 클라이언트로부터 전달받은 Refresh Token을 Redis 화이트리스트에서 삭제하여 이후 토큰 재발급을 차단합니다.
+	 * </p>
+	 *
+	 * <p>
+	 * Access Token은 Stateless(JWT) 특성상 서버에 저장되지 않으므로, 로그아웃 이후에도 만료 시점까지는 유효할 수 있습니다.
+	 * </p>
+	 *
+	 * @param request 로그아웃 대상 Refresh Token을 포함한 요청 DTO
+	 * @return 로그아웃 성공 시 204 No Content
+	 */
+	@PostMapping("/logout")
+	public ApiResponse<Void> logout(@Valid @RequestBody LogoutReq request) {
+		authService.logout(request.getRefreshToken());
+		return ApiResponse.noContent();
+
 	}
 }
