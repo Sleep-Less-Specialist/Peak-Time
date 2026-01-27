@@ -204,7 +204,7 @@ public class ChatService {
 
 		validateUser(userId);
 
-		ChatRoom chatRoom = getChatRoom(userId);
+		ChatRoom chatRoom = getChatRoom(roomId);
 
 		validateHostPermission(roomId, userId);
 		chatRoom.close();
