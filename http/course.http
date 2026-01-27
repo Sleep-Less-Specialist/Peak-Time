@@ -1,0 +1,37 @@
+### 변수 설정
+@host = http://localhost:8080
+@courseId = 1
+
+### 1. 강의 생성
+POST {{host}}/api/v1/courses
+Content-Type: application/json
+
+{
+  "title": "스프링 부트 완벽 정복",
+  "description": "이 강의 하나면 실무 투입 가능합니다.",
+  "category": "BACKEND",
+  "price": 55000,
+  "thumbnailUrl": "https://via.placeholder.com/600x400"
+}
+
+### 2. 강의 영상 업로드 (Multipart)
+# 주의: http 폴더(이 파일과 같은 위치)에 'test-video.mp4' 파일이 있어야 동작합니다.
+POST {{host}}/api/v1/courses/{{courseId}}/lectures
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="title"
+Content-Type: text/plain
+
+1강. 오리엔테이션
+
+--WebAppBoundary
+Content-Disposition: form-data; name="videoFile"; filename="test-video.mp4"
+Content-Type: video/mp4
+
+< ./test-video.mp4
+--WebAppBoundary--
+
+### 3. 강의 상세 조회
+GET {{host}}/api/v1/lecturer/courses/{{courseId}}
+Accept: application/json
