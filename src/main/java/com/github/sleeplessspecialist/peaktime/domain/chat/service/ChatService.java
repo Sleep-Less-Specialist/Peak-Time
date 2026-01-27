@@ -202,15 +202,16 @@ public class ChatService {
 	@Transactional
 	public void closeRoom(Long roomId, Long userId) {
 
+		validateUser(userId);
+
 		ChatRoom chatRoom = getChatRoom(roomId);
-		User user = getUser(userId);
 
 		validateHostPermission(roomId, userId);
 		chatRoom.close();
 	}
 
 	/**
-	 * Room 이 DB 에 존재 하는지 검증
+	 * Room 이 DB 에 존재 하는지 검증 + 없다면 throw
 	 */
 	private ChatRoom getChatRoom(Long roomId) {
 		return chatRoomRepository.findById(roomId)
@@ -218,11 +219,20 @@ public class ChatService {
 	}
 
 	/**
-	 * User 가 DB 에 존재 하는지 검증
+	 * User 가 DB 에 존재 하는지 검증 + 없다면 throw
 	 */
 	private User getUser(Long userId) {
 		return userRepository.findById(userId)
 			.orElseThrow(() -> new CustomException(ChatErrorCode.USER_NOT_FOUND));
+	}
+
+	/**
+	 * User 가 DB 에 존재 하는지 검증
+	 */
+	private void validateUser(Long userId) {
+		if (!userRepository.existsById(userId)) {
+			throw new CustomException(ChatErrorCode.USER_NOT_FOUND);
+		}
 	}
 
 	/**
