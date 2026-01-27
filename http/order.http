@@ -1,0 +1,14 @@
+# 환경 변수
+@host = http://localhost:8080
+@contentType = application/json
+
+# 주문 생성
+POST {{host}}/api/v1/orders
+Content-Type: {{contentType}}
+
+{
+  "orderItems": [
+    { "courseId": 1 }
+  ],
+  "usePoint": 1000
+}
