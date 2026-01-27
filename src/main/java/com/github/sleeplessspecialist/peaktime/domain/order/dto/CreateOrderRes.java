@@ -23,15 +23,10 @@ import lombok.RequiredArgsConstructor;
 @Builder
 public class CreateOrderRes {
 
-	private final List<CreateOrderItemRes> items;
-
+	private final List<OrderItemRes> items;
 	private final Long orderId;
-
 	private final Long userId;
-
 	private final BigDecimal totalAmount;
-
 	private final BigDecimal usePoint;
-
 	private final LocalDateTime createdAt;
 }
