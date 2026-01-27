@@ -1,10 +1,14 @@
 package com.github.sleeplessspecialist.peaktime.domain.course.entity;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
+import com.github.sleeplessspecialist.peaktime.domain.lecture.entity.Lecture;
 import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
+import com.github.sleeplessspecialist.peaktime.global.domain.BaseTimeEntity;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -13,6 +17,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -20,21 +25,21 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * 강의 정보를 저장하는 엔티티 클래스입니다.
+ * 강의(강좌) 정보를 저장하는 엔티티 클래스입니다.
  * <p>
- * 데이터베이스의 'courses' 테이블과 매핑되며,
- * 강의 제목, 설명, 가격, 썸네일 및 지식공유자 정보를 관리합니다.
+ * 강의 제목, 설명, 가격, 썸네일 및 지식공유자(Lecturer) 정보를 관리합니다.
+ * 하나의 강의는 여러 개의 개별 영상(Lecture)을 가집니다.
  * </p>
  *
  * @author 기섭
- * @version 1.0
+ * @version 1.1
  * @since 2026. 1. 22.
  */
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "courses")
-public class Course {
+public class Course extends BaseTimeEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -54,12 +59,18 @@ public class Course {
 
 	private String thumbnailUrl;
 
+	@Column(nullable = false)
+	private Double ratingAvg = 0.0;
+
+	@Column(nullable = false)
+	private Integer reviewCount = 0;
+
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "lecturer_id", nullable = false)
 	private User lecturer;
 
-	private LocalDateTime createdAt;
-	private LocalDateTime updatedAt;
+	@OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<Lecture> lectures = new ArrayList<>();
 
 	@Builder
 	public Course(String title, String description, String category, BigDecimal price, String thumbnailUrl,
@@ -70,7 +81,5 @@ public class Course {
 		this.price = price;
 		this.thumbnailUrl = thumbnailUrl;
 		this.lecturer = lecturer;
-		this.createdAt = LocalDateTime.now();
-		this.updatedAt = LocalDateTime.now();
 	}
 }
