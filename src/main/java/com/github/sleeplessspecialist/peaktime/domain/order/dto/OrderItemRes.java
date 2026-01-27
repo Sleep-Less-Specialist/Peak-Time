@@ -19,7 +19,7 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 @Builder
-public class CreateOrderItemRes {
+public class OrderItemRes {
 
 	private final Long orderItemId;
 	private final Long courseId;
