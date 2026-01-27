@@ -66,8 +66,7 @@ public class ChatService {
 	@Transactional
 	public void saveMessage(Long roomId, ChatMessageReq chatMessageReq) {
 
-		ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(
-			() -> new CustomException(ChatErrorCode.CHAT_ROOM_NOT_FOUND));
+		ChatRoom chatRoom = getChatRoom(roomId);
 
 		User user = userRepository.findByEmail(chatMessageReq.getEmail()).orElseThrow(
 			() -> new CustomException(ChatErrorCode.USER_NOT_FOUND));
