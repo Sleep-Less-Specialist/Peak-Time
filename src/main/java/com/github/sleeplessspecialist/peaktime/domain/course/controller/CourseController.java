@@ -1,10 +1,13 @@
 package com.github.sleeplessspecialist.peaktime.domain.course.controller;
 
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseDetailRes;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseRegisterReq;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseRegisterRes;
 import com.github.sleeplessspecialist.peaktime.domain.course.service.CourseService;
@@ -38,7 +41,24 @@ public class CourseController {
 	 */
 	@PostMapping
 	public ApiResponse<CourseRegisterRes> registerCourse(@RequestBody CourseRegisterReq req) {
+
 		CourseRegisterRes response = courseService.registerCourse(req);
+		return ApiResponse.ok(response);
+	}
+
+	/**
+	 * 강의 상세 정보를 조회합니다.
+	 * <p>
+	 * 접근 권한: 누구나 가능 (비로그인 포함)
+	 * </p>
+	 *
+	 * @param courseId 조회할 강의 ID
+	 * @return 강의 상세 정보 (커리큘럼 포함, 영상 URL 제외)
+	 */
+	@GetMapping("/{courseId}")
+	public ApiResponse<CourseDetailRes> getCourseDetail(@PathVariable Long courseId) {
+
+		CourseDetailRes response = courseService.getCourseDetail(courseId);
 		return ApiResponse.ok(response);
 	}
 }
