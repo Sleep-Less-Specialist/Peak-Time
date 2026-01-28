@@ -120,4 +120,11 @@ public class User extends BaseTimeEntity {
 		this.point = updated;
 	}
 
+	public void changeStatus(UserStatus newStatus) {
+		if (this.status == newStatus) {
+			return;
+		}
+		this.status = newStatus;
+	}
+
 }
