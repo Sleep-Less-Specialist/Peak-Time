@@ -1,5 +1,7 @@
 package com.github.sleeplessspecialist.peaktime.domain.order.controller;
 
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -7,11 +9,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.CreateOrderReq;
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.CreateOrderRes;
+import com.github.sleeplessspecialist.peaktime.domain.order.dto.GetOrderDetailRes;
 import com.github.sleeplessspecialist.peaktime.domain.order.service.OrderService;
 import com.github.sleeplessspecialist.peaktime.global.common.response.ApiResponse;
 import com.github.sleeplessspecialist.peaktime.global.common.response.SuccessCode;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -40,5 +44,13 @@ public class OrderController {
 		Long userId = 1L;
 		CreateOrderRes response = orderService.createOrder(userId, request);
 		return ApiResponse.of(SuccessCode.CREATED, response);
+	}
+
+	@GetMapping("/{orderId}")
+	public ApiResponse<GetOrderDetailRes> getOrder(@PathVariable @Positive Long orderId) {
+
+		Long userId = 1L;
+		GetOrderDetailRes response = orderService.getOrder(userId, orderId);
+		return ApiResponse.of(SuccessCode.OK, response);
 	}
 }

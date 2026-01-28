@@ -10,9 +10,10 @@ import org.springframework.transaction.annotation.Transactional;
 import com.github.sleeplessspecialist.peaktime.domain.course.entity.Course;
 import com.github.sleeplessspecialist.peaktime.domain.course.repository.CourseRepository;
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.CreateOrderItemReq;
-import com.github.sleeplessspecialist.peaktime.domain.order.dto.CreateOrderItemRes;
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.CreateOrderReq;
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.CreateOrderRes;
+import com.github.sleeplessspecialist.peaktime.domain.order.dto.GetOrderDetailRes;
+import com.github.sleeplessspecialist.peaktime.domain.order.dto.OrderItemRes;
 import com.github.sleeplessspecialist.peaktime.domain.order.entity.Order;
 import com.github.sleeplessspecialist.peaktime.domain.order.entity.OrderItem;
 import com.github.sleeplessspecialist.peaktime.domain.order.exception.OrderErrorCode;
@@ -45,6 +46,14 @@ public class OrderService {
 	private final OrderRepository orderRepository;
 	private final OrderItemRepository orderItemRepository;
 
+	/**
+	 * 주문 생성
+	 * 1. userId DB 존재 여부 확인
+	 * 2. 사용 포인트 유효성 검증
+	 * 3. 주문 및 장바구니 생성
+	 * 4. 총 주문 금액 계산 및 반영
+	 * 5. 응답 dto 생성 후 리턴
+	 */
 	@Transactional
 	public CreateOrderRes createOrder(Long userId, CreateOrderReq request) {
 
@@ -54,11 +63,7 @@ public class OrderService {
 		BigDecimal usePoint = request.getUsePoint();
 		BigDecimal userPoint = BigDecimal.valueOf(user.getPoint());
 
-		if (userPoint.compareTo(usePoint) < 0) {
-			log.warn("보유 포인트 부족 : user_id={}, 보유 포인트={}, 사용 포인트={}",
-				userId, userPoint, usePoint);
-			throw new CustomException(OrderErrorCode.INSUFFICIENT_POINT);
-		}
+		validateSufficientPoint(userId, userPoint, usePoint);
 
 		Order order = Order.builder()
 			.user(user)
@@ -68,7 +73,7 @@ public class OrderService {
 
 		orderRepository.save(order);
 
-		List<CreateOrderItemRes> orderItems = new ArrayList<>();
+		List<OrderItemRes> orderItems = new ArrayList<>();
 
 		for (CreateOrderItemReq orderItem : request.getOrderItems()) {
 
@@ -83,7 +88,7 @@ public class OrderService {
 				.build();
 			orderItemRepository.save(saved);
 
-			orderItems.add(CreateOrderItemRes.builder()
+			orderItems.add(OrderItemRes.builder()
 				.orderItemId(saved.getId())
 				.courseId(course.getId())
 				.price(course.getPrice())
@@ -103,18 +108,69 @@ public class OrderService {
 	}
 
 	/**
-	 * User 가 DB 에 존재 하는지 검증 + 없다면 throw
+	 * 주문 상세 조회
+	 * 1. userId DB 존재 여부 확인
+	 * 2. orderId DB 존재 여부 확인
+	 * 3. user 의 권한 검증
+	 * 4. 응답 dto 생성후 리턴
 	 */
+	@Transactional(readOnly = true)
+	public GetOrderDetailRes getOrder(Long userId, Long orderId) {
+
+		User user = getUser(userId);
+		Order order = getOrder(orderId);
+
+		validateAccess(user, order);
+
+		List<OrderItemRes> items = new ArrayList<>();
+
+		for (OrderItem item : orderItemRepository.findAllByOrderId(orderId)) {
+			items.add(OrderItemRes.builder()
+				.orderItemId(item.getId())
+				.courseId(item.getCourse().getId())
+				.price(item.getPrice())
+				.build());
+		}
+
+		return GetOrderDetailRes.builder()
+			.items(items)
+			.orderId(order.getId())
+			.userId(order.getUser().getId())
+			.totalAmount(order.getTotalAmount())
+			.usePoint(order.getUsePoint())
+			.orderStatus(order.getStatus())
+			.createTime(order.getCreatedAt())
+			.updateTime(order.getUpdatedAt())
+			.build();
+	}
+
 	private User getUser(Long userId) {
 		return userRepository.findById(userId)
 			.orElseThrow(() -> new CustomException(OrderErrorCode.USER_NOT_FOUND));
 	}
 
-	/**
-	 * Course 가 DB 에 존재 하는지 검증 + 없다면 throw
-	 */
 	private Course getCourse(Long courseId) {
 		return courseRepository.findById(courseId)
 			.orElseThrow(() -> new CustomException(OrderErrorCode.COURSE_NOT_FOUND));
+	}
+
+	private Order getOrder(Long orderId) {
+		return orderRepository.findById(orderId)
+			.orElseThrow(() -> new CustomException(OrderErrorCode.ORDER_NOT_FOUND));
+	}
+
+	private void validateAccess(User user, Order order) {
+		if (!user.getId().equals(order.getUser().getId())) {
+			log.warn("주문 조회 권한이 없습니다. userId = {}", user.getId());
+			throw new CustomException(OrderErrorCode.UNAUTHORIZED_ACCESS);
+		}
+	}
+
+	private void validateSufficientPoint(Long userId, BigDecimal userPoint, BigDecimal usePoint) {
+		if (userPoint.compareTo(usePoint) < 0) {
+			log.warn("보유 포인트 부족 : user_id={}, 사용자 보유 포인트={}, 사용 포인트={}",
+				userId, userPoint, usePoint);
+			throw new CustomException(OrderErrorCode.INSUFFICIENT_POINT);
+		}
 	}
 }

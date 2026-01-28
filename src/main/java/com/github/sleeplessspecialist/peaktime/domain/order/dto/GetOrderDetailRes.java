@@ -4,15 +4,14 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.github.sleeplessspecialist.peaktime.domain.order.entity.OrderStatus;
+
 import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 /**
- * 주문 생성 완료 후 클라이언트에게 반환되는 응답 DTO
- * <p>
- *
- * </p>
+ * 주문 상세 조회 api 호출시 클라이언트에게 반환되는 응답 DTO
  *
  * @author 주우재
  * @version 1.0
@@ -21,12 +20,14 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 @Builder
-public class CreateOrderRes {
+public class GetOrderDetailRes {
 
 	private final List<OrderItemRes> items;
 	private final Long orderId;
 	private final Long userId;
 	private final BigDecimal totalAmount;
 	private final BigDecimal usePoint;
-	private final LocalDateTime createdAt;
+	private final OrderStatus orderStatus;
+	private final LocalDateTime createTime;
+	private final LocalDateTime updateTime;
 }

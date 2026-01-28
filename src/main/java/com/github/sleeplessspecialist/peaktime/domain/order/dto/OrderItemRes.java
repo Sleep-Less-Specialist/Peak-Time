@@ -1,8 +1,6 @@
 package com.github.sleeplessspecialist.peaktime.domain.order.dto;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.List;
 
 import lombok.Builder;
 import lombok.Getter;
@@ -16,17 +14,14 @@ import lombok.RequiredArgsConstructor;
  *
  * @author 주우재
  * @version 1.0
- * @since 2026.01.27
+ * @since
  */
 @Getter
 @RequiredArgsConstructor
 @Builder
-public class CreateOrderRes {
+public class OrderItemRes {
 
-	private final List<OrderItemRes> items;
-	private final Long orderId;
-	private final Long userId;
-	private final BigDecimal totalAmount;
-	private final BigDecimal usePoint;
-	private final LocalDateTime createdAt;
+	private final Long orderItemId;
+	private final Long courseId;
+	private final BigDecimal price;
 }
