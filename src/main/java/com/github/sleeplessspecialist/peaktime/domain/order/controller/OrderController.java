@@ -1,5 +1,8 @@
 package com.github.sleeplessspecialist.peaktime.domain.order.controller;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -10,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.CreateOrderReq;
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.CreateOrderRes;
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.GetOrderDetailRes;
+import com.github.sleeplessspecialist.peaktime.domain.order.dto.GetOrderListRes;
 import com.github.sleeplessspecialist.peaktime.domain.order.service.OrderService;
 import com.github.sleeplessspecialist.peaktime.global.common.response.ApiResponse;
 import com.github.sleeplessspecialist.peaktime.global.common.response.SuccessCode;
@@ -47,10 +51,23 @@ public class OrderController {
 	}
 
 	@GetMapping("/{orderId}")
-	public ApiResponse<GetOrderDetailRes> getOrder(@PathVariable @Positive Long orderId) {
+	public ApiResponse<GetOrderDetailRes> getOrderDetail(@PathVariable @Positive Long orderId) {
 
 		Long userId = 1L;
-		GetOrderDetailRes response = orderService.getOrder(userId, orderId);
+		GetOrderDetailRes response = orderService.getOrderDetail(userId, orderId);
 		return ApiResponse.of(SuccessCode.OK, response);
 	}
+
+	@GetMapping
+	public ApiResponse<GetOrderListRes> getAllOrder(
+		@PageableDefault(
+			size = 10,
+			sort = "createdAt",
+			direction = Sort.Direction.DESC
+		) Pageable pageable
+	) {
+		Long userId = 1L;
+		return ApiResponse.of(SuccessCode.OK, orderService.getAllOrder(userId, pageable));
+	}
+
 }

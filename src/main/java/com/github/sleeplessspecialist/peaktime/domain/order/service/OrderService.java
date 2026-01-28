@@ -4,16 +4,21 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.github.sleeplessspecialist.peaktime.domain.chat.exception.ChatErrorCode;
 import com.github.sleeplessspecialist.peaktime.domain.course.entity.Course;
 import com.github.sleeplessspecialist.peaktime.domain.course.repository.CourseRepository;
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.CreateOrderItemReq;
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.CreateOrderReq;
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.CreateOrderRes;
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.GetOrderDetailRes;
+import com.github.sleeplessspecialist.peaktime.domain.order.dto.GetOrderListRes;
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.OrderItemRes;
+import com.github.sleeplessspecialist.peaktime.domain.order.dto.OrderListItemRes;
 import com.github.sleeplessspecialist.peaktime.domain.order.entity.Order;
 import com.github.sleeplessspecialist.peaktime.domain.order.entity.OrderItem;
 import com.github.sleeplessspecialist.peaktime.domain.order.exception.OrderErrorCode;
@@ -115,7 +120,7 @@ public class OrderService {
 	 * 4. 응답 dto 생성후 리턴
 	 */
 	@Transactional(readOnly = true)
-	public GetOrderDetailRes getOrder(Long userId, Long orderId) {
+	public GetOrderDetailRes getOrderDetail(Long userId, Long orderId) {
 
 		User user = getUser(userId);
 		Order order = getOrder(orderId);
@@ -144,6 +149,30 @@ public class OrderService {
 			.build();
 	}
 
+	@Transactional(readOnly = true)
+	public GetOrderListRes getAllOrder(Long userId, Pageable pageable) {
+
+		User user = getUser(userId);
+
+		validatePageable(pageable);
+
+		Page<Order> orderPage = orderRepository.findByUser(user, pageable);
+
+		List<OrderListItemRes> orders = orderPage.getContent().stream()
+			.map(OrderListItemRes::from)
+			.toList();
+
+		return GetOrderListRes.builder()
+			.orders(orders)
+			.page(orderPage.getNumber())
+			.size(orderPage.getSize())
+			.totalElements(orderPage.getTotalElements())
+			.totalPages(orderPage.getTotalPages())
+			.hasNext(orderPage.hasNext())
+			.build();
+	}
+
+
 	private User getUser(Long userId) {
 		return userRepository.findById(userId)
 			.orElseThrow(() -> new CustomException(OrderErrorCode.USER_NOT_FOUND));
@@ -171,6 +200,20 @@ public class OrderService {
 			log.warn("보유 포인트 부족 : user_id={}, 사용자 보유 포인트={}, 사용 포인트={}",
 				userId, userPoint, usePoint);
 			throw new CustomException(OrderErrorCode.INSUFFICIENT_POINT);
+		}
+	}
+
+	private void validatePageable(Pageable pageable) {
+
+		int page = pageable.getPageNumber();
+		int size = pageable.getPageSize();
+
+		if (page < 0) {
+			throw new CustomException(OrderErrorCode.BAD_PAGING_CONDITION);
+		}
+
+		if (size < 1 || size > 50) {
+			throw new CustomException(OrderErrorCode.BAD_PAGING_CONDITION);
 		}
 	}
 }
