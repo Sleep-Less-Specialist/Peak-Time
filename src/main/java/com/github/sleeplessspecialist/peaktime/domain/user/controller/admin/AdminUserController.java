@@ -2,11 +2,17 @@ package com.github.sleeplessspecialist.peaktime.domain.user.controller.admin;
 
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.github.sleeplessspecialist.peaktime.domain.user.dto.admin.request.AdminUpdateUserStatusReq;
+import com.github.sleeplessspecialist.peaktime.domain.user.dto.admin.response.AdminUpdateUserStatusRes;
 import com.github.sleeplessspecialist.peaktime.domain.user.dto.admin.response.AdminUserListRes;
+import com.github.sleeplessspecialist.peaktime.domain.user.entity.UserStatus;
 import com.github.sleeplessspecialist.peaktime.domain.user.service.admin.AdminUserService;
 import com.github.sleeplessspecialist.peaktime.global.common.response.ApiResponse;
 import com.github.sleeplessspecialist.peaktime.global.common.response.SuccessCode;
@@ -56,6 +62,31 @@ public class AdminUserController {
 		return ApiResponse.of(
 			SuccessCode.OK,
 			adminUserService.getUsers(page, size)
+		);
+	}
+
+	/**
+	 * 특정 사용자의 상태(status)를 변경합니다. (관리자 권한)
+	 *
+	 * <p>
+	 * 변경 가능한 상태는 ACTIVE, SUSPENDED, DELETED 입니다.
+	 * DELETED 는 소프트 삭제(탈퇴 처리)로 간주합니다.
+	 * </p>
+	 *
+	 * @param userId 대상 사용자 ID
+	 * @param request 변경 요청 바디(status, reason)
+	 * @return 상태 변경 성공 응답
+	 */
+	@PatchMapping("/users/{userId}/status")
+	@PreAuthorize("hasRole('ADMIN')")
+	public ApiResponse<AdminUpdateUserStatusRes> updateUserStatus(
+		@PathVariable Long userId,
+		@Valid @RequestBody AdminUpdateUserStatusReq request
+	) {
+		UserStatus status = adminUserService.updateUserStatus(userId, request);
+		return ApiResponse.of(
+			SuccessCode.OK,
+			new AdminUpdateUserStatusRes(status)
 		);
 	}
 }
