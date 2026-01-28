@@ -4,6 +4,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import com.github.sleeplessspecialist.peaktime.domain.auth.exception.AuthErrorCode;
 import com.github.sleeplessspecialist.peaktime.domain.user.entity.UserRole;
 import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
 import com.github.sleeplessspecialist.peaktime.global.common.error.GlobalErrorCode;
@@ -41,11 +42,11 @@ public class SecurityUtil {
 			try {
 				return Long.parseLong((String)principal);
 			} catch (NumberFormatException e) {
-				throw new CustomException(GlobalErrorCode.INVALID_AUTHENTICATION_TYPE);
+				throw new CustomException(GlobalErrorCode.INTERNAL_SERVER_ERROR);
 			}
 		}
 
-		throw new CustomException(GlobalErrorCode.INVALID_AUTHENTICATION_TYPE);
+		throw new CustomException(GlobalErrorCode.INTERNAL_SERVER_ERROR);
 	}
 
 	/**
@@ -68,7 +69,7 @@ public class SecurityUtil {
 			}
 		}
 
-		throw new CustomException(GlobalErrorCode.ROLE_NOT_FOUND);
+		throw new CustomException(GlobalErrorCode.INTERNAL_SERVER_ERROR);
 	}
 
 	/**
@@ -86,7 +87,7 @@ public class SecurityUtil {
 		final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
 		if (authentication == null || authentication.getPrincipal() == null) {
-			throw new CustomException(GlobalErrorCode.LOGIN_REQUIRED);
+			throw new CustomException(AuthErrorCode.INVALID_CREDENTIALS);
 		}
 		return authentication;
 	}
