@@ -1,10 +1,13 @@
 package com.github.sleeplessspecialist.peaktime.domain.user.controller;
 
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.github.sleeplessspecialist.peaktime.domain.user.dto.UserProfileRes;
+import com.github.sleeplessspecialist.peaktime.domain.user.dto.UserUpdateReq;
 import com.github.sleeplessspecialist.peaktime.domain.user.service.UserService;
 import com.github.sleeplessspecialist.peaktime.global.common.response.ApiResponse;
 
@@ -37,4 +40,10 @@ public class UserController {
 		return ApiResponse.ok(response);
 	}
 
+	/** * 내 정보 수정 */
+	@PatchMapping
+	public ApiResponse<UserProfileRes> updateMyProfile(@RequestBody UserUpdateReq req) {
+		UserProfileRes response = userService.updateMyProfile(req);
+		return ApiResponse.ok(response);
+	}
 }
