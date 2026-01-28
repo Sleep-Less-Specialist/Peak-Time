@@ -12,10 +12,14 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.github.sleeplessspecialist.peaktime.domain.user.dto.admin.request.AdminUpdateUserStatusReq;
 import com.github.sleeplessspecialist.peaktime.domain.user.dto.admin.response.AdminUserListRes;
 import com.github.sleeplessspecialist.peaktime.domain.user.dto.admin.response.AdminUserSummary;
 import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
+import com.github.sleeplessspecialist.peaktime.domain.user.entity.UserStatus;
+import com.github.sleeplessspecialist.peaktime.domain.user.exception.UserErrorCode;
 import com.github.sleeplessspecialist.peaktime.domain.user.repository.UserRepository;
+import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -72,6 +76,55 @@ public class AdminUserService {
 			result.getTotalPages()
 		);
 	}
+
+	/**
+	 * 관리자 권한으로 특정 사용자의 상태를 변경합니다.
+	 * <p>
+	 * 동일한 상태로의 변경 요청은 멱등하게 처리되며,
+	 * 실제 상태 변경이 발생한 경우에만 도메인 상태를 갱신합니다.
+	 * </p>
+	 *
+	 * @param userId  상태를 변경할 대상 사용자 ID
+	 * @param request 상태 변경 요청 DTO
+	 */
+	@Transactional
+	public UserStatus updateUserStatus(Long userId, AdminUpdateUserStatusReq request) {
+		User user = userRepository.findById(userId)
+			.orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
+
+		UserStatus from = user.getStatus();
+		UserStatus to = request.getStatus();
+
+		if (from == to) {
+			log.info(
+				"[ADMIN] 사용자 상태 변경 없음. userId={}, status={}",
+				userId,
+				from
+			);
+			return from;
+		}
+
+		validateStatusTransition(from, to);
+
+		user.changeStatus(to);
+
+		log.info(
+			"[ADMIN] 사용자 상태 변경 완료. userId={}, from={}, to={}, reason={}",
+			userId,
+			from,
+			to,
+			request.getReason()
+		);
+		return to;
+	}
+
+	private void validateStatusTransition(UserStatus from, UserStatus to) {
+
+		if (from == UserStatus.DELETED) {
+			throw new CustomException(UserErrorCode.INVALID_STATUS_TRANSITION);
+		}
+	}
+
 
 	private AdminUserSummary toSummary(User user) {
 		String createdAt = null;
