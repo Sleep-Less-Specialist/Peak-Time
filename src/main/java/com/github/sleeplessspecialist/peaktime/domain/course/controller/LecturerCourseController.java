@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseRegisterReq;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseRegisterRes;
-import com.github.sleeplessspecialist.peaktime.domain.course.service.CourseService;
+import com.github.sleeplessspecialist.peaktime.domain.course.service.LecturerCourseService;
 import com.github.sleeplessspecialist.peaktime.global.common.response.ApiResponse;
 
 import jakarta.validation.Valid;
@@ -28,7 +28,7 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/lecturer/courses")
 public class LecturerCourseController {
 
-	private final CourseService courseService;
+	private final LecturerCourseService LecturerCourseService;
 
 	/**
 	 * 신규 강의를 등록합니다.
@@ -39,7 +39,7 @@ public class LecturerCourseController {
 	@PostMapping
 	public ApiResponse<CourseRegisterRes> registerCourse(@RequestBody @Valid CourseRegisterReq req) {
 
-		CourseRegisterRes response = courseService.registerCourse(req);
+		CourseRegisterRes response = LecturerCourseService.registerCourse(req);
 		return ApiResponse.created(response);
 	}
 }

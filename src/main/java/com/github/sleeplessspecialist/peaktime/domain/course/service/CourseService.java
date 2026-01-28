@@ -10,15 +10,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseDetailRes;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseListRes;
-import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseRegisterReq;
-import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseRegisterRes;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CurriculumDto;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.LecturerDto;
 import com.github.sleeplessspecialist.peaktime.domain.course.entity.Course;
 import com.github.sleeplessspecialist.peaktime.domain.course.exception.CourseErrorCode;
 import com.github.sleeplessspecialist.peaktime.domain.course.repository.CourseRepository;
-import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
-import com.github.sleeplessspecialist.peaktime.domain.user.repository.UserRepository;
 import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
 
 import lombok.RequiredArgsConstructor;
@@ -39,36 +35,6 @@ import lombok.RequiredArgsConstructor;
 public class CourseService {
 
 	private final CourseRepository courseRepository;
-	private final UserRepository userRepository;
-
-	/**
-	 * 새로운 강의를 생성하고 저장합니다.
-	 *
-	 * @param req 강의 등록에 필요한 상세 정보
-	 * @return 저장된 강의의 ID
-	 * @throws CustomException 사용자를 찾을 수 없거나 권한이 없는 경우 예외 발생
-	 */
-	@Transactional
-	public CourseRegisterRes registerCourse(CourseRegisterReq req) {
-		// TODO: 추후 SecurityContextHolder를 통해 로그인한 유저 ID를 가져오도록 수정 필요
-		Long mockUserId = 1L;
-
-		User lecturer = userRepository.findById(mockUserId)
-			.orElseThrow(() -> new CustomException(CourseErrorCode.USER_NOT_FOUND));
-
-		Course course = Course.builder()
-			.title(req.getTitle())
-			.description(req.getDescription())
-			.price(req.getPrice())
-			.category(req.getCategory())
-			.thumbnailUrl(req.getThumbnailUrl())
-			.lecturer(lecturer)
-			.build();
-
-		Course savedCourse = courseRepository.save(course);
-
-		return new CourseRegisterRes(savedCourse.getId());
-	}
 
 	/**
 	 * 강의 상세 정보를 조회합니다.
@@ -80,10 +46,8 @@ public class CourseService {
 	 * @param courseId 조회할 강의 ID
 	 * @return 강의 상세 응답 DTO (Curriculum 포함)
 	 */
-	@Transactional(readOnly = true)
 	public CourseDetailRes getCourseDetail(Long courseId) {
-
-		Course course = courseRepository.findByIdWithDetail(courseId)
+		Course course = courseRepository.findById(courseId)
 			.orElseThrow(() -> new CustomException(CourseErrorCode.COURSE_NOT_FOUND));
 
 		LecturerDto lecturerDto = new LecturerDto(
@@ -119,10 +83,8 @@ public class CourseService {
 	 * @param pageable 페이징 정보 (page, size, sort)
 	 * @return 페이징된 강의 목록 DTO
 	 */
-	@Transactional(readOnly = true)
 	public Page<CourseListRes> getCourseList(Pageable pageable) {
-
-		Page<Course> coursePage = courseRepository.findAllWithLecturer(pageable);
+		Page<Course> coursePage = courseRepository.findAll(pageable);
 
 		return coursePage.map(course -> new CourseListRes(
 			course.getId(),
