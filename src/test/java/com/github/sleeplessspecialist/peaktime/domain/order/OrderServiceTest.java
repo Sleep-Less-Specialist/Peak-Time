@@ -14,6 +14,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.github.sleeplessspecialist.peaktime.domain.course.entity.Course;
@@ -22,6 +25,7 @@ import com.github.sleeplessspecialist.peaktime.domain.order.dto.CreateOrderItemR
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.CreateOrderReq;
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.CreateOrderRes;
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.GetOrderDetailRes;
+import com.github.sleeplessspecialist.peaktime.domain.order.dto.GetOrderListRes;
 import com.github.sleeplessspecialist.peaktime.domain.order.entity.Order;
 import com.github.sleeplessspecialist.peaktime.domain.order.entity.OrderItem;
 import com.github.sleeplessspecialist.peaktime.domain.order.entity.OrderStatus;
@@ -222,7 +226,7 @@ void createOrder_insufficientPoint() {
 		when(orderItemRepository.findAllByOrderId(orderId)).thenReturn(List.of(item1, item2));
 
 		// when
-		GetOrderDetailRes response = orderService.getOrder(userId, orderId);
+		GetOrderDetailRes response = orderService.getOrderDetail(userId, orderId);
 
 		// then
 		assertThat(response.getOrderId()).isEqualTo(orderId);
@@ -265,9 +269,88 @@ void createOrder_insufficientPoint() {
 		when(orderRepository.findById(orderId)).thenReturn(java.util.Optional.of(order));
 
 		// when / then
-		assertThatThrownBy(() -> orderService.getOrder(userId, orderId))
+		assertThatThrownBy(() -> orderService.getOrderDetail(userId, orderId))
 			.isInstanceOf(CustomException.class)
 			.satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
 				.isEqualTo(OrderErrorCode.UNAUTHORIZED_ACCESS));
+	}
+
+	@Test
+	@DisplayName("getAllOrder: 주문 전체 조회 성공")
+	void getAllOrder_success() {
+		// given
+		Long userId = 1L;
+
+		User user = User.createForSignup("tester", "test@test.com", "encoded", "010-0000-0000");
+		ReflectionTestUtils.setField(user, "id", userId);
+
+		Order order1 = Order.builder()
+			.user(user)
+			.totalAmount(new BigDecimal("20000"))
+			.usePoint(new BigDecimal("1000"))
+			.build();
+		ReflectionTestUtils.setField(order1, "id", 100L);
+		ReflectionTestUtils.setField(order1, "status", OrderStatus.PENDING_PAYMENT);
+		ReflectionTestUtils.setField(order1, "createdAt", java.time.LocalDateTime.of(2026, 1, 27, 9, 0));
+
+		Order order2 = Order.builder()
+			.user(user)
+			.totalAmount(new BigDecimal("15000"))
+			.usePoint(new BigDecimal("500"))
+			.build();
+		ReflectionTestUtils.setField(order2, "id", 101L);
+		ReflectionTestUtils.setField(order2, "status", OrderStatus.PENDING_PAYMENT);
+		ReflectionTestUtils.setField(order2, "createdAt", java.time.LocalDateTime.of(2026, 1, 27, 10, 0));
+
+		PageRequest pageable = PageRequest.of(0, 2);
+		Page<Order> orderPage = new PageImpl<>(List.of(order1, order2), pageable, 4);
+
+		when(userRepository.findById(userId)).thenReturn(java.util.Optional.of(user));
+		when(orderRepository.findByUser(user, pageable)).thenReturn(orderPage);
+
+		// when
+		GetOrderListRes response = orderService.getAllOrder(userId, pageable);
+
+		// then
+		assertThat(response.getOrders()).hasSize(2);
+
+		assertThat(response.getOrders().get(0).getOrderId()).isEqualTo(100L);
+		assertThat(response.getOrders().get(0).getUserId()).isEqualTo(userId);
+		assertThat(response.getOrders().get(0).getTotalAmount()).isEqualByComparingTo("20000");
+		assertThat(response.getOrders().get(0).getUserPoint()).isEqualByComparingTo("1000");
+		assertThat(response.getOrders().get(0).getOrderStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT);
+		assertThat(response.getOrders().get(0).getCreateAt()).isEqualTo(java.time.LocalDateTime.of(2026, 1, 27, 9, 0));
+
+		assertThat(response.getOrders().get(1).getOrderId()).isEqualTo(101L);
+		assertThat(response.getOrders().get(1).getUserId()).isEqualTo(userId);
+		assertThat(response.getOrders().get(1).getTotalAmount()).isEqualByComparingTo("15000");
+		assertThat(response.getOrders().get(1).getUserPoint()).isEqualByComparingTo("500");
+		assertThat(response.getOrders().get(1).getOrderStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT);
+		assertThat(response.getOrders().get(1).getCreateAt()).isEqualTo(java.time.LocalDateTime.of(2026, 1, 27, 10, 0));
+
+		assertThat(response.getPage()).isEqualTo(0);
+		assertThat(response.getSize()).isEqualTo(2);
+		assertThat(response.getTotalElements()).isEqualTo(4);
+		assertThat(response.getTotalPages()).isEqualTo(2);
+		assertThat(response.isHasNext()).isTrue();
+	}
+
+	@Test
+	@DisplayName("getAllOrder: 페이지 조건 불일치 예외")
+	void getAllOrder_invalidPageSize() {
+		// given
+		Long userId = 1L;
+		User user = User.createForSignup("tester", "test@test.com", "encoded", "010-0000-0000");
+		ReflectionTestUtils.setField(user, "id", userId);
+
+		PageRequest pageable = PageRequest.of(0, 51);
+
+		when(userRepository.findById(userId)).thenReturn(java.util.Optional.of(user));
+
+		// when / then
+		assertThatThrownBy(() -> orderService.getAllOrder(userId, pageable))
+			.isInstanceOf(CustomException.class)
+			.satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
+				.isEqualTo(OrderErrorCode.BAD_PAGING_CONDITION));
 	}
 }
