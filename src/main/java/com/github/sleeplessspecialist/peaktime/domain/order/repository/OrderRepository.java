@@ -1,8 +1,11 @@
 package com.github.sleeplessspecialist.peaktime.domain.order.repository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.github.sleeplessspecialist.peaktime.domain.order.entity.Order;
+import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
 
 /**
  *  주문(Order) 엔티티에 대한 영속성 처리를 담당하는 Repository 인터페이스.
@@ -15,4 +18,5 @@ import com.github.sleeplessspecialist.peaktime.domain.order.entity.Order;
  * @since
  */
 public interface OrderRepository extends JpaRepository<Order, Long> {
+	Page<Order> findByUser(User user, Pageable pageable);
 }

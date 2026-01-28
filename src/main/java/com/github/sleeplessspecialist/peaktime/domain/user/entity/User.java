@@ -1,9 +1,13 @@
 package com.github.sleeplessspecialist.peaktime.domain.user.entity;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.github.sleeplessspecialist.peaktime.domain.point.exception.PointErrorCode;
 import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
 import com.github.sleeplessspecialist.peaktime.global.domain.BaseTimeEntity;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -11,6 +15,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -74,6 +79,9 @@ public class User extends BaseTimeEntity {
 	@Column(nullable = false, length = 20)
 	private UserStatus status;
 
+	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<ProfileImage> profileImages = new ArrayList<>();
+
 	/**
 	 * 회원가입용 사용자 엔티티를 생성합니다.
 	 *
@@ -127,4 +135,22 @@ public class User extends BaseTimeEntity {
 		this.status = newStatus;
 	}
 
+	// ✅ 추가: 프로필 정보 수정 (이름, 전화번호)
+	public void updateProfile(String name, String phoneNumber) {
+		if (name != null && !name.isBlank()) {
+			this.name = name;
+		}
+		if (phoneNumber != null && !phoneNumber.isBlank()) {
+			this.phoneNumber = phoneNumber;
+		}
+	}
+
+	// ✅ 편의 메서드: 현재 대표 이미지 URL 가져오기 (DTO 변환용)
+	public String getProfileImageUrl() {
+		return this.profileImages.stream()
+			.filter(ProfileImage::isPrimary)
+			.findFirst()
+			.map(ProfileImage::getUrl)
+			.orElse(null); // 이미지가 없으면 null 반환
+	}
 }
