@@ -4,9 +4,8 @@ import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
 import com.github.sleeplessspecialist.peaktime.domain.course.entity.Course;
 
@@ -20,21 +19,18 @@ import com.github.sleeplessspecialist.peaktime.domain.course.entity.Course;
 public interface CourseRepository extends JpaRepository<Course, Long> {
 
 	/**
-	 * 강의 ID로 강의 상세 정보를 조회합니다.
-	 * 지식공유자(lecturer)와 커리큘럼(lectures) 정보를 한 번의 쿼리로 함께 가져옵니다
+	 * 강의 상세 조회
+	 * @EntityGraph를 사용하여 Lecturer(강사)와 Lectures(커리큘럼)를 한 번에 가져옵니다.
 	 */
-	@Query("SELECT c FROM Course c " +
-		"JOIN FETCH c.lecturer " +
-		"LEFT JOIN FETCH c.lectures " +
-		"WHERE c.id = :courseId")
-	Optional<Course> findByIdWithDetail(@Param("courseId") Long courseId);
+	@Override
+	@EntityGraph(attributePaths = {"lecturer", "lectures"})
+	Optional<Course> findById(Long id);
 
 	/**
-	 * 강의 목록을 페이징하여 조회합니다.
-	 * N+1 문제를 방지하기 위해 Lecturer(지식공유자)를 Fetch Join 합니다.
-	 * * countQuery: 페이징을 위해서는 전체 개수를 세는 쿼리가 별도로 필요합니다.
+	 * 강의 목록 조회 (페이징)
+	 * @EntityGraph를 사용하여 Lecturer(강사) 정보만 함께 가져옵니다.
 	 */
-	@Query(value = "SELECT c FROM Course c JOIN FETCH c.lecturer",
-		countQuery = "SELECT COUNT(c) FROM Course c")
-	Page<Course> findAllWithLecturer(Pageable pageable);
+	@Override
+	@EntityGraph(attributePaths = {"lecturer"})
+	Page<Course> findAll(Pageable pageable);
 }
