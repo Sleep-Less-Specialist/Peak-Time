@@ -1,0 +1,17 @@
+@host = http://localhost:8080
+### 1. 내 정보 조회
+# 헤더에 Bearer Token을 넣어주세요.
+GET {{host}}/api/v1/members/me
+Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiIyIiwiaWF0IjoxNzY5NTc5MTE4LCJleHAiOjE3Njk1ODI3MTgsInJvbGUiOiJTVFVERU5UIn0.RUxkql4H2aSRkJFnLbk7J6FTLY-IkrgsbMnjWKtkBTAUOHqpKI7qltpa6d6mpyo7qNYppYRpaExBVJRk3Oha_w
+Content-Type: application/json
+
+### 2. 내 정보 수정
+# 이름과 전화번호를 변경합니다.
+PATCH {{host}}/api/v1/members/me
+Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiIyIiwiaWF0IjoxNzY5NTc5MTE4LCJleHAiOjE3Njk1ODI3MTgsInJvbGUiOiJTVFVERU5UIn0.RUxkql4H2aSRkJFnLbk7J6FTLY-IkrgsbMnjWKtkBTAUOHqpKI7qltpa6d6mpyo7qNYppYRpaExBVJRk3Oha_w
+Content-Type: application/json
+
+{
+  "name": "수정된이름",
+  "phoneNumber": "010-7777-8888"
+}
