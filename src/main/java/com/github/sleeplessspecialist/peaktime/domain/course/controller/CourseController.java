@@ -1,48 +1,63 @@
 package com.github.sleeplessspecialist.peaktime.domain.course.controller;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseDetailRes;
-import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseRegisterReq;
-import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseRegisterRes;
+import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseListRes;
 import com.github.sleeplessspecialist.peaktime.domain.course.service.CourseService;
 import com.github.sleeplessspecialist.peaktime.global.common.response.ApiResponse;
 
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 
 /**
- * 지식공유자(Lecturer) 관련 강의 관리 API를 제공하는 컨트롤러입니다.
+ * 강의(Course) 조회 API 컨트롤러입니다.
  * <p>
- * 강의 등록, 수정, 삭제 및 지식공유자 본인의 강의 목록 조회 기능을 담당합니다.
- * 모든 요청은 지식공유자 권한(ROLE_LECTURER)이 필요합니다.
+ * 강의 목록 조회 및 상세 조회 기능을 제공하며,
+ * 인증 여부와 관계없이 누구나 접근 가능합니다.
  * </p>
  *
  * @author 기섭
  * @version 1.0
- * @since 2026. 1. 22.
+ * @since 2026. 1. 27.
  */
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/lecturer/courses")
+@Validated
+@RequestMapping("/api/v1/courses")
 public class CourseController {
 
 	private final CourseService courseService;
 
 	/**
-	 * 신규 강의를 등록합니다.
+	 * 강의 목록 조회 API
+	 * <p>
+	 * 페이징 기능을 제공하며, 기본적으로 최신순(created_at DESC)으로 정렬됩니다.
+	 * page와 size를 명시적으로 받아서 검증(@Min)을 수행합니다.
+	 * 클라이언트는 1페이지부터 요청한다고 가정하고, 서버에서는 0페이지로 변환합니다.
+	 * </p>
 	 *
-	 * @param req 강의 등록 요청 정보 (제목, 설명, 가격 등)
-	 * @return 등록된 강의 ID를 포함한 응답 객체
+	 * @return 페이징된 강의 목록
 	 */
-	@PostMapping
-	public ApiResponse<CourseRegisterRes> registerCourse(@RequestBody CourseRegisterReq req) {
+	@GetMapping
+	public ApiResponse<Page<CourseListRes>> getCourseList(
+		@RequestParam(defaultValue = "1") @Min(value = 1, message = "페이지는 1 이상이어야 합니다.") int page,
+		@RequestParam(defaultValue = "10") @Min(value = 1, message = "사이즈는 1 이상이어야 합니다.") int size
+	) {
 
-		CourseRegisterRes response = courseService.registerCourse(req);
+		Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+		Page<CourseListRes> response = courseService.getCourseList(pageable);
+
 		return ApiResponse.ok(response);
 	}
 

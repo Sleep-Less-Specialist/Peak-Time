@@ -3,19 +3,18 @@ package com.github.sleeplessspecialist.peaktime.domain.course.service;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseDetailRes;
-import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseRegisterReq;
-import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseRegisterRes;
+import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseListRes;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CurriculumDto;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.LecturerDto;
 import com.github.sleeplessspecialist.peaktime.domain.course.entity.Course;
 import com.github.sleeplessspecialist.peaktime.domain.course.exception.CourseErrorCode;
 import com.github.sleeplessspecialist.peaktime.domain.course.repository.CourseRepository;
-import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
-import com.github.sleeplessspecialist.peaktime.domain.user.repository.UserRepository;
 import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
 
 import lombok.RequiredArgsConstructor;
@@ -36,36 +35,6 @@ import lombok.RequiredArgsConstructor;
 public class CourseService {
 
 	private final CourseRepository courseRepository;
-	private final UserRepository userRepository;
-
-	/**
-	 * 새로운 강의를 생성하고 저장합니다.
-	 *
-	 * @param req 강의 등록에 필요한 상세 정보
-	 * @return 저장된 강의의 ID
-	 * @throws CustomException 사용자를 찾을 수 없거나 권한이 없는 경우 예외 발생
-	 */
-	@Transactional
-	public CourseRegisterRes registerCourse(CourseRegisterReq req) {
-		// TODO: 추후 SecurityContextHolder를 통해 로그인한 유저 ID를 가져오도록 수정 필요
-		Long mockUserId = 1L;
-
-		User lecturer = userRepository.findById(mockUserId)
-			.orElseThrow(() -> new CustomException(CourseErrorCode.USER_NOT_FOUND));
-
-		Course course = Course.builder()
-			.title(req.getTitle())
-			.description(req.getDescription())
-			.price(req.getPrice())
-			.category(req.getCategory())
-			.thumbnailUrl(req.getThumbnailUrl())
-			.lecturer(lecturer)
-			.build();
-
-		Course savedCourse = courseRepository.save(course);
-
-		return new CourseRegisterRes(savedCourse.getId());
-	}
 
 	/**
 	 * 강의 상세 정보를 조회합니다.
@@ -78,8 +47,7 @@ public class CourseService {
 	 * @return 강의 상세 응답 DTO (Curriculum 포함)
 	 */
 	public CourseDetailRes getCourseDetail(Long courseId) {
-
-		Course course = courseRepository.findByIdWithDetail(courseId)
+		Course course = courseRepository.findById(courseId)
 			.orElseThrow(() -> new CustomException(CourseErrorCode.COURSE_NOT_FOUND));
 
 		LecturerDto lecturerDto = new LecturerDto(
@@ -107,5 +75,27 @@ public class CourseService {
 			curriculumList,
 			course.getUpdatedAt()
 		);
+	}
+
+	/**
+	 * 강의 전체 목록을 페이징하여 조회합니다.
+	 *
+	 * @param pageable 페이징 정보 (page, size, sort)
+	 * @return 페이징된 강의 목록 DTO
+	 */
+	public Page<CourseListRes> getCourseList(Pageable pageable) {
+		Page<Course> coursePage = courseRepository.findAll(pageable);
+
+		return coursePage.map(course -> new CourseListRes(
+			course.getId(),
+			course.getTitle(),
+			course.getDescription(),
+			course.getCategory(),
+			course.getPrice(),
+			course.getThumbnailUrl(),
+			course.getRatingAvg(),
+			course.getReviewCount(),
+			course.getLecturer().getName()
+		));
 	}
 }
