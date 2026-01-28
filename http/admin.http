@@ -1,4 +1,5 @@
 @host = http://localhost:8080
+@TARGET_USER_ID = 2
 
 ### [AUTH] 회원가입 (관리자 계정 후보)
 POST {{host}}/api/v1/auth/signup
@@ -12,7 +13,30 @@ Accept: application/json
   "name": "관리자"
 }
 
+### [AUTH] 회원가입 (테스트 대상 사용자)
+POST {{host}}/api/v1/auth/signup
+Content-Type: application/json
+Accept: application/json
 
+{
+  "email": "user1@test.com",
+  "password": "User1234!",
+  "phoneNumber": "010-9999-9999",
+  "name": "일반유저1"
+}
+
+> {%
+    // 회원가입 응답에서 테스트 대상 사용자 ID를 추출해 TARGET_USER_ID로 저장
+    const data = response.body?.data;
+    const id = data?.id ?? data?.userId ?? data?.memberId;
+    if (id) {
+      client.global.set('TARGET_USER_ID', id);
+      client.log('TARGET_USER_ID set from signup: ' + id);
+    } else {
+      client.log(JSON.stringify(response.body));
+      client.log('회원가입 응답에 id가 없어 TARGET_USER_ID를 자동 세팅하지 못했습니다. (응답에 id/userId/memberId가 있는지 확인)');
+    }
+%}
 
 ### [AUTH] 관리자 로그인 (토큰 저장)
 POST {{host}}/api/v1/auth/login
@@ -26,13 +50,83 @@ Accept: application/json
 
 > {%
     // 로그인 응답이 ApiResponse 형태라서 accessToken은 data 안에 있습니다.
-    client.global.set("ADMIN_ACCESS_TOKEN", response.body.data.accessToken);
+    const token = response.body?.data?.accessToken;
+    if (!token) {
+      client.log(JSON.stringify(response.body));
+      throw new Error('ADMIN_ACCESS_TOKEN을 찾지 못했습니다. 응답의 data.accessToken 구조를 확인하세요.');
+    }
+    client.global.set('ADMIN_ACCESS_TOKEN', token);
+    client.log('ADMIN_ACCESS_TOKEN set');
 %}
 
-### [ADMIN] 사용자 목록 기본 조회 (page=0,size=20)
-GET {{host}}/api/v1/admin/users?page=0&size=20
-Authorization: Bearer {{ADMIN_ACCESS_TOKEN}}
+### [AUTH] 일반 사용자 로그인 (토큰 저장)
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
 Accept: application/json
+
+{
+  "email": "user1@test.com",
+  "password": "User1234!"
+}
+
+> {%
+    const token = response.body?.data?.accessToken;
+    if (!token) {
+      client.log(JSON.stringify(response.body));
+      throw new Error('USER_ACCESS_TOKEN을 찾지 못했습니다. 응답의 data.accessToken 구조를 확인하세요.');
+    }
+    client.global.set('USER_ACCESS_TOKEN', token);
+    client.log('USER_ACCESS_TOKEN set');
+%}
+
+# NOTE: 아래 상태 변경(PATCH) 시나리오는 TARGET_USER_ID 세팅이 가능한 경우에만 실행하세요.
+# - 회원가입 응답에 id가 내려오지 않으면 TARGET_USER_ID를 수동으로 설정해야 합니다.
+# - 예: @TARGET_USER_ID = 1
+
+### [ADMIN] 사용자 상태 변경 - ACTIVE → SUSPENDED
+PATCH {{host}}/api/v1/admin/users/{{TARGET_USER_ID}}/status
+Authorization: Bearer {{ADMIN_ACCESS_TOKEN}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "status": "SUSPENDED",
+  "reason": "비정상 활동 감지"
+}
+
+### [ADMIN] 사용자 상태 변경 - 동일 상태 요청 (멱등)
+PATCH {{host}}/api/v1/admin/users/{{TARGET_USER_ID}}/status
+Authorization: Bearer {{ADMIN_ACCESS_TOKEN}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "status": "SUSPENDED",
+  "reason": "이미 정지 상태"
+}
+
+### [ADMIN] 사용자 상태 변경 - ACTIVE/SUSPENDED → DELETED (준비)
+PATCH {{host}}/api/v1/admin/users/{{TARGET_USER_ID}}/status
+Authorization: Bearer {{ADMIN_ACCESS_TOKEN}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "status": "DELETED",
+  "reason": "탈퇴 처리 테스트"
+}
+
+### [ADMIN] 사용자 상태 변경 - DELETED → ACTIVE (실패 기대)
+# 기대: 400 INVALID_STATUS_TRANSITION
+PATCH {{host}}/api/v1/admin/users/{{TARGET_USER_ID}}/status
+Authorization: Bearer {{ADMIN_ACCESS_TOKEN}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "status": "ACTIVE",
+  "reason": "복구 시도"
+}
 
 ### [ADMIN] size 검증 확인 (size=0 -> 400 기대)
 GET {{host}}/api/v1/admin/users?page=0&size=0
