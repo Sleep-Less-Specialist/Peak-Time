@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.github.sleeplessspecialist.peaktime.domain.user.dto.UserProfileRes;
+import com.github.sleeplessspecialist.peaktime.domain.user.dto.UserUpdateReq;
 import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
 import com.github.sleeplessspecialist.peaktime.domain.user.exception.UserErrorCode;
 import com.github.sleeplessspecialist.peaktime.domain.user.repository.UserRepository;
@@ -43,4 +44,19 @@ public class UserService {
 		return UserProfileRes.from(user);
 	}
 
+	/**
+	 * 내 정보 수정
+	 */
+	@Transactional
+	public UserProfileRes updateMyProfile(UserUpdateReq req) {
+
+		Long currentUserId = SecurityUtil.getCurrentUserId();
+
+		User user = userRepository.findById(currentUserId)
+			.orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
+
+		// Dirty Checking (변경 감지)
+		user.updateProfile(req.getName(), req.getPhoneNumber());
+		return UserProfileRes.from(user);
+	}
 }
