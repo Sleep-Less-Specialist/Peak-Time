@@ -29,7 +29,7 @@ public class OrderListItemRes {
 	private final Long orderId;
 	private final Long userId;
 	private final BigDecimal totalAmount;
-	private final BigDecimal userPoint;
+	private final BigDecimal usePoint;
 	private final OrderStatus orderStatus;
 	private final LocalDateTime createAt;
 
@@ -38,7 +38,7 @@ public class OrderListItemRes {
 			.orderId(order.getId())
 			.userId(order.getUser().getId())
 			.totalAmount(order.getTotalAmount())
-			.userPoint(order.getUsePoint())
+			.usePoint(order.getUsePoint())
 			.orderStatus(order.getStatus())
 			.createAt(order	.getCreatedAt())
 			.build();
