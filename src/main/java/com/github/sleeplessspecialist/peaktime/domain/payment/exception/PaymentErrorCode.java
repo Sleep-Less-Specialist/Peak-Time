@@ -23,7 +23,7 @@ import lombok.RequiredArgsConstructor;
 public enum PaymentErrorCode implements ErrorCode {
 
 	USER_NOT_FOUND("PM001", "존재하지 않는 사용자입니다.", HttpStatus.NOT_FOUND),
-	ORDER_NOT_FOUND("PM001", "존재하지 않는 주문입니다.", HttpStatus.NOT_FOUND);
+	ORDER_NOT_FOUND("PM002", "존재하지 않는 주문입니다.", HttpStatus.NOT_FOUND);
 
 	private final String code;
 	private final String message;
