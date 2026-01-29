@@ -96,7 +96,7 @@ public class PointTransaction extends BaseTimeEntity {
 	}
 
 	/**
-	 * 결제 주문에 따른 포인트 차감 이력을 생성합니다.
+	 * 결제 주문에 따른 포인트 차감 이력을 생성한다.
 	 *
 	 * @param user         포인트 변동 대상 사용자
 	 * @param usePoint     사용한 포인트 (양수)
@@ -112,6 +112,33 @@ public class PointTransaction extends BaseTimeEntity {
 			PointTransactionType.SPEND,
 			balanceAfter,
 			"결제 포인트 사용 (orderId=" + orderId + ")",
+			dedupKey
+		);
+	}
+
+	/**
+	 * 결제 취소/환불에 따른 포인트 환급 이력을 생성한다.
+	 *
+	 * <p>
+	 * 결제 시 사용했던 포인트를 환불(복구)할 때 사용.
+	 * amount는 환급이므로 양수(+)로 기록된다.
+	 * </p>
+	 *
+	 * @param user         포인트 변동 대상 사용자
+	 * @param refundPoint  환급할 포인트 (양수)
+	 * @param orderId      결제 주문 ID
+	 * @param balanceAfter 반영 후 잔액(users.point)
+	 * @return 생성된 포인트 환급 이력 엔티티
+	 */
+	public static PointTransaction paymentRefundPoint(User user, Long refundPoint, Long orderId, Long balanceAfter) {
+		String dedupKey = "PAYMENT_REFUND_POINT:ORDER:" + orderId;
+
+		return new PointTransaction(
+			user,
+			refundPoint, // 환급이므로 양수
+			PointTransactionType.REFUND,
+			balanceAfter,
+			"결제 포인트 환불 (orderId=" + orderId + ")",
 			dedupKey
 		);
 	}
