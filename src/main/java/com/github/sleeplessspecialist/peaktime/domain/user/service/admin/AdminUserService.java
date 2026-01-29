@@ -95,15 +95,6 @@ public class AdminUserService {
 		UserStatus from = user.getStatus();
 		UserStatus to = request.getStatus();
 
-		if (from == to) {
-			log.info(
-				"[ADMIN] 사용자 상태 변경 없음. userId={}, status={}",
-				userId,
-				from
-			);
-			return from;
-		}
-
 		validateStatusTransition(from, to);
 
 		user.changeStatus(to);
@@ -119,6 +110,11 @@ public class AdminUserService {
 	}
 
 	private void validateStatusTransition(UserStatus from, UserStatus to) {
+
+		// 동일 상태 변경 요청은 멱등 처리(검증/예외 없이 통과)
+		if (from == to) {
+			return;
+		}
 
 		if (from == UserStatus.DELETED) {
 			throw new CustomException(UserErrorCode.INVALID_STATUS_TRANSITION);
