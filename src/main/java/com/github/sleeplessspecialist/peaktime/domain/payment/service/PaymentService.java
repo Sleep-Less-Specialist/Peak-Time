@@ -9,6 +9,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.github.sleeplessspecialist.peaktime.domain.order.entity.Order;
 import com.github.sleeplessspecialist.peaktime.domain.order.exception.OrderErrorCode;
 import com.github.sleeplessspecialist.peaktime.domain.order.repository.OrderRepository;
+import com.github.sleeplessspecialist.peaktime.domain.payment.dto.PaymentCancelReq;
+import com.github.sleeplessspecialist.peaktime.domain.payment.dto.TossPaymentCancelReq;
+import com.github.sleeplessspecialist.peaktime.domain.payment.dto.TossPaymentCancelRes;
 import com.github.sleeplessspecialist.peaktime.domain.payment.dto.TossPaymentConfirmReq;
 import com.github.sleeplessspecialist.peaktime.domain.payment.dto.TossPaymentConfirmRes;
 import com.github.sleeplessspecialist.peaktime.domain.payment.event.PaymentConfirmedEvent;
@@ -61,6 +64,26 @@ public class PaymentService {
 			.finalAmount(finalAmount)
 			.method(result.getMethod())
 			.build());
+	}
+
+	@Transactional
+	public void cancel(PaymentCancelReq req)  {
+
+		TossPaymentCancelReq tossPaymentCancelReq = TossPaymentCancelReq.builder()
+				.cancelReason(req.getCancelReason())
+				.build();
+
+		// 1) toss 결제 취소(동기)
+		TossPaymentCancelRes result = tossPaymentClient.cancel(req.getPaymentKey(), tossPaymentCancelReq);
+
+		Long orderId = Long.valueOf(OrderIdParser.extractOrderId(result.getOrderId()));
+		Order order = getOrder(orderId);
+		String cancelReason = result.getCancelReason();
+		Long refundPoint = order.getUsePoint().longValueExact();
+
+		pointService.refundForOrder(order.getUser(), orderId, refundPoint); // 2) 포인트 복구 (동기)
+
+		// 3) 비동기 작업 트리거 (커밋 이후 실행되도록 리스너에서 AFTER_COMMIT 사용)
 
 	}
 
