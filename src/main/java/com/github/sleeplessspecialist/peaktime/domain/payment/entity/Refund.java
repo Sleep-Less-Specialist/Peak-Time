@@ -12,7 +12,6 @@ package com.github.sleeplessspecialist.peaktime.domain.payment.entity;
  * @since 2026.01.28
  */
 
-
 import java.math.BigDecimal;
 
 import com.github.sleeplessspecialist.peaktime.global.domain.BaseTimeEntity;
@@ -41,7 +40,7 @@ public class Refund extends BaseTimeEntity {
 	private Long id;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "payment_id")
+	@JoinColumn(name = "payment_id", nullable = false)
 	private Payment payment;
 
 	@Column(name = "amount", nullable = false, precision = 10, scale = 2)
