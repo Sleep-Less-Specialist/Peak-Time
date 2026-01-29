@@ -1,10 +1,20 @@
 package com.github.sleeplessspecialist.peaktime.domain.payment.service;
 
+import java.math.BigDecimal;
+
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.github.sleeplessspecialist.peaktime.domain.order.entity.Order;
+import com.github.sleeplessspecialist.peaktime.domain.order.exception.OrderErrorCode;
+import com.github.sleeplessspecialist.peaktime.domain.order.repository.OrderRepository;
 import com.github.sleeplessspecialist.peaktime.domain.payment.dto.TossPaymentConfirmReq;
 import com.github.sleeplessspecialist.peaktime.domain.payment.dto.TossPaymentConfirmRes;
+import com.github.sleeplessspecialist.peaktime.domain.payment.event.PaymentConfirmedEvent;
+import com.github.sleeplessspecialist.peaktime.domain.payment.utill.OrderIdParser;
+import com.github.sleeplessspecialist.peaktime.domain.point.service.PointService;
+import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
 import com.github.sleeplessspecialist.peaktime.global.infra.payment.TossPaymentClient;
 
 import lombok.RequiredArgsConstructor;
@@ -24,23 +34,38 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class PaymentService {
 
+	private final OrderRepository orderRepository;
 	private final TossPaymentClient tossPaymentClient;
+	private final PointService pointService;
+	private final ApplicationEventPublisher eventPublisher;
 
-	/**
-	 * 토스 결제 승인 및 주문 상태 변경
-	 */
 	@Transactional
-	public TossPaymentConfirmRes confirmPayment(TossPaymentConfirmReq req) {
+	public void confirmPayment(TossPaymentConfirmReq req) {
 
-		// 필요한 내부 로직 추가해서 사용하면 됩니다
+		TossPaymentConfirmRes result = tossPaymentClient.confirm(req); // 1) toss 결제 승인 (동기)
 
-		// 외부 API(토스)로 결제 승인 요청
-		TossPaymentConfirmRes result = tossPaymentClient.confirm(req);
+		Long  orderId = Long.valueOf(OrderIdParser.extractOrderId(result.getOrderId()));
+		Order order = getOrder(orderId);
+		Long usePoint = order.getUsePoint().longValueExact();
+		BigDecimal finalAmount = result.getTotalAmount();
 
-		log.info("결제 승인 완료 - orderId: {}, paymentKey: {}", result.getOrderId(), result.getPaymentKey());
-		return result;
+		pointService.spendForOrder(order.getUser(), orderId, usePoint); // 2) 포인트 차감 (동기)
+
+		// 3) 비동기 작업 트리거 (커밋 이후 실행되도록 리스너에서 AFTER_COMMIT 사용)
+		eventPublisher.publishEvent(PaymentConfirmedEvent.builder()
+			.orderId(order.getId())
+			.userId(order.getUser().getId())
+			.paymentKey(result.getPaymentKey())
+			.finalAmount(finalAmount)
+			.method(result.getMethod())
+			.build());
+
+	}
+
+	private Order getOrder(Long orderId) {
+		return orderRepository.findById(orderId)
+			.orElseThrow(() -> new CustomException(OrderErrorCode.ORDER_NOT_FOUND));
 	}
 }

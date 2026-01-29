@@ -67,4 +67,8 @@ public class Order extends BaseTimeEntity {
 	public void updateTotalAmount(BigDecimal totalAmount) {
 		this.totalAmount = totalAmount;
 	}
+
+	public void updateStatus(OrderStatus status) {
+		this.status = status;
+	}
 }
