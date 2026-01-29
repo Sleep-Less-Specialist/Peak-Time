@@ -10,6 +10,7 @@ package com.github.sleeplessspecialist.peaktime.domain.payment.exception;
  * @version 1.0
  * @since
  */
+
 import org.springframework.http.HttpStatus;
 
 import com.github.sleeplessspecialist.peaktime.global.common.error.ErrorCode;

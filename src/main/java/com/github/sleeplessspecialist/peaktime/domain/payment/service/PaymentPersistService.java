@@ -5,7 +5,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.github.sleeplessspecialist.peaktime.domain.order.entity.Order;
-import com.github.sleeplessspecialist.peaktime.domain.order.exception.OrderErrorCode;
 import com.github.sleeplessspecialist.peaktime.domain.order.repository.OrderRepository;
 import com.github.sleeplessspecialist.peaktime.domain.payment.entity.Payment;
 import com.github.sleeplessspecialist.peaktime.domain.payment.entity.PaymentStatus;
@@ -65,7 +64,7 @@ public class PaymentPersistService {
 	}
 
 	private Order getOrder(PaymentConfirmedEvent event) {
-		 return orderRepository.findById(event.getOrderId())
+		return orderRepository.findById(event.getOrderId())
 			.orElseThrow(() -> new CustomException(PaymentErrorCode.ORDER_NOT_FOUND));
 	}
 }

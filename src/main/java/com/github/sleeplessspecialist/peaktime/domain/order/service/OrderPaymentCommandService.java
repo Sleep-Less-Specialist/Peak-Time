@@ -2,19 +2,6 @@ package com.github.sleeplessspecialist.peaktime.domain.order.service;
 
 import org.springframework.stereotype.Service;
 
-/**
- * .
- * <p>
- *
- * </p>
- *
- * @author 주우재
- * @version 1.0
- * @since
- */
-
-import org.springframework.stereotype.Service;
-
 import com.github.sleeplessspecialist.peaktime.domain.order.entity.Order;
 import com.github.sleeplessspecialist.peaktime.domain.order.entity.OrderStatus;
 import com.github.sleeplessspecialist.peaktime.domain.order.exception.OrderErrorCode;
