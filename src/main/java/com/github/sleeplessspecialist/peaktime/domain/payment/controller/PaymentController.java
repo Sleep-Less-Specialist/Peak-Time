@@ -5,8 +5,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.github.sleeplessspecialist.peaktime.domain.payment.dto.PaymentCancelReq;
 import com.github.sleeplessspecialist.peaktime.domain.payment.dto.TossPaymentConfirmReq;
-import com.github.sleeplessspecialist.peaktime.domain.payment.dto.TossPaymentConfirmRes;
 import com.github.sleeplessspecialist.peaktime.domain.payment.service.PaymentService;
 import com.github.sleeplessspecialist.peaktime.global.common.response.ApiResponse;
 
@@ -38,10 +38,18 @@ public class PaymentController {
 	 * 프론트엔드(결제 위젯)에서 받은 paymentKey, orderId, amount로 최종 승인을 요청합니다.
 	 */
 	@PostMapping("/confirm")
-	public ApiResponse<TossPaymentConfirmRes> confirmPayment(@RequestBody @Valid TossPaymentConfirmReq req) {
+	public ApiResponse<Void> confirmPayment(@RequestBody @Valid TossPaymentConfirmReq req) {
 		log.info("결제 승인 요청 진입 - orderId: {}", req.getOrderId());
 
 		paymentService.confirmPayment(req);
+		return ApiResponse.ok();
+	}
+
+	@PostMapping("/cancel")
+	public ApiResponse<Void> cancelPayment(@RequestBody @Valid PaymentCancelReq req) {
+		log.info("결제 취소 요청 진입");
+
+		paymentService.cancel(req);
 		return ApiResponse.ok();
 	}
 }
