@@ -1,0 +1,56 @@
+name: CD - Deploy to EC2
+
+on:
+  workflow_run:
+    workflows: [ "CI - Build and Push to Docker Hub" ]
+    types:
+      - completed
+    branches:
+      - main
+
+env:
+  DOCKER_IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/security
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get commit SHA
+        id: get-sha
+        run: echo "sha=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_SSH_PORT || 22 }}
+          script: |
+            # Docker 로그인
+            echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+            # 기존 컨테이너 중지 및 제거
+            docker stop security-app || true
+            docker rm security-app || true
+
+            # 최신 이미지 Pull
+            docker pull ${{ env.DOCKER_IMAGE_NAME }}:${{ steps.get-sha.outputs.sha }}
+
+            # 새 컨테이너 실행
+            docker run -d \
+              --name security-app \
+              --restart unless-stopped \
+              -p 8080:8080 \
+              -e SPRING_PROFILES_ACTIVE=prod \
+              ${{ env.DOCKER_IMAGE_NAME }}:${{ steps.get-sha.outputs.sha }}
+
+            # 사용하지 않는 이미지 정리
+            docker image prune -af
+
+            echo "Deployment successful!"
