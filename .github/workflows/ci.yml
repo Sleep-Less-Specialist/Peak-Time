@@ -6,11 +6,6 @@ on:
       - main
       - develop
       - chore/cicd
-  pull_request:
-    branches:
-      - main
-      - develop
-      - chore/cicd
 
 env:
   DOCKER_IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/peak-time
