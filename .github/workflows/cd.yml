@@ -50,14 +50,10 @@ jobs:
             echo "TOSS_CLIENT_KEY=${{ secrets.TOSS_CLIENT_KEY }}" >> .env
             echo "TOSS_SECRET_KEY=${{ secrets.TOSS_SECRET_KEY }}" >> .env
             
-            # Docker Hub 로그인 (이미지 pull 권한)
+            
             echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-            # 최신 이미지 가져오기
             docker compose pull
-
-            # [핵심] 기존 컨테이너 내리고 -> 새 버전으로 다시 올리기 (DB 데이터는 보존됨)
+            docker compose down
             docker compose up -d
-
-            # 불필요한 이미지 정리
             docker image prune -af
