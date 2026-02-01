@@ -7,16 +7,21 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.github.sleeplessspecialist.peaktime.domain.order.entity.Order;
-import com.github.sleeplessspecialist.peaktime.domain.order.exception.OrderErrorCode;
 import com.github.sleeplessspecialist.peaktime.domain.order.repository.OrderRepository;
+import com.github.sleeplessspecialist.peaktime.domain.order.service.OrderPaymentCommandService;
 import com.github.sleeplessspecialist.peaktime.domain.payment.dto.PaymentCancelReq;
 import com.github.sleeplessspecialist.peaktime.domain.payment.dto.TossPaymentCancelReq;
 import com.github.sleeplessspecialist.peaktime.domain.payment.dto.TossPaymentCancelRes;
 import com.github.sleeplessspecialist.peaktime.domain.payment.dto.TossPaymentConfirmReq;
 import com.github.sleeplessspecialist.peaktime.domain.payment.dto.TossPaymentConfirmRes;
+import com.github.sleeplessspecialist.peaktime.domain.payment.entity.Payment;
+import com.github.sleeplessspecialist.peaktime.domain.payment.event.PaymentCancelledEvent;
 import com.github.sleeplessspecialist.peaktime.domain.payment.event.PaymentConfirmedEvent;
+import com.github.sleeplessspecialist.peaktime.domain.payment.exception.PaymentErrorCode;
+import com.github.sleeplessspecialist.peaktime.domain.payment.repository.PaymentRepository;
 import com.github.sleeplessspecialist.peaktime.domain.payment.utill.OrderIdParser;
 import com.github.sleeplessspecialist.peaktime.domain.point.service.PointService;
+import com.github.sleeplessspecialist.peaktime.domain.refund.service.RefundService;
 import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
 import com.github.sleeplessspecialist.peaktime.global.infra.payment.TossPaymentClient;
 
@@ -30,9 +35,9 @@ import lombok.extern.slf4j.Slf4j;
  * 실제 결제 승인을 수행하고 결과를 반환합니다. 추후 주문 상태 업데이트 로직이 포함됩니다.
  * </p>
  *
- * @author 기섭
- * @version 1.0
- * @since 2026. 1. 26.
+ * @author 기섭, 주우재
+ * @version 1.1
+ * @since 2026. 1. 31.
  */
 @Slf4j
 @Service
@@ -43,6 +48,9 @@ public class PaymentService {
 	private final TossPaymentClient tossPaymentClient;
 	private final PointService pointService;
 	private final ApplicationEventPublisher eventPublisher;
+	private final PaymentRepository paymentRepository;
+	private final OrderPaymentCommandService orderPaymentCommandService;
+	private final RefundService refundService;
 
 	@Transactional
 	public void confirmPayment(TossPaymentConfirmReq req) {
@@ -78,17 +86,34 @@ public class PaymentService {
 
 		Long orderId = Long.valueOf(OrderIdParser.extractOrderId(result.getOrderId()));
 		Order order = getOrder(orderId);
+		Payment payment = getPayment(orderId);
 		String cancelReason = result.getCancelReason();
+		BigDecimal cancelAmount = result.getCancelAmount();
 		Long refundPoint = order.getUsePoint().longValueExact();
 
 		pointService.refundForOrder(order.getUser(), orderId, refundPoint); // 2) 포인트 복구 (동기)
 
-		// 3) 비동기 작업 트리거 (커밋 이후 실행되도록 리스너에서 AFTER_COMMIT 사용)
+		// 4. Payment / Order 상태 전이 (동기)
+		payment.refund();
+		orderPaymentCommandService.markCanceled(orderId);
 
+		// 5. Refund 저장 (동기)
+		refundService.createRefund(payment, cancelAmount, cancelReason);
+
+		// 6) 비동기 작업 트리거 (커밋 이후 실행되도록 리스너에서 AFTER_COMMIT 사용)
+		eventPublisher.publishEvent(PaymentCancelledEvent.builder()
+			.orderId(orderId)
+			.userId(order.getUser().getId())
+			.build());
 	}
 
 	private Order getOrder(Long orderId) {
 		return orderRepository.findById(orderId)
-			.orElseThrow(() -> new CustomException(OrderErrorCode.ORDER_NOT_FOUND));
+			.orElseThrow(() -> new CustomException(PaymentErrorCode.ORDER_NOT_FOUND));
+	}
+
+	private Payment getPayment(Long orderId) {
+		return paymentRepository.findByOrderId(orderId)
+			.orElseThrow(() -> new CustomException(PaymentErrorCode.PAYMENT_NOT_FOUND));
 	}
 }
