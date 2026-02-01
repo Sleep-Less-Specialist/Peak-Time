@@ -60,8 +60,28 @@ public class EnrollmentService {
 		}
 	}
 
+	@Transactional
+	public void cancelEnrollment(Long userId, Long orderId) {
+
+		List<OrderItem> orderItems = orderItemRepository.findAllByOrderId(orderId);
+
+		List<Long> courseIds = orderItems.stream()
+			.map(orderItem -> orderItem.getCourse().getId())
+			.distinct()
+			.toList();
+
+		List<Enrollment> enrollments = enrollmentRepository
+			.findAllByUserIdAndCourseIdIn(userId, courseIds);
+
+		for(Enrollment enrollment : enrollments) {
+			enrollment.cancelled();
+		}
+	}
+
 	private Order getOrder(Long orderId) {
 		return orderRepository.findById(orderId)
 			.orElseThrow(() -> new CustomException(EnrollmentErrorCode.ORDER_NOT_FOUND));
 	}
+
+
 }
