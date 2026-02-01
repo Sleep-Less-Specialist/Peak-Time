@@ -3,6 +3,7 @@ package com.github.sleeplessspecialist.peaktime.domain.order.controller;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -43,17 +44,19 @@ public class OrderController {
 	private final OrderService orderService;
 
 	@PostMapping
-	public ApiResponse<CreateOrderRes> createOrder(@RequestBody @Valid CreateOrderReq request) {
+	public ApiResponse<CreateOrderRes> createOrder(
+		@AuthenticationPrincipal Long userId,
+		@RequestBody @Valid CreateOrderReq request) {
 
-		Long userId = 1L;
 		CreateOrderRes response = orderService.createOrder(userId, request);
 		return ApiResponse.of(SuccessCode.CREATED, response);
 	}
 
 	@GetMapping("/{orderId}")
-	public ApiResponse<GetOrderDetailRes> getOrderDetail(@PathVariable @Positive Long orderId) {
+	public ApiResponse<GetOrderDetailRes> getOrderDetail(
+		@AuthenticationPrincipal Long userId,
+		@PathVariable @Positive Long orderId) {
 
-		Long userId = 1L;
 		GetOrderDetailRes response = orderService.getOrderDetail(userId, orderId);
 		return ApiResponse.of(SuccessCode.OK, response);
 	}

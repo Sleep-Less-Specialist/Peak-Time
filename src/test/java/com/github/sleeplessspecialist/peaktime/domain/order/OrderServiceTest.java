@@ -317,14 +317,14 @@ void createOrder_insufficientPoint() {
 		assertThat(response.getOrders().get(0).getOrderId()).isEqualTo(100L);
 		assertThat(response.getOrders().get(0).getUserId()).isEqualTo(userId);
 		assertThat(response.getOrders().get(0).getTotalAmount()).isEqualByComparingTo("20000");
-		assertThat(response.getOrders().get(0).getUserPoint()).isEqualByComparingTo("1000");
+		assertThat(response.getOrders().get(0).getUsePoint()).isEqualByComparingTo("1000");
 		assertThat(response.getOrders().get(0).getOrderStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT);
 		assertThat(response.getOrders().get(0).getCreateAt()).isEqualTo(java.time.LocalDateTime.of(2026, 1, 27, 9, 0));
 
 		assertThat(response.getOrders().get(1).getOrderId()).isEqualTo(101L);
 		assertThat(response.getOrders().get(1).getUserId()).isEqualTo(userId);
 		assertThat(response.getOrders().get(1).getTotalAmount()).isEqualByComparingTo("15000");
-		assertThat(response.getOrders().get(1).getUserPoint()).isEqualByComparingTo("500");
+		assertThat(response.getOrders().get(1).getUsePoint()).isEqualByComparingTo("500");
 		assertThat(response.getOrders().get(1).getOrderStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT);
 		assertThat(response.getOrders().get(1).getCreateAt()).isEqualTo(java.time.LocalDateTime.of(2026, 1, 27, 10, 0));
 
