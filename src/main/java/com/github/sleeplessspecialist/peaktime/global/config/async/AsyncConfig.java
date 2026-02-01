@@ -8,7 +8,7 @@ package com.github.sleeplessspecialist.peaktime.global.config.async;
  *
  * @author 주우재
  * @version 1.0
- * @since
+ * @since 2026.01.30
  */
 
 import java.util.concurrent.Executor;
