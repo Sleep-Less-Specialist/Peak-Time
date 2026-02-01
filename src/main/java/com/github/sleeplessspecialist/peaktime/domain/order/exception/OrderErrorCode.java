@@ -21,12 +21,12 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum OrderErrorCode implements ErrorCode {
 
-	USER_NOT_FOUND("OD-001", "존재하지 않는 사용자입니다.", HttpStatus.NOT_FOUND),
-	COURSE_NOT_FOUND("OD-002", "존재하지 않는 강의입니다.", HttpStatus.NOT_FOUND),
-	ORDER_NOT_FOUND("OD-003", "존재하지 않는 주문입니다.", HttpStatus.NOT_FOUND),
-	UNAUTHORIZED_ACCESS("OD-004", "사용자 권한이 부족합니다.", HttpStatus.FORBIDDEN),
-	INSUFFICIENT_POINT("OD-005" ,"포인트가 충분하지 않습니다",  HttpStatus.BAD_REQUEST),
-	BAD_PAGING_CONDITION("OD-006", "페이징 형식이 올바르지 않습니다.", HttpStatus.BAD_REQUEST);
+	USER_NOT_FOUND("OD001", "존재하지 않는 사용자입니다.", HttpStatus.NOT_FOUND),
+	COURSE_NOT_FOUND("OD002", "존재하지 않는 강의입니다.", HttpStatus.NOT_FOUND),
+	ORDER_NOT_FOUND("OD003", "존재하지 않는 주문입니다.", HttpStatus.NOT_FOUND),
+	UNAUTHORIZED_ACCESS("OD004", "사용자 권한이 부족합니다.", HttpStatus.FORBIDDEN),
+	INSUFFICIENT_POINT("OD005" ,"포인트가 충분하지 않습니다",  HttpStatus.BAD_REQUEST),
+	BAD_PAGING_CONDITION("OD006", "페이징 형식이 올바르지 않습니다.", HttpStatus.BAD_REQUEST);
 
 	private final String code;
 	private final String message;
