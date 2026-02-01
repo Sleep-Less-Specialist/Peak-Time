@@ -75,7 +75,7 @@ public class PaymentService {
 	}
 
 	@Transactional
-	public void cancel(PaymentCancelReq req)  {
+	public void cancelPayment(PaymentCancelReq req)  {
 
 		TossPaymentCancelReq tossPaymentCancelReq = TossPaymentCancelReq.builder()
 				.cancelReason(req.getCancelReason())

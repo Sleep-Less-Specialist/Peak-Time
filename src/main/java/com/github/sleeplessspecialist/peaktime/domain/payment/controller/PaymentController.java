@@ -49,7 +49,7 @@ public class PaymentController {
 	public ApiResponse<Void> cancelPayment(@RequestBody @Valid PaymentCancelReq req) {
 		log.info("결제 취소 요청 진입");
 
-		paymentService.cancel(req);
+		paymentService.cancelPayment(req);
 		return ApiResponse.ok();
 	}
 }
