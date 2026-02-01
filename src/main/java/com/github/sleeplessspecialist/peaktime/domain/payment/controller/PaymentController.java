@@ -41,8 +41,7 @@ public class PaymentController {
 	public ApiResponse<TossPaymentConfirmRes> confirmPayment(@RequestBody @Valid TossPaymentConfirmReq req) {
 		log.info("결제 승인 요청 진입 - orderId: {}", req.getOrderId());
 
-		TossPaymentConfirmRes result = paymentService.confirmPayment(req);
-
-		return ApiResponse.ok(result);
+		paymentService.confirmPayment(req);
+		return ApiResponse.ok();
 	}
 }

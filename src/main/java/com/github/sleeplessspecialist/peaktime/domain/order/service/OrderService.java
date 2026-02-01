@@ -9,7 +9,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.github.sleeplessspecialist.peaktime.domain.chat.exception.ChatErrorCode;
 import com.github.sleeplessspecialist.peaktime.domain.course.entity.Course;
 import com.github.sleeplessspecialist.peaktime.domain.course.repository.CourseRepository;
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.CreateOrderItemReq;
