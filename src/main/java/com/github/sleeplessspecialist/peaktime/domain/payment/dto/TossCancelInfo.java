@@ -1,5 +1,7 @@
 package com.github.sleeplessspecialist.peaktime.domain.payment.dto;
 
+import java.math.BigDecimal;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -18,4 +20,6 @@ import lombok.RequiredArgsConstructor;
 public class TossCancelInfo {
 
 	private final String cancelReason;
+
+	private final BigDecimal cancelAmount;
 }

@@ -26,7 +26,7 @@ import lombok.extern.slf4j.Slf4j;
  * 결제 승인 요청(Confirm) 전송, 인증 헤더(Basic Auth) 설정, 그리고 응답 에러 핸들링을 수행합니다.
  * </p>
  *
- * @author 기섭
+ * @author 기섭, 주우재
  * @version 1.0
  * @since 2026. 1. 26.
  */
@@ -86,7 +86,6 @@ public class TossPaymentClient {
 			})
 			.body(TossPaymentConfirmRes.class);
 	}
-
 
 	/**
 	 * 토스 페이먼츠에 결제 취소를 요청

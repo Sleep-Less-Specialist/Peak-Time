@@ -1,5 +1,6 @@
 package com.github.sleeplessspecialist.peaktime.domain.payment.dto;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import lombok.Builder;
@@ -34,5 +35,12 @@ public class TossPaymentCancelRes {
 			return null;
 		}
 		return cancels.get(0).getCancelReason();
+	}
+
+	public BigDecimal getCancelAmount() {
+		if (cancels == null || cancels.isEmpty()) {
+			return null;
+		}
+		return cancels.get(0).getCancelAmount();
 	}
 }
