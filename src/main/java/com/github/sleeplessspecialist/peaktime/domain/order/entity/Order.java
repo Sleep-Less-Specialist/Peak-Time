@@ -2,7 +2,9 @@ package com.github.sleeplessspecialist.peaktime.domain.order.entity;
 
 import java.math.BigDecimal;
 
+import com.github.sleeplessspecialist.peaktime.domain.order.exception.OrderErrorCode;
 import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
+import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
 import com.github.sleeplessspecialist.peaktime.global.domain.BaseTimeEntity;
 
 import jakarta.persistence.Column;
@@ -68,7 +70,19 @@ public class Order extends BaseTimeEntity {
 		this.totalAmount = totalAmount;
 	}
 
-	public void updateStatus(OrderStatus status) {
-		this.status = status;
+	public void complete() {
+		if (this.status == OrderStatus.COMPLETED) return; // 멱등
+		if (this.status != OrderStatus.PENDING_PAYMENT) {
+			throw new CustomException(OrderErrorCode.INVALID_ORDER_STATUS);
+		}
+		this.status = OrderStatus.COMPLETED;
+	}
+
+	public void cancel() {
+		if (this.status == OrderStatus.CANCELLED) return; // 멱등
+		if (this.status != OrderStatus.COMPLETED) {
+			throw new CustomException(OrderErrorCode.INVALID_ORDER_STATUS);
+		}
+		this.status = OrderStatus.CANCELLED;
 	}
 }
