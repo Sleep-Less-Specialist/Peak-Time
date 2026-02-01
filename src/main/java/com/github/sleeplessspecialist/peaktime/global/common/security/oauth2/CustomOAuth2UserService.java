@@ -1,5 +1,7 @@
 package com.github.sleeplessspecialist.peaktime.global.common.security.oauth2;
 
+import java.util.Map;
+
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
@@ -7,6 +9,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * OAuth2 로그인 과정에서 외부 인증 제공자(provider)의 사용자 정보를 조회하는 서비스입니다.
@@ -21,6 +24,7 @@ import lombok.RequiredArgsConstructor;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
 	/**
@@ -48,6 +52,41 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
 		String registrationId =
 			userRequest.getClientRegistration().getRegistrationId();
+
+		// 1. OAuth2 provider 확인 (현재는 Kakao만 지원)
+		if (!"kakao".equals(registrationId)) {
+			throw new OAuth2AuthenticationException("지원하지 않는 OAuth2 연결입니다: " + registrationId);
+		}
+
+		// 2. Kakao userInfo 응답 파싱
+		Map<String, Object> attributes = oAuth2User.getAttributes();
+
+		// Kakao 고유 사용자 ID (providerId)
+		String providerId = String.valueOf(attributes.get("id"));
+
+		// kakao_account 영역
+		Map<String, Object> kakaoAccount =
+			(Map<String, Object>)attributes.get("kakao_account");
+
+		String email = null;
+		String nickname = null;
+
+		if (kakaoAccount != null) {
+			email = (String)kakaoAccount.get("email");
+
+			Map<String, Object> profile =
+				(Map<String, Object>)kakaoAccount.get("profile");
+
+			if (profile != null) {
+				nickname = (String)profile.get("nickname");
+			}
+		}
+
+		// 3. 파싱 결과 로그 출력 (다음 단계: User 매핑)
+		log.info(
+			"카카오 OAuth2 사용자 정보를 불러왔습니다. providerId={}, email={}, nickname={}",
+			providerId, email, nickname
+		);
 
 		return oAuth2User;
 	}
