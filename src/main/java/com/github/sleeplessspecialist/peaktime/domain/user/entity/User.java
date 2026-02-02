@@ -128,7 +128,9 @@ public class User extends BaseTimeEntity {
 		this.point = updated;
 	}
 
-	// ✅ 추가: 프로필 정보 수정 (이름, 전화번호)
+	/**
+	 * 프로필 정보 수정
+	 */
 	public void updateProfile(String name, String phoneNumber) {
 		if (name != null && !name.isBlank()) {
 			this.name = name;
@@ -138,12 +140,14 @@ public class User extends BaseTimeEntity {
 		}
 	}
 
-	// ✅ 편의 메서드: 현재 대표 이미지 URL 가져오기 (DTO 변환용)
+	/**
+	 * 현재 대표 이미지 URL 가져오기
+	 */
 	public String getProfileImageUrl() {
 		return this.profileImages.stream()
 			.filter(ProfileImage::isPrimary)
 			.findFirst()
 			.map(ProfileImage::getUrl)
-			.orElse(null); // 이미지가 없으면 null 반환
+			.orElse(null);
 	}
 }

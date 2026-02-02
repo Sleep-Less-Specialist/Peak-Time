@@ -1,10 +1,5 @@
 package com.github.sleeplessspecialist.peaktime.domain.course.repository;
 
-import java.util.Optional;
-
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.github.sleeplessspecialist.peaktime.domain.course.entity.Course;
@@ -17,20 +12,4 @@ import com.github.sleeplessspecialist.peaktime.domain.course.entity.Course;
  * @since 2026. 1. 22.
  */
 public interface CourseRepository extends JpaRepository<Course, Long> {
-
-	/**
-	 * 강의 상세 조회
-	 * @EntityGraph를 사용하여 Lecturer(강사)와 Lectures(커리큘럼)를 한 번에 가져옵니다.
-	 */
-	@Override
-	@EntityGraph(attributePaths = {"lecturer", "lectures"})
-	Optional<Course> findById(Long id);
-
-	/**
-	 * 강의 목록 조회 (페이징)
-	 * @EntityGraph를 사용하여 Lecturer(강사) 정보만 함께 가져옵니다.
-	 */
-	@Override
-	@EntityGraph(attributePaths = {"lecturer"})
-	Page<Course> findAll(Pageable pageable);
 }
