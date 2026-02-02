@@ -1,4 +1,4 @@
-package com.github.sleeplessspecialist.peaktime.domain.payment.entity;
+package com.github.sleeplessspecialist.peaktime.domain.refund.entity;
 
 /**
  * 결제에 대한 환불 정보를 관리하는 엔티티입니다.
@@ -14,6 +14,7 @@ package com.github.sleeplessspecialist.peaktime.domain.payment.entity;
 
 import java.math.BigDecimal;
 
+import com.github.sleeplessspecialist.peaktime.domain.payment.entity.Payment;
 import com.github.sleeplessspecialist.peaktime.global.domain.BaseTimeEntity;
 
 import jakarta.persistence.Column;
@@ -25,12 +26,18 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "refunds")
+@Table(
+	name = "refunds",
+	uniqueConstraints = {
+		@UniqueConstraint(name = "uk_refund_payment", columnNames = "payment_id")
+	}
+)
 @Getter
 @NoArgsConstructor
 public class Refund extends BaseTimeEntity {

@@ -27,7 +27,7 @@ public enum OrderErrorCode implements ErrorCode {
 	UNAUTHORIZED_ACCESS("OD-004", "사용자 권한이 부족합니다.", HttpStatus.FORBIDDEN),
 	INSUFFICIENT_POINT("OD-005" ,"포인트가 충분하지 않습니다",  HttpStatus.BAD_REQUEST),
 	BAD_PAGING_CONDITION("OD-006", "페이징 형식이 올바르지 않습니다.", HttpStatus.BAD_REQUEST),
-	INVALID_ORDER_STATUS("OD-007", "페이징 형식이 올바르지 않습니다.", HttpStatus.BAD_REQUEST);
+	INVALID_ORDER_STATUS("OD-007", "주문 상태 전이 실패.", HttpStatus.CONFLICT),;
 
 	private final String code;
 	private final String message;

@@ -1,5 +1,7 @@
 package com.github.sleeplessspecialist.peaktime.domain.enrollment.repository;
 
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.github.sleeplessspecialist.peaktime.domain.enrollment.entity.Enrollment;
@@ -15,4 +17,6 @@ import com.github.sleeplessspecialist.peaktime.domain.enrollment.entity.Enrollme
  * @since 2026.01.29
  */
 public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
+
+	List<Enrollment> findAllByUserIdAndCourseIdIn(Long userId, List<Long> courseIds);
 }

@@ -22,7 +22,8 @@ import lombok.RequiredArgsConstructor;
 public enum EnrollmentErrorCode implements ErrorCode {
 
 	USER_NOT_FOUND("EN001", "존재하지 않는 사용자입니다.", HttpStatus.NOT_FOUND),
-	ORDER_NOT_FOUND("EN002", "존재하지 않는 주문입니다.", HttpStatus.NOT_FOUND);
+	ORDER_NOT_FOUND("EN002", "존재하지 않는 주문입니다.", HttpStatus.NOT_FOUND),
+	INVALID_ENROLLMENT_STATUS("EN003", "강의 등록 상태 전이 실패.", HttpStatus.CONFLICT);
 
 	private final String code;
 	private final String message;
