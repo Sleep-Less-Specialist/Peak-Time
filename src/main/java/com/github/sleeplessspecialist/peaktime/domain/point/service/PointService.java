@@ -53,4 +53,62 @@ public class PointService {
 		}
 	}
 
+	/**
+	 * 결제에 사용한 포인트를 차감하고, 이력을 기록합니다.
+	 * <p>
+	 * 동시성/중복 호출로 인해 동일 차감이 두 번 실행될 수 있으므로,
+	 * PointTransaction의 dedupKey 유니크 제약을 통해 1회만 반영되도록 보장합니다.
+	 * </p>
+	 *
+	 * @param user     포인트 차감 대상 사용자
+	 * @param orderId  결제 주문 ID (dedupKey 생성에 사용)
+	 * @param usePoint 사용 포인트 (양수, 0이면 아무 작업도 하지 않음)
+	 */
+	public void spendForOrder(User user, Long orderId, Long usePoint) {
+		if (usePoint == null || usePoint <= 0) {
+			return;
+		}
+
+		long balanceBefore = user.getPoint();
+		long balanceAfter = balanceBefore - usePoint;
+
+		PointTransaction tx = PointTransaction.paymentUsePoint(user, usePoint, orderId, balanceAfter);
+
+		try {
+			pointTransactionRepository.save(tx);
+			user.addPoint(-usePoint); // 차감 반영 (User에 usePoint 메서드가 있으면 그걸로 교체)
+		} catch (DataIntegrityViolationException e) {
+			log.debug("결제 포인트 차감이 이미 처리되었습니다. userId={}, orderId={}", user.getId(), orderId);
+		}
+	}
+
+	/**
+	 * 결제 취소(전체 환불) 시 사용 포인트를 환급하고, 이력을 기록합니다.
+	 * <p>
+	 * 전체 환불만 지원하므로 orderId 기준으로 dedupKey를 구성해 1회만 반영되도록 보장합니다.
+	 * (PointTransaction의 dedupKey 유니크 제약 + DataIntegrityViolationException 처리)
+	 * </p>
+	 *
+	 * @param user        포인트 환급 대상 사용자
+	 * @param orderId     결제 주문 ID (dedupKey 생성에 사용)
+	 * @param refundPoint 환급 포인트 (양수, 0이면 아무 작업도 하지 않음)
+	 */
+	public void refundForOrder(User user, Long orderId, Long refundPoint) {
+		if (refundPoint == null || refundPoint <= 0) {
+			return;
+		}
+
+		long balanceBefore = user.getPoint();
+		long balanceAfter = balanceBefore + refundPoint;
+
+		PointTransaction tx = PointTransaction.paymentRefundPoint(user, refundPoint, orderId, balanceAfter);
+
+		try {
+			pointTransactionRepository.save(tx);
+			user.addPoint(refundPoint); // 환급 반영
+		} catch (DataIntegrityViolationException e) {
+			log.debug("결제 포인트 환불이 이미 처리되었습니다. userId={}, orderId={}", user.getId(), orderId);
+		}
+	}
+
 }

@@ -128,6 +128,13 @@ public class User extends BaseTimeEntity {
 		this.point = updated;
 	}
 
+	public void changeStatus(UserStatus newStatus) {
+		if (this.status == newStatus) {
+			return;
+		}
+		this.status = newStatus;
+	}
+
 	// ✅ 추가: 프로필 정보 수정 (이름, 전화번호)
 	public void updateProfile(String name, String phoneNumber) {
 		if (name != null && !name.isBlank()) {
