@@ -1,12 +1,19 @@
 package com.github.sleeplessspecialist.peaktime.global.common.security.oauth2;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
+
+import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
+import com.github.sleeplessspecialist.peaktime.domain.user.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +33,8 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
+
+	private final UserRepository userRepository;
 
 	/**
 	 * OAuth2 인증 제공자(provider)로부터 사용자 정보를 조회합니다.
@@ -88,6 +97,29 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 			providerId, email, nickname
 		);
 
-		return oAuth2User;
+		final String provider = "KAKAO";
+		final String resolvedNickname = (nickname != null) ? nickname : "KakaoUser";
+		final String resolvedEmail = email;
+
+		User user = userRepository
+			.findByAuthProviderAndProviderId(provider, providerId)
+			.orElseGet(() -> userRepository.save(
+				User.createForOAuth2(
+					resolvedNickname,
+					resolvedEmail,
+					provider,
+					providerId
+				)
+			));
+
+		Map<String, Object> merged = new HashMap<>(attributes);
+		merged.put("userId", String.valueOf(user.getId()));
+		merged.put("authProvider", user.getAuthProvider());
+
+		return new DefaultOAuth2User(
+			Collections.singleton(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())),
+			merged,
+			"userId"
+		);
 	}
 }
