@@ -7,7 +7,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.github.sleeplessspecialist.peaktime.domain.point.entity.PointTransaction;
 import com.github.sleeplessspecialist.peaktime.domain.point.repository.PointTransactionRepository;
 import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
+import com.github.sleeplessspecialist.peaktime.domain.user.exception.UserErrorCode;
 import com.github.sleeplessspecialist.peaktime.domain.user.repository.UserRepository;
+import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,7 +48,7 @@ public class PointService {
 
 		// 트랜잭션 내에서 영속(Managed) 상태의 엔티티를 확보해야 users.point 변경이 DB에 반영됩니다.
 		User managedUser = userRepository.findById(user.getId())
-			.orElseThrow(() -> new IllegalStateException("User not found. id=" + user.getId()));
+			.orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
 
 		try {
 			long balanceBefore = managedUser.getPoint();
@@ -83,7 +85,7 @@ public class PointService {
 
 		// 트랜잭션 내에서 영속(Managed) 상태의 엔티티를 확보해야 users.point 변경이 DB에 반영됩니다.
 		User managedUser = userRepository.findById(user.getId())
-			.orElseThrow(() -> new IllegalStateException("User not found. id=" + user.getId()));
+			.orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
 
 		long balanceBefore = managedUser.getPoint();
 		long balanceAfter = balanceBefore - usePoint;
