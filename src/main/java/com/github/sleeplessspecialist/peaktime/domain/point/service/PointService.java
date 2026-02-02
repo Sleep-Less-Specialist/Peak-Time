@@ -2,10 +2,12 @@ package com.github.sleeplessspecialist.peaktime.domain.point.service;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.github.sleeplessspecialist.peaktime.domain.point.entity.PointTransaction;
 import com.github.sleeplessspecialist.peaktime.domain.point.repository.PointTransactionRepository;
 import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
+import com.github.sleeplessspecialist.peaktime.domain.user.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 public class PointService {
 
 	private final PointTransactionRepository pointTransactionRepository;
+	private final UserRepository userRepository;
 
 	/**
 	 * 회원가입 보너스 포인트를 지급하고, 이력을 기록합니다.
@@ -37,19 +40,27 @@ public class PointService {
 	 *
 	 * @param user 포인트 지급 대상 사용자
 	 */
+	@Transactional
 	public void grantSignupBonus(User user) {
 		long bonus = 1000L;
 
-		long balanceBefore = user.getPoint();
-		long balanceAfter = balanceBefore + bonus;
-
-		PointTransaction tx = PointTransaction.signupBonus(user, bonus, balanceAfter);
+		// 트랜잭션 내에서 영속(Managed) 상태의 엔티티를 확보해야 users.point 변경이 DB에 반영됩니다.
+		User managedUser = userRepository.findById(user.getId())
+			.orElseThrow(() -> new IllegalStateException("User not found. id=" + user.getId()));
 
 		try {
+			long balanceBefore = managedUser.getPoint();
+			long balanceAfter = balanceBefore + bonus;
+
+			// 1) users.point 반영 (dirty checking)
+			managedUser.addPoint(bonus);
+
+			// 2) point_transactions 이력 저장 (dedupKey 유니크로 멱등 보장)
+			PointTransaction tx = PointTransaction.signupBonus(managedUser, bonus, balanceAfter);
 			pointTransactionRepository.save(tx);
-			user.addPoint(bonus);
+
 		} catch (DataIntegrityViolationException e) {
-			log.debug("회원가입 보너스 포인트 지급이 이미 완료되었습니다. userId={}", user.getId());
+			log.debug("회원가입 보너스 포인트 지급이 이미 완료되었습니다. userId={}", managedUser.getId());
 		}
 	}
 
@@ -64,21 +75,30 @@ public class PointService {
 	 * @param orderId  결제 주문 ID (dedupKey 생성에 사용)
 	 * @param usePoint 사용 포인트 (양수, 0이면 아무 작업도 하지 않음)
 	 */
+	@Transactional
 	public void spendForOrder(User user, Long orderId, Long usePoint) {
 		if (usePoint == null || usePoint <= 0) {
 			return;
 		}
 
-		long balanceBefore = user.getPoint();
+		// 트랜잭션 내에서 영속(Managed) 상태의 엔티티를 확보해야 users.point 변경이 DB에 반영됩니다.
+		User managedUser = userRepository.findById(user.getId())
+			.orElseThrow(() -> new IllegalStateException("User not found. id=" + user.getId()));
+
+		long balanceBefore = managedUser.getPoint();
 		long balanceAfter = balanceBefore - usePoint;
 
-		PointTransaction tx = PointTransaction.paymentUsePoint(user, usePoint, orderId, balanceAfter);
+		PointTransaction tx = PointTransaction.paymentUsePoint(managedUser, usePoint, orderId, balanceAfter);
 
 		try {
+			// 1) users.point 반영 (dirty checking)
+			managedUser.addPoint(-usePoint); // 차감 반영 (User에 usePoint 메서드가 있으면 그걸로 교체)
+
+			// 2) point_transactions 이력 저장 (dedupKey 유니크로 멱등 보장)
 			pointTransactionRepository.save(tx);
-			user.addPoint(-usePoint); // 차감 반영 (User에 usePoint 메서드가 있으면 그걸로 교체)
+
 		} catch (DataIntegrityViolationException e) {
-			log.debug("결제 포인트 차감이 이미 처리되었습니다. userId={}, orderId={}", user.getId(), orderId);
+			log.debug("결제 포인트 차감이 이미 처리되었습니다. userId={}, orderId={}", managedUser.getId(), orderId);
 		}
 	}
 }
