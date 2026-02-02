@@ -23,6 +23,17 @@ public final class SecurityPathPolicy {
 	public static final String[] PUBLIC_ENDPOINTS = {
 		"/error",
 
+		// ✅ 기본 프론트 진입
+		"/",
+		"/index.html",
+		"/signup.html",
+		"/favicon.ico",
+
+		// 정적 리소스
+		"/css/**",
+		"/js/**",
+		"/images/**",
+
 		// 인증/인가(비로그인 가능)
 		"/api/v1/auth/signup",
 		"/api/v1/auth/login",
@@ -30,7 +41,9 @@ public final class SecurityPathPolicy {
 		"/api/v1/auth/logout",
 		"/api/v1/auth/password/**",
 
-		// OAuth 시작/콜백
+		// OAuth2
+		"/oauth2/**",
+		"/login/oauth2/**",
 		"/api/v1/oauth2/**"
 	};
 

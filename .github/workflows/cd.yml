@@ -43,12 +43,16 @@ jobs:
           JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
           TOSS_CLIENT_KEY: ${{ secrets.TOSS_CLIENT_KEY }}
           TOSS_SECRET_KEY: ${{ secrets.TOSS_SECRET_KEY }}
+          KAKAO_CLIENT_ID: ${{ secrets.KAKAO_CLIENT_ID }}
+          KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           port: ${{ secrets.EC2_SSH_PORT || 22 }}
-          envs: MYSQL_DATABASE,MYSQL_USER,MYSQL_PASSWORD,MYSQL_ROOT_PASSWORD,DOCKER_USERNAME,DOCKER_PASSWORD,GMAIL_ID,SMTP_PASSWORD,AWS_S3_BUCKET,AWS_ACCESS_KEY,AWS_SECRET_KEY,JWT_SECRET_KEY,TOSS_CLIENT_KEY,TOSS_SECRET_KEY
+          envs: MYSQL_DATABASE,MYSQL_USER,MYSQL_PASSWORD,MYSQL_ROOT_PASSWORD,DOCKER_USERNAME,DOCKER_PASSWORD,GMAIL_ID,SMTP_PASSWORD,AWS_S3_BUCKET,AWS_ACCESS_KEY,AWS_SECRET_KEY,JWT_SECRET_KEY,TOSS_CLIENT_KEY,TOSS_SECRET_KEY,KAKAO_CLIENT_ID,KAKAO_CLIENT_SECRET,GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET
           script: |
             cd /home/${{ secrets.EC2_USERNAME }}/peak-time
             
@@ -66,6 +70,10 @@ jobs:
             printf "JWT_SECRET_KEY=%s\n" "$JWT_SECRET_KEY" >> .env
             printf "TOSS_CLIENT_KEY=%s\n" "$TOSS_CLIENT_KEY" >> .env
             printf "TOSS_SECRET_KEY=%s\n" "$TOSS_SECRET_KEY" >> .env
+            printf "KAKAO_CLIENT_ID=%s\n" "$KAKAO_CLIENT_ID" >> .env
+            printf "KAKAO_CLIENT_SECRET=%s\n" "$KAKAO_CLIENT_SECRET" >> .env
+            printf "GOOGLE_CLIENT_ID=%s\n" "$GOOGLE_CLIENT_ID" >> .env
+            printf "GOOGLE_CLIENT_SECRET=%s\n" "$GOOGLE_CLIENT_SECRET" >> .env
             printf "DB_DDL_AUTO=update\n" >> .env
             
             # Docker 로그인
