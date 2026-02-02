@@ -3,6 +3,7 @@ package com.github.sleeplessspecialist.peaktime.domain.order.service;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +15,7 @@ import com.github.sleeplessspecialist.peaktime.domain.order.dto.CreateOrderReq;
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.CreateOrderRes;
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.GetOrderDetailRes;
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.OrderItemRes;
+import com.github.sleeplessspecialist.peaktime.domain.order.dto.OrderListRes;
 import com.github.sleeplessspecialist.peaktime.domain.order.entity.Order;
 import com.github.sleeplessspecialist.peaktime.domain.order.entity.OrderItem;
 import com.github.sleeplessspecialist.peaktime.domain.order.exception.OrderErrorCode;
@@ -22,6 +24,7 @@ import com.github.sleeplessspecialist.peaktime.domain.order.repository.OrderRepo
 import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
 import com.github.sleeplessspecialist.peaktime.domain.user.repository.UserRepository;
 import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
+import com.github.sleeplessspecialist.peaktime.global.common.security.util.SecurityUtil;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +33,7 @@ import lombok.extern.slf4j.Slf4j;
  * 주문 로직
  * <p>
  * 주문 생성, 전체 조회, 단건 주문 조회 내부 로직
+ * 유저 구매 내역 조회
  * </p>
  *
  * @author 주우재
@@ -172,5 +176,21 @@ public class OrderService {
 				userId, userPoint, usePoint);
 			throw new CustomException(OrderErrorCode.INSUFFICIENT_POINT);
 		}
+	}
+
+	public List<OrderListRes> getMyOrderList() {
+
+		Long currentUserId = SecurityUtil.getCurrentUserId();
+
+		return orderRepository.findAllByUserIdOrderByCreatedAtDesc(currentUserId)
+			.stream()
+			.map(order -> OrderListRes.builder()
+				.orderId(order.getId())
+				.totalAmount(order.getTotalAmount())
+				.usePoint(order.getUsePoint())
+				.status(order.getStatus())
+				.orderedAt(order.getCreatedAt())
+				.build())
+			.collect(Collectors.toList());
 	}
 }
