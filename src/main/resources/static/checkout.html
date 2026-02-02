@@ -83,7 +83,13 @@
             try {
                 const response = await fetch(
                     `${API_BASE_URL}/api/v1/orders/${encodeURIComponent(orderId)}`,
-                    { method: "GET", headers: { Accept: "application/json" } }
+                    {
+                        method: "GET",
+                        headers: {
+                            Accept: "application/json",
+                            Authorization: `Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIyIiwiaWF0IjoxNzcwMDIxOTM3LCJleHAiOjE3NzAwMjU1MzcsInJvbGUiOiJTVFVERU5UIn0.ugQhNWMTWiONYnnuUWY5nlBZgrj4beUgOxeAZ_WYZMQ`
+                        }
+                    }
                 );
 
                 const json = await response.json().catch(() => ({}));
