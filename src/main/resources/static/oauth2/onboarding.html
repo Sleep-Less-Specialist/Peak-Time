@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>온보딩 - 전화번호 등록</title>
+</head>
+<body>
+<h1>추가 정보 입력</h1>
+<p>전화번호를 입력하면 가입이 완료됩니다.</p>
+
+<label>
+    전화번호:
+    <input id="phone" type="text" placeholder="01012345678" />
+</label>
+<div style="margin: 12px 0;">
+  <button id="refreshBtn" type="button">리프레시 토큰 재발급 테스트</button>
+  <button id="saveBtn" type="button">저장</button>
+</div>
+
+<p style="color:#555;">
+  현재 접속: <span id="origin"></span>
+</p>
+
+<pre id="result" style="white-space: pre-wrap;"></pre>
+
+<script>
+    const resultEl = document.getElementById("result");
+    const phoneEl = document.getElementById("phone");
+    const btn = document.getElementById("saveBtn");
+    const refreshBtn = document.getElementById("refreshBtn");
+    const originEl = document.getElementById("origin");
+    originEl.textContent = window.location.origin;
+
+    function show(obj) {
+        resultEl.textContent = typeof obj === "string" ? obj : JSON.stringify(obj, null, 2);
+    }
+
+    async function readResponse(res) {
+      const text = await res.text();
+      try {
+        return { ok: res.ok, status: res.status, json: JSON.parse(text), text };
+      } catch {
+        return { ok: res.ok, status: res.status, json: null, text };
+      }
+    }
+
+    async function refreshAccessToken() {
+      const res = await fetch("/api/v1/auth/refresh", {
+        method: "POST",
+        credentials: "include", // ✅ 쿠키(RefreshToken) 자동 전송
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify({}), // 서버가 바디를 요구하는 경우 대비
+        cache: "no-store"
+      });
+
+      const parsed = await readResponse(res);
+      if (!parsed.ok) {
+        // 401이면 쿠키가 안 붙었거나(또는 permitAll/필터 설정) refresh 정책 불일치 가능성이 큼
+        throw {
+          message: "refresh 호출 실패",
+          status: parsed.status,
+          hint: parsed.status === 401
+            ? "401이면 (1) refreshToken 쿠키가 없음/전송 안됨 (2) /api/v1/auth/refresh가 permitAll이 아님 (3) 서버가 쿠키가 아니라 헤더/바디로 토큰을 기대하는 경우를 확인하세요."
+            : "응답 본문을 확인하세요.",
+          response: parsed.json ?? parsed.text
+        };
+      }
+
+      const data = parsed.json ?? {};
+      const accessToken =
+        (data && data.data && data.data.accessToken) ||
+        (data && data.accessToken);
+
+      if (!accessToken) {
+        throw {
+          message: "accessToken이 응답에 없습니다. refresh 응답 구조를 확인하세요.",
+          response: data
+        };
+      }
+
+      return accessToken;
+    }
+
+    async function updatePhone(accessToken, phoneNumber) {
+        const res = await fetch("/api/v1/members/me", {
+            method: "PATCH",
+            credentials: "include",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + accessToken
+            },
+            body: JSON.stringify({ phoneNumber })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw data;
+        return data;
+    }
+
+    refreshBtn.addEventListener("click", async () => {
+      try {
+        refreshBtn.disabled = true;
+        show("리프레시 토큰 재발급 테스트 중...");
+        const accessToken = await refreshAccessToken();
+        show({ message: "재발급 성공", accessTokenPrefix: accessToken.substring(0, 12) });
+      } catch (e) {
+        show(e);
+      } finally {
+        refreshBtn.disabled = false;
+      }
+    });
+
+    btn.addEventListener("click", async () => {
+        try {
+            btn.disabled = true;
+
+            const phoneNumber = phoneEl.value.trim();
+            if (!phoneNumber) {
+                show("전화번호를 입력하세요.");
+                return;
+            }
+
+            show("1) 토큰 재발급 중...");
+            const accessToken = await refreshAccessToken();
+
+            show("2) 전화번호 저장 중...");
+            const updated = await updatePhone(accessToken, phoneNumber);
+
+            show({ message: "온보딩 완료!", updated });
+
+            // ✅ 저장 후 성공 페이지로 이동
+            window.location.href = "/oauth2/success";
+        } catch (e) {
+            show(e);
+        } finally {
+            btn.disabled = false;
+        }
+    });
+</script>
+</body>
+</html>
