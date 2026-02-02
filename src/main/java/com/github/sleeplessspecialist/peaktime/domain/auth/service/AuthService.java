@@ -1,6 +1,9 @@
 package com.github.sleeplessspecialist.peaktime.domain.auth.service;
 
 import java.time.Duration;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.time.Instant;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.redis.RedisConnectionFailureException;
@@ -16,6 +19,8 @@ import com.github.sleeplessspecialist.peaktime.domain.auth.dto.response.LoginRes
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.response.RefreshRes;
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.response.SignupRes;
 import com.github.sleeplessspecialist.peaktime.domain.auth.exception.AuthErrorCode;
+import com.github.sleeplessspecialist.peaktime.domain.auth.token.RefreshTokenStore;
+import com.github.sleeplessspecialist.peaktime.domain.auth.token.SessionEntry;
 import com.github.sleeplessspecialist.peaktime.domain.point.service.PointService;
 import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
 import com.github.sleeplessspecialist.peaktime.domain.user.entity.UserRole;
@@ -52,6 +57,7 @@ public class AuthService {
 	private final JwtTokenProvider jwtTokenProvider;
 	private final StringRedisTemplate stringRedisTemplate;
 	private final JwtProperties jwtProperties;
+	private final RefreshTokenStore refreshTokenStore;
 
 	private static final int MAX_LOGIN_ATTEMPTS = 5;
 	private static final Duration LOGIN_ATTEMPT_WINDOW_TTL = Duration.ofMinutes(10);
@@ -125,10 +131,11 @@ public class AuthService {
 	 * </p>
 	 *
 	 * @param request 로그인 요청 DTO
+	 * @param deviceId 디바이스 식별자
 	 * @return 토큰 정보를 포함한 응답 DTO
 	 * @throws CustomException 인증 실패 또는 보안 정책 위반 시
 	 */
-	public LoginRes login(final LoginReq request) {
+	public LoginRes login(final LoginReq request, final String deviceId) {
 		final String email = normalizeEmail(request.getEmail());
 
 		validateLoginAttemptAllowed(email);
@@ -144,7 +151,7 @@ public class AuthService {
 			final String accessToken = jwtTokenProvider.createAccessToken(userId, role);
 			final String refreshToken = jwtTokenProvider.createRefreshToken(userId);
 
-			saveRefreshTokenWhitelist(userId, refreshToken);
+			saveRefreshTokenWhitelist(userId, deviceId, refreshToken);
 
 			clearLoginAttempts(email);
 
@@ -178,19 +185,20 @@ public class AuthService {
 	 * </p>
 	 *
 	 * @param request 재발급에 사용할 Refresh Token을 포함한 요청 DTO
+	 * @param deviceId 디바이스 식별자
 	 * @return 새로 발급된 Access / Refresh Token 정보
 	 * @throws CustomException 유효하지 않거나 만료된 Refresh Token인 경우
 	 */
-	public RefreshRes refreshToken(final RefreshReq request) {
+	public RefreshRes refreshToken(final RefreshReq request, final String deviceId) {
 		final String refreshToken = request.getRefreshToken();
 
 		validateRefreshToken(refreshToken);
 
 		final User user = validateUserByRefreshToken(refreshToken);
 
-		validateRefreshTokenWhitelisted(user.getId(), refreshToken);
+		validateRefreshTokenWhitelisted(user.getId(), deviceId, refreshToken);
 
-		return rotateAndIssueTokens(user, refreshToken);
+		return rotateAndIssueTokens(user, deviceId, refreshToken);
 	}
 
 	private void validateRefreshToken(final String refreshToken) {
@@ -209,17 +217,18 @@ public class AuthService {
 	 * </p>
 	 *
 	 * @param refreshToken 로그아웃 대상 Refresh Token
+	 * @param deviceId 디바이스 식별자
 	 * @throws CustomException 유효하지 않은 Refresh Token 인 경우
 	 */
-	public void logout(final String refreshToken) {
+	public void logout(final String refreshToken, final String deviceId) {
 		validateRefreshToken(refreshToken);
 
 		final User user = validateUserByRefreshToken(refreshToken);
 		final Long userId = user.getId();
 
-		validateRefreshTokenWhitelisted(userId, refreshToken);
+		validateRefreshTokenWhitelisted(userId, deviceId, refreshToken);
 
-		revokeRefreshTokenWhitelist(userId, refreshToken);
+		revokeRefreshTokenWhitelist(userId, deviceId);
 	}
 
 	private User validateUserByRefreshToken(final String refreshToken) {
@@ -240,38 +249,15 @@ public class AuthService {
 		return user;
 	}
 
-	private void validateRefreshTokenWhitelisted(final Long userId, final String refreshToken) {
-		final String refreshKey = buildRefreshWhitelistKey(userId, refreshToken);
-		try {
-			final Boolean exists = stringRedisTemplate.hasKey(refreshKey);
-			if (!Boolean.TRUE.equals(exists)) {
-				throw new CustomException(AuthErrorCode.INVALID_REFRESH_TOKEN);
-			}
-		} catch (RedisConnectionFailureException e) {
-			log.error("Redis 장애로 RefreshToken 화이트리스트 검증에 실패했습니다. userId={}, key={}", userId, refreshKey, e);
-			throw e;
-		}
-	}
-
-	private void revokeRefreshTokenWhitelist(final Long userId, final String refreshToken) {
-		final String refreshKey = buildRefreshWhitelistKey(userId, refreshToken);
-		try {
-			stringRedisTemplate.delete(refreshKey);
-		} catch (RedisConnectionFailureException e) {
-			log.error("Redis 장애로 RefreshToken 화이트리스트 삭제에 실패했습니다. userId={}, key={}", userId, refreshKey, e);
-			throw e;
-		}
-	}
-
-	private RefreshRes rotateAndIssueTokens(final User user, final String oldRefreshToken) {
+	private RefreshRes rotateAndIssueTokens(final User user, final String deviceId, final String oldRefreshToken) {
 		final Long userId = user.getId();
 		final String role = resolveRole(user.getRole());
 
 		final String newAccessToken = jwtTokenProvider.createAccessToken(userId, role);
 		final String newRefreshToken = jwtTokenProvider.createRefreshToken(userId);
 
-		revokeRefreshTokenWhitelist(userId, oldRefreshToken);
-		saveRefreshTokenWhitelist(userId, newRefreshToken);
+		revokeRefreshTokenWhitelist(userId, deviceId);
+		saveRefreshTokenWhitelist(userId, deviceId, newRefreshToken);
 
 		return new RefreshRes(
 			newAccessToken,
@@ -317,27 +303,47 @@ public class AuthService {
 		return (userRole == null) ? UserRole.STUDENT.name() : userRole.name();
 	}
 
-	private void saveRefreshTokenWhitelist(final Long userId, final String refreshToken) {
-		final String refreshKey = buildRefreshWhitelistKey(userId, refreshToken);
-		try {
-			stringRedisTemplate.opsForValue().set(
-				refreshKey,
-				"1",
-				Duration.ofMillis(jwtProperties.getRefreshTokenExpirationMs())
-			);
-		} catch (RedisConnectionFailureException e) {
-			log.error("Redis 장애로 RefreshToken 화이트리스트 저장에 실패했습니다. userId={}, key={}", userId, refreshKey, e);
-			throw e;
-		}
-	}
-
 	private int accessTokenExpiresInSeconds() {
 		final long accessTokenExpirationMs = jwtProperties.getAccessTokenExpirationMs();
 		return (int)(accessTokenExpirationMs / 1000);
 	}
 
-	private String buildRefreshWhitelistKey(final Long userId, final String refreshToken) {
-		return "refresh:" + userId + ":" + refreshToken;
+	private void validateRefreshTokenWhitelisted(final Long userId, final String deviceId, final String refreshToken) {
+		final String refreshTokenHash = sha256(refreshToken);
+
+		try {
+			final SessionEntry entry = refreshTokenStore.find(userId, deviceId)
+				.orElseThrow(() -> new CustomException(AuthErrorCode.INVALID_REFRESH_TOKEN));
+
+			if (!refreshTokenHash.equals(entry.getRefreshTokenHash())) {
+				throw new CustomException(AuthErrorCode.INVALID_REFRESH_TOKEN);
+			}
+		} catch (RedisConnectionFailureException e) {
+			log.error("Redis 장애로 RefreshToken 화이트리스트 검증에 실패했습니다. userId={}, deviceId={}", userId, deviceId, e);
+			throw e;
+		}
+	}
+
+	private void revokeRefreshTokenWhitelist(final Long userId, final String deviceId) {
+		try {
+			refreshTokenStore.delete(userId, deviceId);
+		} catch (RedisConnectionFailureException e) {
+			log.error("Redis 장애로 RefreshToken 화이트리스트 삭제에 실패했습니다. userId={}, deviceId={}", userId, deviceId, e);
+			throw e;
+		}
+	}
+
+	private void saveRefreshTokenWhitelist(final Long userId, final String deviceId, final String refreshToken) {
+		final Instant now = Instant.now();
+		final String refreshTokenHash = sha256(refreshToken);
+		final Duration ttl = Duration.ofMillis(jwtProperties.getRefreshTokenExpirationMs());
+
+		try {
+			refreshTokenStore.save(new SessionEntry(userId, deviceId, refreshTokenHash, now, ttl));
+		} catch (RedisConnectionFailureException e) {
+			log.error("Redis 장애로 RefreshToken 화이트리스트 저장에 실패했습니다. userId={}, deviceId={}", userId, deviceId, e);
+			throw e;
+		}
 	}
 
 	private void validateLoginAttemptAllowed(final String email) {
@@ -393,6 +399,21 @@ public class AuthService {
 
 	private String buildLoginLockKey(final String email) {
 		return "login:lock:" + email;
+	}
+
+	private String sha256(final String raw) {
+		try {
+			MessageDigest md = MessageDigest.getInstance("SHA-256");
+			byte[] digest = md.digest(raw.getBytes(StandardCharsets.UTF_8));
+			StringBuilder sb = new StringBuilder();
+			for (byte b : digest) {
+				sb.append(String.format("%02x", b));
+			}
+			return sb.toString();
+		} catch (Exception e) {
+			// fallback (매우 드문 케이스)
+			return Long.toHexString(System.nanoTime());
+		}
 	}
 
 }

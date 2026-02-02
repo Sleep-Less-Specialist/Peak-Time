@@ -3,6 +3,7 @@ package com.github.sleeplessspecialist.peaktime.global.common.security.oauth2;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
@@ -103,14 +104,32 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
 		User user = userRepository
 			.findByAuthProviderAndProviderId(provider, providerId)
-			.orElseGet(() -> userRepository.save(
-				User.createForOAuth2(
-					resolvedNickname,
-					resolvedEmail,
-					provider,
-					providerId
-				)
-			));
+			.orElseGet(() -> {
+				if (resolvedEmail != null && !resolvedEmail.isBlank()) {
+					Optional<User> byEmail = userRepository.findByEmail(resolvedEmail);
+					if (byEmail.isPresent()) {
+						User existing = byEmail.get();
+
+						log.info(
+							"기존 계정에 OAuth 자동 연동을 수행합니다. email={}, provider={}, providerId={}",
+							resolvedEmail, provider, providerId
+						);
+
+						existing.updateOAuthProvider(provider, providerId);
+
+						return userRepository.save(existing);
+					}
+				}
+
+				return userRepository.save(
+					User.createForOAuth2(
+						resolvedNickname,
+						resolvedEmail,
+						provider,
+						providerId
+					)
+				);
+			});
 
 		Map<String, Object> merged = new HashMap<>(attributes);
 		merged.put("userId", String.valueOf(user.getId()));

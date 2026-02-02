@@ -202,4 +202,30 @@ public class User extends BaseTimeEntity {
 			.map(ProfileImage::getUrl)
 			.orElse(null); // 이미지가 없으면 null 반환
 	}
+
+	/**
+	 * OAuth 인증 제공자 정보를 사용자 계정에 연동합니다.
+	 *
+	 * <p>
+	 * OAuth 로그인 시 전달된 이메일이 기존 사용자 계정과 동일한 경우
+	 * 해당 사용자 계정에 OAuth 인증 제공자 정보를 연결하기 위해 사용됩니다.
+	 * </p>
+	 *
+	 * <p>주의사항</p>
+	 * <ul>
+	 *   <li>
+	 *       이메일 동일성을 기준으로 자동 연동을 수행하므로,
+	 *       OAuth 제공자가 이메일 소유를 신뢰할 수 있는 경우에만 사용해야 합니다.</li>
+	 *   <li>
+	 *       추후 보안 정책 강화 시, 연동 전 추가 인증(step-up) 로직이 이 메서드 호출 이전에
+	 *       수행되도록 확장할 수 있습니다.</li>
+	 * </ul>
+	 *
+	 * @param authProvider OAuth 인증 제공자 (예: KAKAO, GOOGLE)
+	 * @param providerId   OAuth 제공자에서 발급한 사용자 고유 식별자
+	 */
+	public void updateOAuthProvider(String authProvider, String providerId) {
+		this.authProvider = authProvider;
+		this.providerId = providerId;
+	}
 }
