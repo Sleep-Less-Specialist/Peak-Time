@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,6 +23,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import com.github.sleeplessspecialist.peaktime.domain.course.entity.Course;
 import com.github.sleeplessspecialist.peaktime.domain.course.repository.CourseRepository;
+import com.github.sleeplessspecialist.peaktime.domain.enrollment.repository.EnrollmentRepository;
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.CreateOrderItemReq;
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.CreateOrderReq;
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.CreateOrderRes;
@@ -65,13 +67,22 @@ class OrderServiceTest {
 	@Mock
 	private OrderItemRepository orderItemRepository;
 
+	@Mock
+	private EnrollmentRepository enrollmentRepository;
+
 	@Test
 	@DisplayName("createOrder: totalAmount 합산, order/items 저장, 응답 필드 확인")
 	void createOrder_success() {
 		// given
 		Long userId = 1L;
+		Long buyerId = 2L;
 		User user = User.createForSignup("우재", "test@test.com", "password1234", "010-0000-0000");
 		user.addPoint(5000L);
+		ReflectionTestUtils.setField(user, "id", userId);
+
+		User buyer = User.createForSignup("구매자", "buyer@test.com", "pw", "010-...");
+		buyer.addPoint(5000L);
+		ReflectionTestUtils.setField(buyer, "id", buyerId);
 
 		Course course1 = Course.builder()
 			.title("course-1")
@@ -98,10 +109,11 @@ class OrderServiceTest {
 			new BigDecimal("1000")
 		);
 
-		when(userRepository.findById(userId)).thenReturn(java.util.Optional.of(user));
-		when(courseRepository.findById(11L)).thenReturn(java.util.Optional.of(course1));
-		when(courseRepository.findById(12L)).thenReturn(java.util.Optional.of(course2));
-
+		when(userRepository.findById(buyerId)).thenReturn(Optional.of(buyer));
+		when(courseRepository.findAllByIdInWithUser(List.of(11L, 12L)))
+			.thenReturn(List.of(course1, course2));
+		when(enrollmentRepository.existsByUserIdAndCourseIdIn(buyerId, List.of(11L, 12L)))
+			.thenReturn(false);
 		when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
 			Order order = invocation.getArgument(0);
 			ReflectionTestUtils.setField(order, "id", 100L);
@@ -118,7 +130,7 @@ class OrderServiceTest {
 		});
 
 		// when
-		CreateOrderRes response = orderService.createOrder(userId, request);
+		CreateOrderRes response = orderService.createOrder(buyerId, request);
 
 		// then
 		ArgumentCaptor<Order> orderCaptor = ArgumentCaptor.forClass(Order.class);
@@ -130,7 +142,7 @@ class OrderServiceTest {
 		verify(orderItemRepository, times(2)).save(any(OrderItem.class));
 
 		assertThat(response.getOrderId()).isEqualTo(100L);
-		assertThat(response.getUserId()).isEqualTo(userId);
+		assertThat(response.getUserId()).isEqualTo(buyerId);
 		assertThat(response.getTotalAmount()).isEqualByComparingTo("25000");
 		assertThat(response.getUsePoint()).isEqualByComparingTo("1000");
 		assertThat(response.getItems()).hasSize(2);
