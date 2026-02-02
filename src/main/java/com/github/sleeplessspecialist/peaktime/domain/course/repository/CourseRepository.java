@@ -1,11 +1,14 @@
 package com.github.sleeplessspecialist.peaktime.domain.course.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import com.github.sleeplessspecialist.peaktime.domain.course.entity.Course;
 
@@ -33,4 +36,15 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 	@Override
 	@EntityGraph(attributePaths = {"lecturer"})
 	Page<Course> findAll(Pageable pageable);
+
+	/**
+	 * List<Long> courseId 를 fetch join 으로 user 까지 가지고 오기
+	 */
+	@Query("""
+	select c
+    from Course c
+    join fetch c.lecturer u
+    where c.id in :ids""")
+	List<Course> findAllByIdInWithUser(@Param("ids") List<Long> ids);
+
 }
