@@ -3,6 +3,9 @@ package com.github.sleeplessspecialist.peaktime.domain.payment.entity;
 import java.math.BigDecimal;
 
 import com.github.sleeplessspecialist.peaktime.domain.order.entity.Order;
+import com.github.sleeplessspecialist.peaktime.domain.order.entity.OrderStatus;
+import com.github.sleeplessspecialist.peaktime.domain.payment.exception.PaymentErrorCode;
+import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
 import com.github.sleeplessspecialist.peaktime.global.domain.BaseTimeEntity;
 
 import jakarta.persistence.Column;
@@ -70,14 +73,12 @@ public class Payment extends BaseTimeEntity {
 		this.paymentMethod = paymentMethod;
 	}
 
-	public void completePayment(BigDecimal amount, String method) {
-		this.amount = amount;
-		this.status = PaymentStatus.PAID;
-		this.paymentMethod = method;
-	}
-
-	public void updatePaymentStatus(PaymentStatus status) {
-		this.status = status;
+	public void refund() {
+		if (status == PaymentStatus.REFUNDED) return;
+		if (status != PaymentStatus.PAID) {
+			throw new CustomException(PaymentErrorCode.INVALID_ORDER_STATUS);
+		}
+		this.status = PaymentStatus.REFUNDED;
 	}
 
 }

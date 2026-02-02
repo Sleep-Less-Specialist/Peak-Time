@@ -1,7 +1,9 @@
 package com.github.sleeplessspecialist.peaktime.domain.enrollment.entity;
 
 import com.github.sleeplessspecialist.peaktime.domain.course.entity.Course;
+import com.github.sleeplessspecialist.peaktime.domain.enrollment.exception.EnrollmentErrorCode;
 import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
+import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
 import com.github.sleeplessspecialist.peaktime.global.domain.BaseTimeEntity;
 
 import jakarta.persistence.Column;
@@ -63,5 +65,13 @@ public class Enrollment extends BaseTimeEntity {
 	private Enrollment(Course course, User user) {
 		this.course = course;
 		this.user = user;
+	}
+
+	public void cancelled() {
+		if (this.status == EnrollmentStatus.CANCELLED) return; // 멱등
+		if (this.status != EnrollmentStatus.ENROLLED) {
+			throw new CustomException(EnrollmentErrorCode.INVALID_ENROLLMENT_STATUS);
+		}
+		this.status = EnrollmentStatus.CANCELLED;
 	}
 }
