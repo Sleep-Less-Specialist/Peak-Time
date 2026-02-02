@@ -13,6 +13,7 @@ import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
+import com.github.sleeplessspecialist.peaktime.domain.point.service.PointService;
 import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
 import com.github.sleeplessspecialist.peaktime.domain.user.repository.UserRepository;
 
@@ -36,6 +37,7 @@ import lombok.extern.slf4j.Slf4j;
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
 	private final UserRepository userRepository;
+	private final PointService pointService;
 
 	/**
 	 * OAuth2 인증 제공자(provider)로부터 사용자 정보를 조회합니다.
@@ -63,43 +65,74 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 		String registrationId =
 			userRequest.getClientRegistration().getRegistrationId();
 
-		// 1. OAuth2 provider 확인 (현재는 Kakao만 지원)
-		if (!"kakao".equals(registrationId)) {
+		// 1. OAuth2 provider 확인 (Kakao / Google 지원)
+		if (!"kakao".equals(registrationId) && !"google".equals(registrationId)) {
 			throw new OAuth2AuthenticationException("지원하지 않는 OAuth2 연결입니다: " + registrationId);
 		}
 
-		// 2. Kakao userInfo 응답 파싱
+		// 2. Provider별 userInfo 응답 파싱
 		Map<String, Object> attributes = oAuth2User.getAttributes();
 
-		// Kakao 고유 사용자 ID (providerId)
-		String providerId = String.valueOf(attributes.get("id"));
+		String providerId;
+		String email;
+		String nickname;
+		String provider;
 
-		// kakao_account 영역
-		Map<String, Object> kakaoAccount =
-			(Map<String, Object>)attributes.get("kakao_account");
+		// Kakao
+		if ("kakao".equals(registrationId)) {
+			// Kakao 고유 사용자 ID (providerId)
+			providerId = String.valueOf(attributes.get("id"));
 
-		String email = null;
-		String nickname = null;
+			// kakao_account 영역
+			@SuppressWarnings("unchecked")
+			Map<String, Object> kakaoAccount = (Map<String, Object>) attributes.get("kakao_account");
 
-		if (kakaoAccount != null) {
-			email = (String)kakaoAccount.get("email");
+			email = null;
+			nickname = null;
 
-			Map<String, Object> profile =
-				(Map<String, Object>)kakaoAccount.get("profile");
+			if (kakaoAccount != null) {
+				email = (String)kakaoAccount.get("email");
 
-			if (profile != null) {
-				nickname = (String)profile.get("nickname");
+				@SuppressWarnings("unchecked")
+				Map<String, Object> profile = (Map<String, Object>)kakaoAccount.get("profile");
+
+				if (profile != null) {
+					nickname = (String)profile.get("nickname");
+				}
 			}
+
+			provider = "KAKAO";
+
+			log.info(
+				"카카오 OAuth2 사용자 정보를 불러왔습니다. providerId={}, email={}, nickname={}",
+				providerId, email, nickname
+			);
 		}
 
-		// 3. 파싱 결과 로그 출력 (다음 단계: User 매핑)
-		log.info(
-			"카카오 OAuth2 사용자 정보를 불러왔습니다. providerId={}, email={}, nickname={}",
-			providerId, email, nickname
-		);
+		// Google
+		else {
+			// Google 고유 사용자 ID (providerId): 보통 'sub'
+			Object sub = attributes.get("sub");
+			providerId = (sub != null) ? String.valueOf(sub) : String.valueOf(attributes.get("id"));
 
-		final String provider = "KAKAO";
-		final String resolvedNickname = (nickname != null) ? nickname : "KakaoUser";
+			email = (String)attributes.get("email");
+
+			// Google은 보통 name / given_name 등을 제공
+			String name = (String)attributes.get("name");
+			String givenName = (String)attributes.get("given_name");
+			nickname = (name != null && !name.isBlank()) ? name : givenName;
+
+			provider = "GOOGLE";
+
+			log.info(
+				"구글 OAuth2 사용자 정보를 불러왔습니다. providerId={}, email={}, nickname={}",
+				providerId, email, nickname
+			);
+		}
+
+		final String resolvedNickname = (nickname != null && !nickname.isBlank())
+			? nickname
+			: (provider + "User");
 		final String resolvedEmail = email;
 
 		User user = userRepository
@@ -121,7 +154,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 					}
 				}
 
-				return userRepository.save(
+				User created = userRepository.save(
 					User.createForOAuth2(
 						resolvedNickname,
 						resolvedEmail,
@@ -129,6 +162,11 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 						providerId
 					)
 				);
+
+				// OAuth 신규 가입도 로컬 회원가입과 동일하게 보너스 지급
+				pointService.grantSignupBonus(created);
+
+				return created;
 			});
 
 		Map<String, Object> merged = new HashMap<>(attributes);
