@@ -45,9 +45,9 @@ import lombok.extern.slf4j.Slf4j;
  * @version 1.0
  * @since 2026.01.27
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OrderService {
 
 	private final UserRepository userRepository;
@@ -55,6 +55,7 @@ public class OrderService {
 	private final OrderRepository orderRepository;
 	private final OrderItemRepository orderItemRepository;
 	private final EnrollmentRepository enrollmentRepository;
+
 	/**
 	 * 주문 생성
 	 * 1. userId DB 존재 여부 확인
@@ -81,7 +82,7 @@ public class OrderService {
 
 		Order order = createOrderEntity(request, user, totalAmount);
 
-		List<OrderItemRes> orderItems =  new ArrayList<>();
+		List<OrderItemRes> orderItems = new ArrayList<>();
 
 		for (CreateOrderItemReq item : request.getOrderItems()) {
 			Course course = courseMap.get(item.getCourseId());
@@ -181,7 +182,6 @@ public class OrderService {
 			.build();
 	}
 
-
 	private User getUser(Long userId) {
 		return userRepository.findById(userId)
 			.orElseThrow(() -> new CustomException(OrderErrorCode.USER_NOT_FOUND));
@@ -266,6 +266,5 @@ public class OrderService {
 			throw new CustomException(OrderErrorCode.ALREADY_ENROLLED_COURSE);
 		}
 	}
-
 
 }

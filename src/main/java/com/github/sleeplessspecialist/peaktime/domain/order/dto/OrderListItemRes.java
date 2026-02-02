@@ -19,7 +19,7 @@ import lombok.RequiredArgsConstructor;
  *
  * @author 주우재
  * @version 1.0
- * @since
+ * @since 2026.01.29
  */
 @Getter
 @RequiredArgsConstructor

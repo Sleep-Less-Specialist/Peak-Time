@@ -7,8 +7,9 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
-import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 /**
  * 주문 생성을 위한 요청 DTO.
@@ -23,15 +24,16 @@ import lombok.Getter;
  * @since
  */
 @Getter
-@AllArgsConstructor
+@RequiredArgsConstructor
+@Builder
 public class CreateOrderReq {
 
 	@NotNull
 	@Size(min = 1)
 	@Valid
-	private List<CreateOrderItemReq> orderItems;
+	private final List<CreateOrderItemReq> orderItems;
 
 	@NotNull
 	@PositiveOrZero
-	private BigDecimal usePoint;
+	private final BigDecimal usePoint;
 }

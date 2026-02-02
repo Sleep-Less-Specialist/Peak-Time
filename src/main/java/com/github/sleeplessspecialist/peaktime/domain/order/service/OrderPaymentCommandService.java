@@ -22,12 +22,13 @@ import lombok.extern.slf4j.Slf4j;
  * @version 1.0
  * @since 2026.01.29
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OrderPaymentCommandService {
 
 	private final OrderRepository orderRepository;
+
 	/**
 	 * 결제 완료 후처리 로직으로 주문 상태 전이
 	 */
