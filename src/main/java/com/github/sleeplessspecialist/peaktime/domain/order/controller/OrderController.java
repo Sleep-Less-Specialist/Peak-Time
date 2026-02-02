@@ -1,14 +1,12 @@
 package com.github.sleeplessspecialist.peaktime.domain.order.controller;
 
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.CreateOrderReq;
@@ -20,6 +18,8 @@ import com.github.sleeplessspecialist.peaktime.global.common.response.ApiRespons
 import com.github.sleeplessspecialist.peaktime.global.common.response.SuccessCode;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 
@@ -63,14 +63,11 @@ public class OrderController {
 
 	@GetMapping
 	public ApiResponse<GetOrderListRes> getAllOrder(
-		@PageableDefault(
-			size = 10,
-			sort = "createdAt",
-			direction = Sort.Direction.DESC
-		) Pageable pageable
+		@AuthenticationPrincipal Long userId,
+		@RequestParam(defaultValue = "1") @Min(1) int page,
+		@RequestParam(defaultValue = "10") @Min(1) @Max(50) int size
 	) {
-		Long userId = 1L;
-		return ApiResponse.of(SuccessCode.OK, orderService.getAllOrder(userId, pageable));
+		return ApiResponse.of(SuccessCode.OK, orderService.getAllOrder(userId, page, size));
 	}
 
 }

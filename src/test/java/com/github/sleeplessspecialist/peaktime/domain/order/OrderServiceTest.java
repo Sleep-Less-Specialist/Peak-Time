@@ -17,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.github.sleeplessspecialist.peaktime.domain.course.entity.Course;
@@ -302,14 +303,14 @@ void createOrder_insufficientPoint() {
 		ReflectionTestUtils.setField(order2, "status", OrderStatus.PENDING_PAYMENT);
 		ReflectionTestUtils.setField(order2, "createdAt", java.time.LocalDateTime.of(2026, 1, 27, 10, 0));
 
-		PageRequest pageable = PageRequest.of(0, 2);
+		PageRequest pageable = PageRequest.of(0, 2, Sort.by(Sort.Direction.DESC, "createdAt"));
 		Page<Order> orderPage = new PageImpl<>(List.of(order1, order2), pageable, 4);
 
 		when(userRepository.findById(userId)).thenReturn(java.util.Optional.of(user));
 		when(orderRepository.findByUser(user, pageable)).thenReturn(orderPage);
 
 		// when
-		GetOrderListRes response = orderService.getAllOrder(userId, pageable);
+		GetOrderListRes response = orderService.getAllOrder(userId, 1, 2);
 
 		// then
 		assertThat(response.getOrders()).hasSize(2);
@@ -335,22 +336,4 @@ void createOrder_insufficientPoint() {
 		assertThat(response.isHasNext()).isTrue();
 	}
 
-	@Test
-	@DisplayName("getAllOrder: 페이지 조건 불일치 예외")
-	void getAllOrder_invalidPageSize() {
-		// given
-		Long userId = 1L;
-		User user = User.createForSignup("tester", "test@test.com", "encoded", "010-0000-0000");
-		ReflectionTestUtils.setField(user, "id", userId);
-
-		PageRequest pageable = PageRequest.of(0, 51);
-
-		when(userRepository.findById(userId)).thenReturn(java.util.Optional.of(user));
-
-		// when / then
-		assertThatThrownBy(() -> orderService.getAllOrder(userId, pageable))
-			.isInstanceOf(CustomException.class)
-			.satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
-				.isEqualTo(OrderErrorCode.BAD_PAGING_CONDITION));
-	}
 }

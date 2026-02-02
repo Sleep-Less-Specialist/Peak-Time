@@ -5,7 +5,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -150,11 +152,15 @@ public class OrderService {
 	}
 
 	@Transactional(readOnly = true)
-	public GetOrderListRes getAllOrder(Long userId, Pageable pageable) {
+	public GetOrderListRes getAllOrder(Long userId, int page, int size) {
 
 		User user = getUser(userId);
 
-		validatePageable(pageable);
+		Pageable pageable = PageRequest.of(
+			page - 1,
+			size,
+			Sort.by(Sort.Direction.DESC, "createdAt")
+		);
 
 		Page<Order> orderPage = orderRepository.findByUser(user, pageable);
 
@@ -200,20 +206,6 @@ public class OrderService {
 			log.warn("보유 포인트 부족 : user_id={}, 사용자 보유 포인트={}, 사용 포인트={}",
 				userId, userPoint, usePoint);
 			throw new CustomException(OrderErrorCode.INSUFFICIENT_POINT);
-		}
-	}
-
-	private void validatePageable(Pageable pageable) {
-
-		int page = pageable.getPageNumber();
-		int size = pageable.getPageSize();
-
-		if (page < 0) {
-			throw new CustomException(OrderErrorCode.BAD_PAGING_CONDITION);
-		}
-
-		if (size < 1 || size > 50) {
-			throw new CustomException(OrderErrorCode.BAD_PAGING_CONDITION);
 		}
 	}
 }

@@ -25,8 +25,7 @@ public enum OrderErrorCode implements ErrorCode {
 	COURSE_NOT_FOUND("OD002", "존재하지 않는 강의입니다.", HttpStatus.NOT_FOUND),
 	ORDER_NOT_FOUND("OD003", "존재하지 않는 주문입니다.", HttpStatus.NOT_FOUND),
 	UNAUTHORIZED_ACCESS("OD004", "사용자 권한이 부족합니다.", HttpStatus.FORBIDDEN),
-	INSUFFICIENT_POINT("OD005" ,"포인트가 충분하지 않습니다",  HttpStatus.BAD_REQUEST),
-	BAD_PAGING_CONDITION("OD006", "페이징 형식이 올바르지 않습니다.", HttpStatus.BAD_REQUEST);
+	INSUFFICIENT_POINT("OD005" ,"포인트가 충분하지 않습니다",  HttpStatus.BAD_REQUEST);
 
 	private final String code;
 	private final String message;
