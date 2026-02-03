@@ -228,4 +228,16 @@ public class User extends BaseTimeEntity {
 		this.authProvider = authProvider;
 		this.providerId = providerId;
 	}
+
+	/**
+	 * 사용자 비밀번호 해시를 변경합니다.
+	 * <p>
+	 * 전달되는 값은 반드시 인코딩(해시)된 비밀번호여야 합니다.
+	 * </p>
+	 *
+	 * @param encodedPasswordHash 인코딩된 비밀번호 해시
+	 */
+	public void changePassword(String encodedPasswordHash) {
+		this.passwordHash = encodedPasswordHash;
+	}
 }
