@@ -3,6 +3,7 @@ package com.github.sleeplessspecialist.peaktime.domain.chat.service;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -31,10 +32,6 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * 커피쳇(Chat) 도메인의 핵심 비즈니스 로직을 처리하는 서비스 클래스입니다.
- *  *
- *  <p>
- *
- *  </p>
  *
  * @author 주우재
  * @version 1.0
@@ -132,13 +129,16 @@ public class ChatService {
 	 * 적용된 정렬 기준이 포함됩니다.
 	 * </p>
 	 *
-	 * @param pageable 페이지 번호, 페이지 크기, 정렬 기준 정보
 	 * @return 페이지네이션이 적용된 커피쳇 방 목록 응답
 	 */
 	@Transactional(readOnly = true)
-	public GetChatRoomListRes getChatRooms(Pageable pageable) {
+	public GetChatRoomListRes getChatRooms(int page, int size) {
 
-		validatePageable(pageable);
+		Pageable pageable = PageRequest.of(
+			page - 1,
+			size,
+			Sort.by(Sort.Direction.DESC, "createdAt")
+		);
 
 		Page<ChatRoom> roomPage =
 			chatRoomRepository.findByChatRoomStatusNot(ChatRoomStatus.CLOSED, pageable);
@@ -154,7 +154,6 @@ public class ChatService {
 			.totalElements(roomPage.getTotalElements())
 			.totalPages(roomPage.getTotalPages())
 			.hasNext(roomPage.hasNext())
-			.sort(toSortString(roomPage.getSort()))
 			.build();
 	}
 
@@ -191,13 +190,6 @@ public class ChatService {
 		chatRoom.matched();
 	}
 
-	/**
-	 * 커피챗 종료하기
-	 * 1. roomId DB 존재 여부 확인
-	 * 2. userId DB 존재 여부 확인
-	 * 3. 방의 참여자이면서 Host 인지 검증
-	 * 4. 상태 전이(OPEN, MATCHED -> CLOSED)
-	 */
 	@Transactional
 	public void closeRoom(Long roomId, Long userId) {
 
@@ -209,35 +201,22 @@ public class ChatService {
 		chatRoom.close();
 	}
 
-	/**
-	 * Room 이 DB 에 존재 하는지 검증 + 없다면 throw
-	 */
 	private ChatRoom getChatRoom(Long roomId) {
 		return chatRoomRepository.findById(roomId)
 			.orElseThrow(() -> new CustomException(ChatErrorCode.CHAT_ROOM_NOT_FOUND));
 	}
 
-	/**
-	 * User 가 DB 에 존재 하는지 검증 + 없다면 throw
-	 */
 	private User getUser(Long userId) {
 		return userRepository.findById(userId)
 			.orElseThrow(() -> new CustomException(ChatErrorCode.USER_NOT_FOUND));
 	}
 
-	/**
-	 * User 가 DB 에 존재 하는지 검증
-	 */
 	private void validateUser(Long userId) {
 		if (!userRepository.existsById(userId)) {
 			throw new CustomException(ChatErrorCode.USER_NOT_FOUND);
 		}
 	}
 
-	/**
-	 * 참가 가능한 방 상태인지 검증합니다. (OPEN만 허용)
-	 * 방이 open 상태 임과 동시에 방 정원보다 작은지 검증
-	 */
 	private void validateJoinableRoom(ChatRoom chatRoom, Long roomId, Long userId) {
 
 		long participantNum = chatParticipantRepository.countByChatRoomId(roomId);
@@ -251,9 +230,6 @@ public class ChatService {
 		}
 	}
 
-	/**
-	 * 이미 참가자인지 검증합니다.
-	 */
 	private void validateNotAlreadyParticipant(ChatRoom chatRoom, User user, Long roomId, Long userId) {
 		if (chatParticipantRepository.existsByChatRoomAndUser(chatRoom, user)) {
 			log.warn("채팅방 참가 거절: 이미 참가한 사용자입니다. roomId={}, userId={}",
@@ -263,9 +239,6 @@ public class ChatService {
 		}
 	}
 
-	/**
-	 * 참가자인지 검증과 동시에 RoleInRoom 이 RoleInRoom.HOST 인지 검증합니다.
-	 */
 	private void validateHostPermission(Long roomId, Long userId) {
 		boolean isHost = chatParticipantRepository
 			.existsByChatRoomIdAndUserIdAndRoleInRoom(roomId, userId, RoleInRoom.HOST);
@@ -274,35 +247,6 @@ public class ChatService {
 			log.warn("채팅방 닫기 실패: roomId={}, userId={}", roomId, userId);
 			throw new CustomException(ChatErrorCode.UNAUTHORIZED_ACCESS);
 		}
-	}
-
-	/**
-	 * 페이지 쿼리 파라미터 변수를 검증하는 메서드
-	 * 1. page > 0
-	 * 2. size >= 0 or size < 50 (정책)
-	 */
-	private void validatePageable(Pageable pageable) {
-
-		int page = pageable.getPageNumber();
-		int size = pageable.getPageSize();
-
-		if (page < 0) {
-			throw new CustomException(ChatErrorCode.BAD_PAGING_CONDITION);
-		}
-
-		if (size < 1 || size > 50) {
-			throw new CustomException(ChatErrorCode.BAD_PAGING_CONDITION);
-		}
-	}
-
-	/**
-	 * 정렬 정보를 문자열로 나타내는 메서드
-	 */
-	private String toSortString(Sort sort) {
-		return sort.stream()
-			.map(order -> order.getProperty() + "," + order.getDirection())
-			.findFirst()
-			.orElse(null);
 	}
 
 }

@@ -1,13 +1,12 @@
 package com.github.sleeplessspecialist.peaktime.domain.chat.controller;
 
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.web.PageableDefault;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.github.sleeplessspecialist.peaktime.domain.chat.dto.CreateChatRoomReq;
@@ -18,6 +17,8 @@ import com.github.sleeplessspecialist.peaktime.global.common.response.ApiRespons
 import com.github.sleeplessspecialist.peaktime.global.common.response.SuccessCode;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 
@@ -42,12 +43,12 @@ public class ChatController {
 
 	/**
 	 * 채팅방 생성 API
-	 * 인증, 인가 미구현으로 임시 하드코딩
 	 */
 	@PostMapping("/room")
-	public ApiResponse<CreateChatRoomRes> createRoom(@RequestBody @Valid CreateChatRoomReq createChatRoomReq) {
+	public ApiResponse<CreateChatRoomRes> createRoom(
+		@AuthenticationPrincipal Long userId,
+		@RequestBody @Valid CreateChatRoomReq createChatRoomReq) {
 
-		Long userId = 1L;
 		CreateChatRoomRes response = chatService.createRoom(userId, createChatRoomReq);
 		return ApiResponse.of(SuccessCode.CREATED, response);
 	}
@@ -58,24 +59,21 @@ public class ChatController {
 	 */
 	@GetMapping("/room")
 	public ApiResponse<GetChatRoomListRes> getRooms(
-		@PageableDefault(
-			size = 10,
-			sort = "createdAt",
-			direction = Sort.Direction.DESC
-		) Pageable pageable
-	) {
-		GetChatRoomListRes response = chatService.getChatRooms(pageable);
+		@RequestParam(defaultValue = "1") @Min(1) int page,
+		@RequestParam(defaultValue = "10") @Min(1) @Max(50) int size) {
+
+		GetChatRoomListRes response = chatService.getChatRooms(page, size);
 		return ApiResponse.of(SuccessCode.OK, response);
 	}
 
 	/**
 	 * 채팅방 참여 API
-	 * 인증, 인가 미구현으로 임시 하드코딩
 	 */
 	@PostMapping("/room/{roomId}/join")
-	public ApiResponse<Void> joinRoom(@PathVariable @Positive Long roomId){
+	public ApiResponse<Void> joinRoom(
+		@AuthenticationPrincipal Long userId,
+		@PathVariable @Positive Long roomId) {
 
-		Long userId = 2L;
 		chatService.addParticipantToChat(userId, roomId);
 		return ApiResponse.ok();
 	}
@@ -84,9 +82,10 @@ public class ChatController {
 	 * 커피챗 종료 API
 	 */
 	@PostMapping("/room/{roomId}/close")
-	public ApiResponse<Void> closeRoom(@PathVariable @Positive Long roomId){
+	public ApiResponse<Void> closeRoom(
+		@AuthenticationPrincipal Long userId,
+		@PathVariable @Positive Long roomId) {
 
-		Long userId = 1L;
 		chatService.closeRoom(roomId, userId);
 		return ApiResponse.ok();
 	}
