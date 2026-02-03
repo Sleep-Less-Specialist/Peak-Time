@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * 주문 생성을 위한 요청 DTO.
+ *
  * <p>
  * 주문 항목 목록
  * 총 결제 금액
@@ -21,7 +22,7 @@ import lombok.RequiredArgsConstructor;
  *
  * @author 주우재
  * @version 1.0
- * @since
+ * @since 2026.01.27
  */
 @Getter
 @RequiredArgsConstructor

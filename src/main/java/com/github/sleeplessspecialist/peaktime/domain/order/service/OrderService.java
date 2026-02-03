@@ -155,6 +155,11 @@ public class OrderService {
 			.build();
 	}
 
+	/**
+	 * 1. userId DB 존재 여부 확인
+	 * 2. Pageable 객체 변환
+	 * 3. 쿼리메서드 호출후 응답 dto 로 리턴
+	 */
 	@Transactional(readOnly = true)
 	public GetOrderListRes getAllOrder(Long userId, int page, int size) {
 

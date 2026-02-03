@@ -24,7 +24,6 @@ import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 
 /**
- * .
  * 주문(Order) 관련 HTTP API를 제공하는 컨트롤러
  *
  * <p>
@@ -34,7 +33,7 @@ import lombok.RequiredArgsConstructor;
  *
  * @author 주우재
  * @version 1.0
- * @since
+ * @since 2026.01.27
  */
 @RestController
 @RequiredArgsConstructor
@@ -43,6 +42,9 @@ public class OrderController {
 
 	private final OrderService orderService;
 
+	/**
+	 * 주문 생성
+	 */
 	@PostMapping
 	public ApiResponse<CreateOrderRes> createOrder(
 		@AuthenticationPrincipal Long userId,
@@ -52,6 +54,9 @@ public class OrderController {
 		return ApiResponse.of(SuccessCode.CREATED, response);
 	}
 
+	/**
+	 * 내 주문 상세 조회
+	 */
 	@GetMapping("/{orderId}")
 	public ApiResponse<GetOrderDetailRes> getOrderDetail(
 		@AuthenticationPrincipal Long userId,
@@ -61,6 +66,9 @@ public class OrderController {
 		return ApiResponse.of(SuccessCode.OK, response);
 	}
 
+	/**
+	 * 내 주문 전체 조회
+	 */
 	@GetMapping
 	public ApiResponse<GetOrderListRes> getAllOrder(
 		@AuthenticationPrincipal Long userId,
@@ -69,6 +77,5 @@ public class OrderController {
 	) {
 		return ApiResponse.of(SuccessCode.OK, orderService.getAllOrder(userId, page, size));
 	}
-
 }
 

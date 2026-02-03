@@ -7,14 +7,15 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 /**
- * 주문 생성 완료 후 클라이언트에게 반환되는 응답 DTO
- * <p>
+ * 주문 생성 완료 후 주문 항목 정보를 반환하는 응답 DTO
  *
+ * <p>
+ * 생성된 주문 항목의 식별자와 강의 정보, 가격을 포함한다.
  * </p>
  *
  * @author 주우재
  * @version 1.0
- * @since
+ * @since 2026.01.27
  */
 @Getter
 @RequiredArgsConstructor
