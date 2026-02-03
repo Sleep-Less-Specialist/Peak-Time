@@ -19,4 +19,6 @@ import com.github.sleeplessspecialist.peaktime.domain.enrollment.entity.Enrollme
 public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
 
 	List<Enrollment> findAllByUserIdAndCourseIdIn(Long userId, List<Long> courseIds);
+
+	boolean existsByUserIdAndCourseIdIn(Long userId, List<Long> courseIds);
 }
