@@ -6,6 +6,27 @@
 </head>
 <body>
 
+<div style="margin-bottom: 16px;">
+    <label for="accessToken-input" style="display:block; margin-bottom:6px;">
+        Access Token 입력
+    </label>
+
+    <input
+            id="accessToken-input"
+            type="text"
+            placeholder="Bearer 없이 토큰만 붙여넣기"
+            style="width: 420px; padding: 8px;"
+    />
+
+    <button id="accessToken-apply-button" style="margin-left: 8px; padding: 8px 12px;">
+        적용
+    </button>
+
+    <div style="margin-top: 8px; font-size: 12px; color: #666;">
+        현재 상태: <span id="accessToken-status">미적용</span>
+    </div>
+</div>
+
 <!-- 주문 조회 영역 -->
 <div style="margin-bottom: 16px;">
     <label for="orderId-input" style="display:block; margin-bottom:6px;">
@@ -39,6 +60,7 @@
 
 <script>
     const API_BASE_URL = "http://localhost:8080";
+    const ACCESS_TOKEN_STORAGE_KEY = "peaktime_access_token";
 
     main();
 
@@ -48,6 +70,39 @@
         const orderIdInput = document.getElementById("orderId-input");
         const orderIdCheckButton = document.getElementById("orderId-check-button");
         const finalAmountSpan = document.getElementById("final-amount");
+
+        const accessTokenInput = document.getElementById("accessToken-input");
+        const accessTokenApplyButton = document.getElementById("accessToken-apply-button");
+        const accessTokenStatus = document.getElementById("accessToken-status");
+
+        // ✅ 현재 적용된 토큰(메모리)
+        let currentAccessToken = null;
+
+        // ✅ localStorage에 저장된 토큰 자동 로드
+        const savedToken = localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
+        if (savedToken) {
+            currentAccessToken = savedToken;
+            accessTokenInput.value = savedToken;
+            accessTokenStatus.textContent = "적용됨";
+        }
+
+        // ✅ 토큰 적용 버튼
+        accessTokenApplyButton.addEventListener("click", () => {
+            const token = accessTokenInput.value.trim();
+
+            if (!token) {
+                currentAccessToken = null;
+                localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+                accessTokenStatus.textContent = "미적용";
+                alert("Access Token이 비어있어 적용 해제되었습니다.");
+                return;
+            }
+
+            currentAccessToken = token;
+            localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, token);
+            accessTokenStatus.textContent = "적용됨";
+            alert("Access Token 적용 완료");
+        });
 
         // Toss 위젯 초기화
         const clientKey = "test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm";
@@ -60,6 +115,7 @@
          */
         let currentAmount = null;
         let orderId = null;
+
         // 최초 위젯 금액 (임시값)
         await widgets.setAmount({ currency: "KRW", value: 1000 });
 
@@ -80,6 +136,12 @@
                 return;
             }
 
+            // ✅ 토큰 없으면 막기(원하면 이 체크 제거 가능)
+            if (!currentAccessToken) {
+                alert("먼저 Access Token을 입력 후 적용해주세요.");
+                return;
+            }
+
             try {
                 const response = await fetch(
                     `${API_BASE_URL}/api/v1/orders/${encodeURIComponent(orderId)}`,
@@ -87,7 +149,8 @@
                         method: "GET",
                         headers: {
                             Accept: "application/json",
-                            Authorization: `Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIyIiwiaWF0IjoxNzcwMDIxOTM3LCJleHAiOjE3NzAwMjU1MzcsInJvbGUiOiJTVFVERU5UIn0.ugQhNWMTWiONYnnuUWY5nlBZgrj4beUgOxeAZ_WYZMQ`
+                            // ✅ 입력받은 토큰 반영
+                            Authorization: `Bearer ${currentAccessToken}`
                         }
                     }
                 );
@@ -159,9 +222,6 @@
     }
 
     /**
-     * 안전한 orderId: ORDER_{DATE}_{orderId}_{RANDOM}  / orderId 는 실제로 서버 DB 의 orderId
-     */
-    /**
      * 안전한 orderId 생성
      * 형식: ORDER_yyyyMMddHHmmss_{orderId}_{random}
      */
@@ -176,8 +236,6 @@
 
         return `ORDER_${timestamp}_${orderId}_${random}`;
     }
-
-
 </script>
 
 </body>
