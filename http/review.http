@@ -1,0 +1,15 @@
+### 환경 변수
+@host = http://localhost:8080
+@contentType = application/json
+@enrollmentId = 1
+
+### 리뷰 생성 (인증 제거)
+
+POST {{host}}/api/v1/enrollments/{{enrollmentId}}/reviews
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "rating": 4,
+  "content": "전체적으로 만족했습니다."
+}
