@@ -75,7 +75,7 @@ public class ReviewService {
 
         return CreateReviewRes.builder()
                 .id(saved.getId())
-                .enrollmentId(saved.getId())
+                .enrollmentId(enrollment.getId())
                 .courseId(course.getId())
                 .userId(userId)
                 .rating(saved.getRating())
