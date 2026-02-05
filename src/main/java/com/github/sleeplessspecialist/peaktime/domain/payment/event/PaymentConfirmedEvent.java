@@ -1,7 +1,5 @@
 package com.github.sleeplessspecialist.peaktime.domain.payment.event;
 
-import java.math.BigDecimal;
-
 import lombok.Builder;
 import lombok.Getter;
 
@@ -21,9 +19,6 @@ import lombok.Getter;
 @Builder
 public class PaymentConfirmedEvent {
 
-	private final Long orderId;
-	private final String paymentKey;
-	private final BigDecimal finalAmount;
-	private final String method;
-	private final Long userId;
+    private final Long orderId;
+    private final Long userId;
 }
