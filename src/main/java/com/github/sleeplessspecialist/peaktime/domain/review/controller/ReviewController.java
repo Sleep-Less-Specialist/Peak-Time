@@ -31,7 +31,7 @@ public class ReviewController {
 	private final ReviewService reviewService;
 
     /**
-     * 수강 생성
+     * 리뷰 생성
      */
     @PostMapping("/enrollments/{enrollmentId}/reviews")
 	public ApiResponse<CreateReviewRes> createReview(
