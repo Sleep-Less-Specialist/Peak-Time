@@ -1,5 +1,7 @@
 package com.github.sleeplessspecialist.peaktime.domain.order.repository;
 
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,5 +20,7 @@ import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
  * @since
  */
 public interface OrderRepository extends JpaRepository<Order, Long> {
+
+	List<Order> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 	Page<Order> findByUser(User user, Pageable pageable);
 }

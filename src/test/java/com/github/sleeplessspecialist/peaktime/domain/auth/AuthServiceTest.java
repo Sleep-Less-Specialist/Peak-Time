@@ -68,8 +68,6 @@ public class AuthServiceTest {
 	@Mock
 	private ValueOperations<String, String> valueOperations;
 
-
-
 	/**
 	 * 회원가입 성공 시 내부 로직 테스트
 	 */
@@ -112,7 +110,6 @@ public class AuthServiceTest {
 		verify(pointService).grantSignupBonus(savedUser);
 	}
 
-
 	/**
 	 * 로그인 성공 시 내부 로직 테스트
 	 */
@@ -144,7 +141,7 @@ public class AuthServiceTest {
 		when(jwtProperties.getAccessTokenExpirationMs()).thenReturn(1_800_000L);
 
 		// when
-		LoginRes result = authService.login(request);
+		LoginRes result = authService.login(request, "test-user-agent");
 
 		// then
 		assertThat(result.getAccessToken()).isEqualTo("access-token");
@@ -181,7 +178,7 @@ public class AuthServiceTest {
 		// when
 		CustomException ex = Assertions.<CustomException>assertThrows(
 			CustomException.class,
-			() -> authService.login(request)
+			() -> authService.login(request, "test-user-agent")
 		);
 
 		// then
@@ -213,7 +210,7 @@ public class AuthServiceTest {
 		// when
 		CustomException ex = Assertions.<CustomException>assertThrows(
 			CustomException.class,
-			() -> authService.login(request)
+			() -> authService.login(request, "test-user-agent")
 		);
 
 		// then

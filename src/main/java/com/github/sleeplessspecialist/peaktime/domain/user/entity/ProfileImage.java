@@ -17,11 +17,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * ProfileImage 클래스입니다.
- * <p>
  * 사용자의 프로필 이미지 정보를 관리하는 엔티티 클래스입니다.
  * 이미지 URL, 대표 이미지 여부(isPrimary)를 저장하며 User 엔티티와 N:1 연관 관계를 맺습니다.
- * </p>
  *
  * @author 기섭
  * @version 1.0

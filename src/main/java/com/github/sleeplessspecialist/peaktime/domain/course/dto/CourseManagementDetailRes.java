@@ -1,18 +1,19 @@
 package com.github.sleeplessspecialist.peaktime.domain.course.dto;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import lombok.Builder;
 
 /**
- * 강의 전체 리스트 조회 응답 DTO
+ * 지식공유자 전용 강의 상세 조회 응답 DTO
  *
  * @author 기섭
- * @version 1.1
- * @since 2026. 1. 27.
+ * @version 1.0
+ * @since 2026. 2. 5.
  */
 @Builder
-public record CourseListRes(
+public record CourseManagementDetailRes(
 	Long courseId,
 	String title,
 	String description,
@@ -21,6 +22,8 @@ public record CourseListRes(
 	String thumbnailUrl,
 	Double ratingAvg,
 	Integer reviewCount,
-	String lecturerName
+	String lecturerName,
+	LocalDateTime createdAt,
+	LocalDateTime updatedAt
 ) {
 }

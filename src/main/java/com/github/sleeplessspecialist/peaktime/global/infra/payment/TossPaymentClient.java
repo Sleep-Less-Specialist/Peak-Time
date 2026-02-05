@@ -37,7 +37,6 @@ public class TossPaymentClient {
 	private final ObjectMapper objectMapper;
 	private final RestClient restClient;
 
-	// 생성자 주입
 	public TossPaymentClient(
 		RestClient.Builder builder,
 		ObjectMapper objectMapper,
@@ -46,7 +45,6 @@ public class TossPaymentClient {
 	) {
 		this.objectMapper = objectMapper;
 
-		// 생성자 내부에서 암호화 및 RestClient 초기화 수행
 		String encodedKey = Base64.getEncoder().encodeToString((secretKey + ":").getBytes(StandardCharsets.UTF_8));
 
 		this.restClient = builder
@@ -68,22 +66,22 @@ public class TossPaymentClient {
 			.uri("/confirm")
 			.body(req)
 			.retrieve()
-			.onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), (request, response) -> {
-				// 1. 에러 바디 읽기
-				String errorBodyStr = new String(response.getBody().readAllBytes(), StandardCharsets.UTF_8);
+			.onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
+				(request, response) -> {
 
-				// 2. 로그 상세 기록
-				log.error("토스 결제 실패 응답: Status={}, Body={}", response.getStatusCode(), errorBodyStr);
+					String errorBodyStr = new String(response.getBody().readAllBytes(), StandardCharsets.UTF_8);
 
-				// 3. 에러 메시지 파싱
-				try {
-					TossErrorDto errorDto = objectMapper.readValue(errorBodyStr, TossErrorDto.class);
-					throw new RuntimeException("토스 결제 실패: " + errorDto.getMessage() + " (" + errorDto.getCode() + ")");
+					log.error("토스 결제 실패 응답: Status={}, Body={}", response.getStatusCode(), errorBodyStr);
 
-				} catch (Exception e) {
-					throw new CustomException(GlobalErrorCode.INTERNAL_SERVER_ERROR);
-				}
-			})
+					try {
+						TossErrorDto errorDto = objectMapper.readValue(errorBodyStr, TossErrorDto.class);
+						throw new RuntimeException(
+							"토스 결제 실패: " + errorDto.getMessage() + " (" + errorDto.getCode() + ")");
+
+					} catch (Exception e) {
+						throw new CustomException(GlobalErrorCode.INTERNAL_SERVER_ERROR);
+					}
+				})
 			.body(TossPaymentConfirmRes.class);
 	}
 
@@ -102,22 +100,22 @@ public class TossPaymentClient {
 			.uri("/{paymentKey}/cancel", paymentKey)
 			.body(req)
 			.retrieve()
-			.onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), (request, response) -> {
-				// 1. 에러 바디 읽기
-				String errorBodyStr = new String(response.getBody().readAllBytes(), StandardCharsets.UTF_8);
+			.onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
+				(request, response) -> {
 
-				// 2. 로그 상세 기록
-				log.error("토스 결제 취소 실패 응답: Status={}, Body={}", response.getStatusCode(), errorBodyStr);
+					String errorBodyStr = new String(response.getBody().readAllBytes(), StandardCharsets.UTF_8);
 
-				// 3. 에러 메시지 파싱
-				try {
-					TossErrorDto errorDto = objectMapper.readValue(errorBodyStr, TossErrorDto.class);
-					throw new RuntimeException("토스 결제 실패: " + errorDto.getMessage() + " (" + errorDto.getCode() + ")");
+					log.error("토스 결제 취소 실패 응답: Status={}, Body={}", response.getStatusCode(), errorBodyStr);
 
-				} catch (Exception e) {
-					throw new CustomException(GlobalErrorCode.INTERNAL_SERVER_ERROR);
-				}
-			})
+					try {
+						TossErrorDto errorDto = objectMapper.readValue(errorBodyStr, TossErrorDto.class);
+						throw new RuntimeException(
+							"토스 결제 실패: " + errorDto.getMessage() + " (" + errorDto.getCode() + ")");
+
+					} catch (Exception e) {
+						throw new CustomException(GlobalErrorCode.INTERNAL_SERVER_ERROR);
+					}
+				})
 			.body(TossPaymentCancelRes.class);
 	}
 }
