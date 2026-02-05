@@ -202,8 +202,8 @@ class LecturerCourseServiceTest {
 
 		// then
 		assertThat(result.getContent()).hasSize(1);
-		assertThat(result.getContent().get(0).getTitle()).isEqualTo("테스트 강의");
-		assertThat(result.getContent().get(0).getLecturerName()).isEqualTo("나강사");
+		assertThat(result.getContent().get(0).title()).isEqualTo("테스트 강의");
+		assertThat(result.getContent().get(0).lecturerName()).isEqualTo("나강사");
 
 		verify(courseRepository).findAllByLecturerId(userId, pageable);
 	}
@@ -234,10 +234,10 @@ class LecturerCourseServiceTest {
 		CourseManagementDetailRes result = lecturerCourseService.getCourseDetail(userId, courseId);
 
 		// then
-		assertThat(result.getCourseId()).isEqualTo(courseId);
-		assertThat(result.getTitle()).isEqualTo("상세 조회 테스트 강의");
-		assertThat(result.getDescription()).isEqualTo("상세 설명입니다.");
-		assertThat(result.getLecturerName()).isEqualTo("나강사");
+		assertThat(result.courseId()).isEqualTo(courseId);
+		assertThat(result.title()).isEqualTo("상세 조회 테스트 강의");
+		assertThat(result.description()).isEqualTo("상세 설명입니다.");
+		assertThat(result.lecturerName()).isEqualTo("나강사");
 
 		verify(courseRepository).findById(courseId);
 	}

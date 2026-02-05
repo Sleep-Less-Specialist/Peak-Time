@@ -122,7 +122,7 @@ class CourseServiceTest {
 
 		// then
 		assertThat(result.getContent()).hasSize(2);
-		assertThat(result.getContent().get(0).getLecturerName()).isEqualTo("이자바");
+		assertThat(result.getContent().get(0).lecturerName()).isEqualTo("이자바");
 
 		verify(courseRepository).findAll(any(Pageable.class));
 	}
