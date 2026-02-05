@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -38,8 +39,13 @@ import com.github.sleeplessspecialist.peaktime.domain.payment.repository.Payment
 import com.github.sleeplessspecialist.peaktime.domain.point.service.PointService;
 import com.github.sleeplessspecialist.peaktime.domain.refund.service.RefundService;
 import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
+import com.github.sleeplessspecialist.peaktime.domain.user.repository.UserRepository;
 import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
 import com.github.sleeplessspecialist.peaktime.global.infra.payment.TossPaymentClient;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 /**
  * {@link PaymentService}의 결제 승인/취소 핵심 플로우를 검증하는 테스트 클래스입니다.
@@ -78,6 +84,9 @@ class PaymentServiceTest {
 
     @Mock
     private RefundService refundService;
+
+    @Mock
+    private UserRepository userRepository;
 
     /**
      * 결제 승인 성공 케이스를 검증합니다.
@@ -373,5 +382,104 @@ class PaymentServiceTest {
         verify(orderPaymentCommandService, never()).markCanceled(anyLong());
         verify(refundService, never()).createRefund(any(), any(), anyString());
         verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    /**
+     * 내 결제 전체 조회 성공 케이스를 검증합니다.
+     * <p>
+     * 사용자 조회 후 결제 목록을 페이징 조건에 맞게 조회하고,
+     * 응답 DTO에 매핑되는지 확인합니다.
+     * </p>
+     */
+    @Test
+    @DisplayName("내 결제 전체 조회 성공: 페이징/정렬 적용 및 응답 매핑")
+    void getMyPayments_success() {
+        // given
+        Long userId = 10L;
+        User user = User.createForSignup("tester", "test@test.com", "pw", "010-0000-0000");
+        ReflectionTestUtils.setField(user, "id", userId);
+
+        Order order1 = Order.builder()
+                .user(user)
+                .totalAmount(new BigDecimal("20000"))
+                .usePoint(new BigDecimal("1000"))
+                .build();
+        ReflectionTestUtils.setField(order1, "id", 100L);
+
+        Order order2 = Order.builder()
+                .user(user)
+                .totalAmount(new BigDecimal("15000"))
+                .usePoint(new BigDecimal("0"))
+                .build();
+        ReflectionTestUtils.setField(order2, "id", 101L);
+
+        Payment payment1 = Payment.builder()
+                .order(order1)
+                .amount(new BigDecimal("20000"))
+                .impUid("pay_100")
+                .status(PaymentStatus.PAID)
+                .paymentMethod("CARD")
+                .build();
+        ReflectionTestUtils.setField(payment1, "id", 1L);
+        ReflectionTestUtils.setField(payment1, "createdAt", LocalDateTime.of(2026, 2, 1, 10, 0));
+
+        Payment payment2 = Payment.builder()
+                .order(order2)
+                .amount(new BigDecimal("15000"))
+                .impUid("pay_101")
+                .status(PaymentStatus.REFUNDED)
+                .paymentMethod("VIRTUAL_ACCOUNT")
+                .build();
+        ReflectionTestUtils.setField(payment2, "id", 2L);
+        ReflectionTestUtils.setField(payment2, "createdAt", LocalDateTime.of(2026, 2, 2, 9, 0));
+
+        int page = 1;
+        int size = 2;
+        PageRequest pageable = PageRequest.of(
+                page - 1,
+                size,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        Page<Payment> paymentPage = new PageImpl<>(
+                List.of(payment2, payment1),
+                pageable,
+                2
+        );
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(paymentRepository.findPaymentsByUser(user, pageable)).thenReturn(paymentPage);
+
+        // when
+        var result = paymentService.getMyPayments(userId, page, size);
+
+        // then
+        assertThat(result.getPayments()).hasSize(2);
+        assertThat(result.getPayments().get(0).getPaymentId()).isEqualTo(2L);
+        assertThat(result.getPayments().get(0).getOrderId()).isEqualTo(101L);
+        assertThat(result.getPayments().get(0).getAmount()).isEqualByComparingTo("15000");
+        assertThat(result.getPayments().get(0).getPaymentMethod()).isEqualTo("VIRTUAL_ACCOUNT");
+        assertThat(result.getPayments().get(0).getStatus()).isEqualTo(PaymentStatus.REFUNDED);
+        assertThat(result.getPayments().get(0).getPaymentKey()).isEqualTo("pay_101");
+        assertThat(result.getPayments().get(0).getCreatedAt())
+                .isEqualTo(LocalDateTime.of(2026, 2, 2, 9, 0));
+
+        assertThat(result.getPayments().get(1).getPaymentId()).isEqualTo(1L);
+        assertThat(result.getPayments().get(1).getOrderId()).isEqualTo(100L);
+        assertThat(result.getPayments().get(1).getAmount()).isEqualByComparingTo("20000");
+        assertThat(result.getPayments().get(1).getPaymentMethod()).isEqualTo("CARD");
+        assertThat(result.getPayments().get(1).getStatus()).isEqualTo(PaymentStatus.PAID);
+        assertThat(result.getPayments().get(1).getPaymentKey()).isEqualTo("pay_100");
+        assertThat(result.getPayments().get(1).getCreatedAt())
+                .isEqualTo(LocalDateTime.of(2026, 2, 1, 10, 0));
+
+        assertThat(result.getPage()).isEqualTo(0);
+        assertThat(result.getSize()).isEqualTo(2);
+        assertThat(result.getTotalElements()).isEqualTo(2);
+        assertThat(result.getTotalPages()).isEqualTo(1);
+        assertThat(result.isHasNext()).isFalse();
+
+        verify(userRepository).findById(userId);
+        verify(paymentRepository).findPaymentsByUser(user, pageable);
     }
 }
