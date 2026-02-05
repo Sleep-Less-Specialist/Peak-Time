@@ -9,10 +9,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * 강의 영상 등록 요청 시 클라이언트로부터 전달받는 데이터를 담는 DTO입니다.
- * <p>
  * 영상 제목(Text)과 실제 영상 파일(MultipartFile)을 포함합니다.
- * 불변성을 위해 Setter를 제거하고 생성자 주입을 사용합니다.
- * </p>
  *
  * @author 기섭
  * @version 1.0

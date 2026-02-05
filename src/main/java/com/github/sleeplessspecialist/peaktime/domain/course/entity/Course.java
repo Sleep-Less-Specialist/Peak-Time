@@ -25,11 +25,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * 강의(강좌) 정보를 저장하는 엔티티 클래스입니다.
- * <p>
- * 강의 제목, 설명, 가격, 썸네일 및 지식공유자(Lecturer) 정보를 관리합니다.
- * 하나의 강의는 여러 개의 개별 영상(Lecture)을 가집니다.
- * </p>
+ * 강의 정보를 저장하는 엔티티 클래스입니다.
  *
  * @author 기섭
  * @version 1.1
@@ -83,15 +79,28 @@ public class Course extends BaseTimeEntity {
 		this.lecturer = lecturer;
 	}
 
-    public void updateRatingWeight(int newRating) {
-        if (this.reviewCount == null) this.reviewCount = 0;
-        if (this.ratingAvg == null) this.ratingAvg = 0.0;
+	public void updateRatingWeight(int newRating) {
+		if (this.reviewCount == null)
+			this.reviewCount = 0;
+		if (this.ratingAvg == null)
+			this.ratingAvg = 0.0;
 
-        this.reviewCount += 1;
+		this.reviewCount += 1;
 
-        int n = this.reviewCount;
-        double oldAvg = this.ratingAvg;
+		int n = this.reviewCount;
+		double oldAvg = this.ratingAvg;
 
-        this.ratingAvg = ((oldAvg * (n - 1)) + newRating) / n;
-    }
+		this.ratingAvg = ((oldAvg * (n - 1)) + newRating) / n;
+	}
+
+	/**
+	 * 강의 정보 수정
+	 */
+	public void update(String title, String description, String category, BigDecimal price, String thumbnailUrl) {
+		this.title = title;
+		this.description = description;
+		this.category = category;
+		this.price = price;
+		this.thumbnailUrl = thumbnailUrl;
+	}
 }

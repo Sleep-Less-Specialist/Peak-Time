@@ -4,10 +4,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 /**
- * CurriculumDto 클래스입니다.
- * <p>
  * 강의 상세 조회 시 포함되는 커리큘럼(강의 영상 목차) 정보 DTO입니다.
- * </p>
  *
  * @author 기섭
  * @version 1.0

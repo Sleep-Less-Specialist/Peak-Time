@@ -1,0 +1,99 @@
+@host = http://localhost:8080
+@token = eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIyIiwiaWF0IjoxNzcwMjY0NjAyLCJleHAiOjE3NzAyNjgyMDIsInJvbGUiOiJTVFVERU5UIn0.vucnyIdgpqfIjm9wAobYT7d7Ue4rx2CuWkhz-UHkEJ0
+@contentType = application/json
+
+### 1. 지식공유자 - 강의 등록
+# @name registerCourse
+POST {{host}}/api/v1/lecturer/courses
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "title": "스프링 부트 핵심 원리",
+  "description": "스프링 부트의 동작 원리를 깊이 있게 학습합니다.",
+  "category": "BACKEND",
+  "price": 55000,
+  "thumbnailUrl": "https://cdn.peaktime.com/spring-boot-thumbnail.jpg"
+}
+
+> {%
+    client.global.set("courseId", response.body.data.courseId);
+    client.log("등록된 강의 ID: " + response.body.data.courseId);
+%}
+
+### 2. 지식공유자 - 강의 정보 전체 수정
+PUT {{host}}/api/v1/lecturer/courses/{{courseId}}
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "title": "스프링 부트 핵심 원리 (개정판)",
+  "description": "최신 버전(3.x) 내용을 반영하여 내용이 보강되었습니다.",
+  "category": "BACKEND",
+  "price": 68000,
+  "thumbnailUrl": "https://cdn.peaktime.com/spring-boot-v3-new.jpg"
+}
+
+### 3. (403 실패) 권한 없는 유저나 다른 강사의 토큰으로 수정 시도
+PUT {{host}}/api/v1/lecturer/courses/{{courseId}}
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIyIiwiaWF0IjoxNzcwMjY0NjAyLCJleHAiOjE3NzAyNjgyMDIsInJvbGUiOiJTVFVERU5UIn0.vucnyIdgpqfIjm9wAobYT7d7Ue4rx2CuWkhz-UHkEJ0
+Content-Type: {{contentType}}
+
+{
+  "title": "해킹 시도",
+  "description": "이 요청은 실패해야 합니다.",
+  "category": "HACKING",
+  "price": 0,
+  "thumbnailUrl": "null"
+}
+
+### 4. 내 강의 목록 조회 (페이징)
+GET {{host}}/api/v1/lecturer/courses?page=0&size=5
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+> {%
+    client.test("Status is 200", function () {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+
+    client.test("응답 데이터 검증", function () {
+        var content = response.body.data.content;
+        client.log("조회된 강의 수: " + content.length);
+
+        if (content.length > 0) {
+            client.log("첫 번째 강의 제목: " + content[0].title);
+            client.log("강사명: " + content[0].lecturerName);
+        }
+    });
+%}
+
+### 5. 내 강의 상세 조회
+GET {{host}}/api/v1/lecturer/courses/{{courseId}}
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+> {%
+    client.test("Status is 200", function () {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+
+    client.test("상세 정보 검증", function () {
+        var data = response.body.data;
+        client.log("강의 제목: " + data.title);
+        client.log("강의 설명: " + data.description);
+        client.log("등록일: " + data.createdAt); // 상세 조회에만 있는 필드 확인
+    });
+%}
+
+### 6. (실패) 존재하지 않거나 권한 없는 강의 조회
+GET {{host}}/api/v1/lecturer/courses/999999
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+> {%
+    client.test("Status is 404 or 403", function () {
+        client.log("실패 응답 코드: " + response.status);
+        client.assert(response.status !== 200, "성공하면 안 되는 요청입니다.");
+    });
+%}

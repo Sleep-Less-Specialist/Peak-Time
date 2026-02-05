@@ -21,9 +21,6 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * 강의 도메인의 비즈니스 로직을 처리하는 서비스 클래스입니다.
- * <p>
- * 강의 등록, 조회, 수정 등의 실질적인 데이터 처리 흐름을 제어합니다.
- * </p>
  *
  * @author 기섭
  * @version 1.1

@@ -39,7 +39,6 @@ public class LectureService {
 	private final CourseRepository courseRepository;
 	private final S3Uploader s3Uploader;
 
-	// 허용할 비디오 확장자 목록
 	private static final List<String> ALLOWED_VIDEO_EXTENSIONS = List.of("mp4", "avi", "mov", "wmv", "mkv");
 
 	/**
@@ -55,17 +54,13 @@ public class LectureService {
 		Course course = courseRepository.findById(courseId)
 			.orElseThrow(() -> new CustomException(GlobalErrorCode.INVALID_REQUEST));
 
-		// 파일 확장자 검증
 		validateVideoFileExtension(req.getVideoFile());
 
-		// S3 업로드 (폴더명: video)
 		String videoUrl = s3Uploader.upload(req.getVideoFile(), "video");
 
 		try {
-			// DB 저장 (별도 트랜잭션)
 			return saveLectureMetadata(course, req.getTitle(), videoUrl);
 		} catch (Exception e) {
-			// 보상 트랜잭션, DB 저장 실패 시 S3에 올라간 파일 삭제
 			log.error("DB 저장 실패로 인한 S3 파일 롤백 수행. url={}", videoUrl);
 			s3Uploader.deleteFile(videoUrl);
 			throw e;
@@ -93,14 +88,12 @@ public class LectureService {
 	private void validateVideoFileExtension(MultipartFile file) {
 		String originalFilename = file.getOriginalFilename();
 
-		// 1. 파일명 자체가 문제가 있는 경우
 		if (originalFilename == null || !originalFilename.contains(".")) {
 			throw new CustomException(LectureErrorCode.INVALID_FILE_NAME);
 		}
 
 		String extension = originalFilename.substring(originalFilename.lastIndexOf(".") + 1).toLowerCase();
 
-		// 2. 허용되지 않은 확장자인 경우
 		if (!ALLOWED_VIDEO_EXTENSIONS.contains(extension)) {
 			throw new CustomException(LectureErrorCode.INVALID_FILE_EXTENSION);
 		}

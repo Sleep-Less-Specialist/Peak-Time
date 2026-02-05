@@ -51,13 +51,11 @@ public class S3Uploader {
 			throw new CustomException(GlobalErrorCode.INVALID_REQUEST);
 		}
 
-		// 1. 파일 이름 중복 방지를 위한 UUID 생성
 		String originalFilename = file.getOriginalFilename();
 		String uuid = UUID.randomUUID().toString();
 		String fileName = dirName + "/" + uuid + "_" + originalFilename;
 
 		try (InputStream inputStream = file.getInputStream()) {
-			// 2. S3에 파일 업로드 (Spring Cloud AWS 3.0 방식)
 			s3Template.upload(bucket, fileName, inputStream, ObjectMetadata.builder()
 				.contentType(file.getContentType())
 				.build());
@@ -69,7 +67,6 @@ public class S3Uploader {
 			throw new CustomException(GlobalErrorCode.INTERNAL_SERVER_ERROR);
 		}
 
-		// 3. 업로드된 파일의 접근 URL 반환
 		return getFileUrl(fileName);
 	}
 
@@ -77,7 +74,6 @@ public class S3Uploader {
 	 * S3에 저장된 파일의 전체 URL을 가져옵니다.
 	 */
 	private String getFileUrl(String fileName) {
-		// ap-northeast-2 (서울) 기준 URL 형식
 		return "https://" + bucket + ".s3.ap-northeast-2.amazonaws.com/" + fileName;
 	}
 
@@ -89,19 +85,15 @@ public class S3Uploader {
 	 */
 	public void deleteFile(String fileUrl) {
 		try {
-			// 1. URL에서 파일 키(Key) 추출 (예: video/uuid_file.mp4)
 			String splitStr = ".com/";
 			String fileName = fileUrl.substring(fileUrl.lastIndexOf(splitStr) + splitStr.length());
 
-			// 2. 한글 파일명 등을 대비해 디코딩
 			String decodedFileName = URLDecoder.decode(fileName, StandardCharsets.UTF_8);
 
-			// 3. S3에서 삭제
 			s3Template.deleteObject(bucket, decodedFileName);
 			log.info("S3 파일 삭제 성공: {}", decodedFileName);
 
 		} catch (Exception e) {
-			// 삭제 실패는 치명적인 에러로 보지 않고 로그만 남김 (나중에 배치로 지울 수도 있음)
 			log.error("S3 파일 삭제 실패: url={}, error={}", fileUrl, e.getMessage());
 		}
 	}
