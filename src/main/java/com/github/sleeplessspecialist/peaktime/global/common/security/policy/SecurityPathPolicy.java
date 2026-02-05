@@ -28,6 +28,10 @@ public final class SecurityPathPolicy {
 		"/index.html",
 		"/signup.html",
 		"/favicon.ico",
+		// ✅ 비밀번호 재설정 화면 진입(메일 링크)
+		"/reset-password",
+		"/reset-password.html",
+
 
 		// 정적 리소스
 		"/css/**",
