@@ -1,8 +1,11 @@
 package com.github.sleeplessspecialist.peaktime.domain.course.service;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseListRes;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseRegisterReq;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseRegisterRes;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseUpdateReq;
@@ -76,5 +79,26 @@ public class LecturerCourseService {
 			.thumbnailUrl(course.getThumbnailUrl())
 			.updatedAt(course.getUpdatedAt())
 			.build();
+	}
+
+	/**
+	 * 본인이 등록한 강의 목록 조회
+	 */
+	@Transactional(readOnly = true)
+	public Page<CourseListRes> getMyCourses(Long userId, Pageable pageable) {
+
+		Page<Course> coursePage = courseRepository.findAllByLecturerId(userId, pageable);
+
+		return coursePage.map(course -> CourseListRes.builder()
+			.courseId(course.getId())
+			.title(course.getTitle())
+			.description(course.getDescription())
+			.category(course.getCategory())
+			.price(course.getPrice())
+			.thumbnailUrl(course.getThumbnailUrl())
+			.ratingAvg(course.getRatingAvg())
+			.reviewCount(course.getReviewCount())
+			.lecturerName(course.getLecturer().getName())
+			.build());
 	}
 }

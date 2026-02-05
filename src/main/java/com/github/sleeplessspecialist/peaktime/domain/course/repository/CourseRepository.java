@@ -2,6 +2,8 @@ package com.github.sleeplessspecialist.peaktime.domain.course.repository;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -26,4 +28,9 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 		   join fetch c.lecturer u
 		   where c.id in :ids""")
 	List<Course> findAllByIdInWithUser(@Param("ids") List<Long> ids);
+
+	/**
+	 * 특정 강사의 강의 목록을 페이징하여 조회
+	 */
+	Page<Course> findAllByLecturerId(Long lecturerId, Pageable pageable);
 }
