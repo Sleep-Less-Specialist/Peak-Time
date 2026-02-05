@@ -21,6 +21,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseListRes;
+import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseManagementDetailRes;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseRegisterReq;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseRegisterRes;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseUpdateReq;
@@ -205,5 +206,64 @@ class LecturerCourseServiceTest {
 		assertThat(result.getContent().get(0).getLecturerName()).isEqualTo("나강사");
 
 		verify(courseRepository).findAllByLecturerId(userId, pageable);
+	}
+
+	@Test
+	@DisplayName("getCourseDetail: 본인의 강의 상세 정보를 조회한다.")
+	void getCourseDetail_Success() {
+		// given
+		Long userId = 1L;
+		Long courseId = 100L;
+
+		User lecturer = User.createForSignup("나강사", "tutor@test.com", "pw", "01011112222");
+		ReflectionTestUtils.setField(lecturer, "id", userId);
+		ReflectionTestUtils.setField(lecturer, "nickname", "나강사");
+
+		Course course = Course.builder()
+			.title("상세 조회 테스트 강의")
+			.description("상세 설명입니다.")
+			.price(BigDecimal.valueOf(50000))
+			.category("DEV")
+			.lecturer(lecturer)
+			.build();
+		ReflectionTestUtils.setField(course, "id", courseId);
+
+		given(courseRepository.findById(courseId)).willReturn(Optional.of(course));
+
+		// when
+		CourseManagementDetailRes result = lecturerCourseService.getCourseDetail(userId, courseId);
+
+		// then
+		assertThat(result.getCourseId()).isEqualTo(courseId);
+		assertThat(result.getTitle()).isEqualTo("상세 조회 테스트 강의");
+		assertThat(result.getDescription()).isEqualTo("상세 설명입니다.");
+		assertThat(result.getLecturerName()).isEqualTo("나강사");
+
+		verify(courseRepository).findById(courseId);
+	}
+
+	@Test
+	@DisplayName("getCourseDetail: 본인의 강의가 아니면 예외가 발생한다.")
+	void getCourseDetail_Fail_Unauthorized() {
+		// given
+		Long myId = 1L;
+		Long otherId = 999L;
+		Long courseId = 100L;
+
+		User otherLecturer = User.createForSignup("남강사", "other@test.com", "pw", "01022223333");
+		ReflectionTestUtils.setField(otherLecturer, "id", otherId);
+
+		Course course = Course.builder()
+			.title("남의 강의")
+			.lecturer(otherLecturer)
+			.build();
+		ReflectionTestUtils.setField(course, "id", courseId);
+
+		given(courseRepository.findById(courseId)).willReturn(Optional.of(course));
+
+		// when & then
+		assertThatThrownBy(() -> lecturerCourseService.getCourseDetail(myId, courseId))
+			.isInstanceOf(CustomException.class)
+			.hasFieldOrPropertyWithValue("errorCode", CourseErrorCode.UNAUTHORIZED_ACCESS);
 	}
 }

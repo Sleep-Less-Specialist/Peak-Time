@@ -67,3 +67,33 @@ Content-Type: {{contentType}}
         }
     });
 %}
+
+### 5. 내 강의 상세 조회
+GET {{host}}/api/v1/lecturer/courses/{{courseId}}
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+> {%
+    client.test("Status is 200", function () {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+
+    client.test("상세 정보 검증", function () {
+        var data = response.body.data;
+        client.log("강의 제목: " + data.title);
+        client.log("강의 설명: " + data.description);
+        client.log("등록일: " + data.createdAt); // 상세 조회에만 있는 필드 확인
+    });
+%}
+
+### 6. (실패) 존재하지 않거나 권한 없는 강의 조회
+GET {{host}}/api/v1/lecturer/courses/999999
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+> {%
+    client.test("Status is 404 or 403", function () {
+        client.log("실패 응답 코드: " + response.status);
+        client.assert(response.status !== 200, "성공하면 안 되는 요청입니다.");
+    });
+%}
