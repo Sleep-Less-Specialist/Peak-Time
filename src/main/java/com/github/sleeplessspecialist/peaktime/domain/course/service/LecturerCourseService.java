@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseListRes;
+import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseManagementDetailRes;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseRegisterReq;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseRegisterRes;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseUpdateReq;
@@ -100,5 +101,33 @@ public class LecturerCourseService {
 			.reviewCount(course.getReviewCount())
 			.lecturerName(course.getLecturer().getName())
 			.build());
+	}
+
+	/**
+	 * 강의 상세 조회
+	 */
+	@Transactional(readOnly = true)
+	public CourseManagementDetailRes getCourseDetail(Long userId, Long courseId) {
+
+		Course course = courseRepository.findById(courseId)
+			.orElseThrow(() -> new CustomException(CourseErrorCode.COURSE_NOT_FOUND));
+
+		if (!course.getLecturer().getId().equals(userId)) {
+			throw new CustomException(CourseErrorCode.UNAUTHORIZED_ACCESS);
+		}
+
+		return CourseManagementDetailRes.builder()
+			.courseId(course.getId())
+			.title(course.getTitle())
+			.description(course.getDescription())
+			.category(course.getCategory())
+			.price(course.getPrice())
+			.thumbnailUrl(course.getThumbnailUrl())
+			.ratingAvg(course.getRatingAvg())
+			.reviewCount(course.getReviewCount())
+			.lecturerName(course.getLecturer().getName())
+			.createdAt(course.getCreatedAt())
+			.updatedAt(course.getUpdatedAt())
+			.build();
 	}
 }
