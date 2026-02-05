@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseListRes;
+import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseManagementDetailRes;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseRegisterReq;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseRegisterRes;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseUpdateReq;
@@ -79,6 +80,18 @@ public class LecturerCourseController {
 
 		Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 		Page<CourseListRes> response = lecturerCourseService.getMyCourses(userId, pageable);
+		return ApiResponse.ok(response);
+	}
+
+	/**
+	 * 내 강의 상세 조회
+	 */
+	@GetMapping("/{courseId}")
+	public ApiResponse<CourseManagementDetailRes> getCourseDetail(
+		@AuthenticationPrincipal Long userId,
+		@PathVariable @Positive Long courseId
+	) {
+		CourseManagementDetailRes response = lecturerCourseService.getCourseDetail(userId, courseId);
 		return ApiResponse.ok(response);
 	}
 }
