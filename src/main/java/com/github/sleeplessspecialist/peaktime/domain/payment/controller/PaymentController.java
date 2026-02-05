@@ -1,16 +1,17 @@
 package com.github.sleeplessspecialist.peaktime.domain.payment.controller;
 
+import com.github.sleeplessspecialist.peaktime.domain.payment.dto.GetMyPaymentListRes;
 import com.github.sleeplessspecialist.peaktime.domain.payment.dto.PaymentCancelReq;
 import com.github.sleeplessspecialist.peaktime.domain.payment.dto.TossPaymentConfirmReq;
 import com.github.sleeplessspecialist.peaktime.domain.payment.service.PaymentService;
 import com.github.sleeplessspecialist.peaktime.global.common.response.ApiResponse;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 프론트엔드 결제 위젯으로부터 넘어온 결제 승인 요청을 처리하는 API 컨트롤러입니다.
@@ -19,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 서비스 계층으로 전달하고, 최종 결제 승인 결과를 반환합니다.
  * </p>
  *
- * @author 기섭
+ * @author 기섭, 주우재
  * @version 1.0
  * @since 2026. 1. 26.
  */
@@ -51,5 +52,17 @@ public class PaymentController {
 
         paymentService.cancelPayment(req);
         return ApiResponse.ok();
+    }
+
+    /**
+     * 내 결제 전체 조회
+     */
+    @GetMapping
+    public ApiResponse<GetMyPaymentListRes> getMyPayments(
+            @AuthenticationPrincipal Long userId,
+            @RequestParam(defaultValue = "1") @Min(1) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(50) int size
+    ) {
+        return ApiResponse.ok(paymentService.getMyPayments(userId, page, size));
     }
 }
