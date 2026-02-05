@@ -37,7 +37,7 @@ import com.github.sleeplessspecialist.peaktime.global.common.error.CustomExcepti
  * LecturerCourseService(지식공유자 전용) 비즈니스 로직 테스트 클래스
  * <p>
  * 대상: LecturerCourseService
- * 기능: 강의 등록, 수정
+ * 기능: 강의 등록, 수정, 조회
  * </p>
  *
  * @author 기섭
@@ -132,7 +132,7 @@ class LecturerCourseServiceTest {
 	}
 
 	@Test
-	@DisplayName("updateCourse: 본인 강의가 아니면 권한 예외(UNAUTHORIZED_ACCESS)가 발생한다.")
+	@DisplayName("updateCourse: 본인 강의가 아니면 권한 예외(UNAUTHORIZED_ACCESS)가 발생")
 	void updateCourse_Fail_Unauthorized() {
 		// given
 		Long attackerId = 999L;
@@ -156,7 +156,7 @@ class LecturerCourseServiceTest {
 	}
 
 	@Test
-	@DisplayName("updateCourse: 존재하지 않는 강의 ID를 수정하려 하면 예외가 발생한다.")
+	@DisplayName("updateCourse: 존재하지 않는 강의 ID를 수정하려 하면 예외가 발생")
 	void updateCourse_Fail_NotFound() {
 		// given
 		Long userId = 1L;
@@ -173,7 +173,7 @@ class LecturerCourseServiceTest {
 	}
 
 	@Test
-	@DisplayName("getMyCourses: 본인이 등록한 강의 목록을 페이징하여 조회한다.")
+	@DisplayName("getMyCourses: 본인이 등록한 강의 목록을 페이징하여 조회")
 	void getMyCourses_Success() {
 		// given
 		Long userId = 1L;
@@ -209,7 +209,7 @@ class LecturerCourseServiceTest {
 	}
 
 	@Test
-	@DisplayName("getCourseDetail: 본인의 강의 상세 정보를 조회한다.")
+	@DisplayName("getCourseDetail: 본인의 강의 상세 정보를 조회")
 	void getCourseDetail_Success() {
 		// given
 		Long userId = 1L;
@@ -217,7 +217,7 @@ class LecturerCourseServiceTest {
 
 		User lecturer = User.createForSignup("나강사", "tutor@test.com", "pw", "01011112222");
 		ReflectionTestUtils.setField(lecturer, "id", userId);
-		ReflectionTestUtils.setField(lecturer, "nickname", "나강사");
+		ReflectionTestUtils.setField(lecturer, "name", "나강사");
 
 		Course course = Course.builder()
 			.title("상세 조회 테스트 강의")
@@ -243,7 +243,7 @@ class LecturerCourseServiceTest {
 	}
 
 	@Test
-	@DisplayName("getCourseDetail: 본인의 강의가 아니면 예외가 발생한다.")
+	@DisplayName("getCourseDetail: 본인의 강의가 아니면 예외가 발생")
 	void getCourseDetail_Fail_Unauthorized() {
 		// given
 		Long myId = 1L;

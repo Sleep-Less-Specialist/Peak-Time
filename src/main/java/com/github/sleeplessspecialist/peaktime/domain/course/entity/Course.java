@@ -25,11 +25,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * 강의(강좌) 정보를 저장하는 엔티티 클래스입니다.
- * <p>
- * 강의 제목, 설명, 가격, 썸네일 및 지식공유자(Lecturer) 정보를 관리합니다.
- * 하나의 강의는 여러 개의 개별 영상(Lecture)을 가집니다.
- * </p>
+ * 강의 정보를 저장하는 엔티티 클래스입니다.
  *
  * @author 기섭
  * @version 1.1

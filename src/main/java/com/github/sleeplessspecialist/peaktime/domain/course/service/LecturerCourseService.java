@@ -21,11 +21,8 @@ import com.github.sleeplessspecialist.peaktime.global.common.error.CustomExcepti
 import lombok.RequiredArgsConstructor;
 
 /**
- * LecturerCourseService 클래스입니다.
- * <p>
  * 지식공유자(Lecturer) 전용 강의 관리 서비스입니다.
  * 강의 등록, 수정, 조회 등의 비즈니스 로직을 담당합니다.
- * </p>
  *
  * @author 기섭
  * @version 1.0

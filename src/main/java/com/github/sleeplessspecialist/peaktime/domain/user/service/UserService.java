@@ -14,11 +14,8 @@ import com.github.sleeplessspecialist.peaktime.global.common.security.util.Secur
 import lombok.RequiredArgsConstructor;
 
 /**
- * UserService 클래스입니다.
- * <p>
  * 사용자(User) 도메인의 비즈니스 로직을 처리하는 서비스 클래스입니다.
  * 현재 로그인한 사용자의 정보 조회 및 수정 기능을 담당합니다.
- * </p>
  *
  * @author 기섭
  * @version 1.0
@@ -55,7 +52,6 @@ public class UserService {
 		User user = userRepository.findById(currentUserId)
 			.orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
 
-		// Dirty Checking (변경 감지)
 		user.updateProfile(req.getName(), req.getPhoneNumber());
 		return UserProfileRes.from(user);
 	}

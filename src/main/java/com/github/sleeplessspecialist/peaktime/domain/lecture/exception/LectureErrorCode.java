@@ -8,7 +8,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 /**
- * LectureErrorCode 클래스입니다.
+ * 강의 영상(Lecture) 도메인에서 발생할 수 있는 에러 코드를 정의한 Enum입니다.
  * <p>
  * GlobalExceptionHandler에서 이 코드를 기반으로 적절한 HTTP 상태 코드와 메시지를 반환합니다.
  * </p>

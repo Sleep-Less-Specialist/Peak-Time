@@ -7,10 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 /**
- * CourseUpdateRes 클래스입니다.
- * <p>
  * 강의 수정 완료 후, 변경된 강의 정보를 클라이언트에게 반환하는 응답 DTO입니다.
- * </p>
  *
  * @author 기섭
  * @version 1.0

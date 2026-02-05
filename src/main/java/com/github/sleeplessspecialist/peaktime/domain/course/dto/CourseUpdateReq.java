@@ -11,10 +11,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * CourseUpdateReq 클래스입니다.
- * <p>
  * 강의 정보를 수정할 때 사용하는 요청 DTO입니다.
- * </p>
  *
  * @author 기섭
  * @version 1.1

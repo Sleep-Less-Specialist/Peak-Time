@@ -19,10 +19,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * 개별 강의 영상 정보를 저장하는 엔티티 클래스입니다.
- * <p>
- * 영상의 제목, URL, 재생 시간(Duration)을 관리하며
- * 특정 Course(강좌)에 소속됩니다.
- * </p>
+ * 특정 강의에 소속됩니다.
  *
  * @author 기섭
  * @version 1.1

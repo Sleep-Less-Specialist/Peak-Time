@@ -10,10 +10,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * CourseManagementDetailRes 클래스입니다.
- * <p>
- * 강의의 모든 상세 정보와 관리용 데이터(등록일, 수정일 등)를 포함합니다.
- * </p>
+ * 지식공유자 전용 강의 상세 조회 응답 DTO입니다.
  *
  * @author 기섭
  * @version 1.0
