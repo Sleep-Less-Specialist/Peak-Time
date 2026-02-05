@@ -1,26 +1,29 @@
 package com.github.sleeplessspecialist.peaktime.domain.course.controller;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseRegisterReq;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseRegisterRes;
+import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseUpdateReq;
+import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseUpdateRes;
 import com.github.sleeplessspecialist.peaktime.domain.course.service.LecturerCourseService;
 import com.github.sleeplessspecialist.peaktime.global.common.response.ApiResponse;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 
 /**
  * 지식공유자(Lecturer) 전용 강의 관리 API 컨트롤러입니다.
- * <p>
- * 강의 등록, 수정, 삭제 등 지식공유자 권한(ROLE_LECTURER)이 필요한 기능을 담당합니다.
- * </p>
  *
  * @author 기섭
- * @version 1.0
+ * @version 1.1
  * @since 2026. 1. 27.
  */
 @RestController
@@ -28,18 +31,30 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/lecturer/courses")
 public class LecturerCourseController {
 
-	private final LecturerCourseService LecturerCourseService;
+	private final LecturerCourseService lecturerCourseService;
 
 	/**
-	 * 신규 강의를 등록합니다.
-	 *
-	 * @param req 강의 등록 요청 정보 (제목, 설명, 가격 등)
-	 * @return 등록된 강의 ID를 포함한 응답 객체
+	 * 신규 강의 등록
 	 */
 	@PostMapping
-	public ApiResponse<CourseRegisterRes> registerCourse(@RequestBody @Valid CourseRegisterReq req) {
+	public ApiResponse<CourseRegisterRes> registerCourse(
+		@AuthenticationPrincipal Long userId,
+		@RequestBody @Valid CourseRegisterReq req) {
 
-		CourseRegisterRes response = LecturerCourseService.registerCourse(req);
+		CourseRegisterRes response = lecturerCourseService.registerCourse(userId, req);
 		return ApiResponse.created(response);
+	}
+
+	/**
+	 * 강의 정보 수정
+	 */
+	@PutMapping("/{courseId}")
+	public ApiResponse<CourseUpdateRes> updateCourse(
+		@AuthenticationPrincipal Long userId,
+		@PathVariable @Positive Long courseId,
+		@RequestBody @Valid CourseUpdateReq req) {
+
+		CourseUpdateRes response = lecturerCourseService.updateCourse(userId, courseId, req);
+		return ApiResponse.ok(response);
 	}
 }
