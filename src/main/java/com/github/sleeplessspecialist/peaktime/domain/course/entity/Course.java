@@ -82,4 +82,16 @@ public class Course extends BaseTimeEntity {
 		this.thumbnailUrl = thumbnailUrl;
 		this.lecturer = lecturer;
 	}
+
+    public void updateRatingWeight(int newRating) {
+        if (this.reviewCount == null) this.reviewCount = 0;
+        if (this.ratingAvg == null) this.ratingAvg = 0.0;
+
+        this.reviewCount += 1;
+
+        int n = this.reviewCount;
+        double oldAvg = this.ratingAvg;
+
+        this.ratingAvg = ((oldAvg * (n - 1)) + newRating) / n;
+    }
 }

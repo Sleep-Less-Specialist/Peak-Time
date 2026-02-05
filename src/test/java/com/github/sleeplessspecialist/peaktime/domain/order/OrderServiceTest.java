@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,14 +15,20 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.github.sleeplessspecialist.peaktime.domain.course.entity.Course;
 import com.github.sleeplessspecialist.peaktime.domain.course.repository.CourseRepository;
+import com.github.sleeplessspecialist.peaktime.domain.enrollment.repository.EnrollmentRepository;
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.CreateOrderItemReq;
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.CreateOrderReq;
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.CreateOrderRes;
 import com.github.sleeplessspecialist.peaktime.domain.order.dto.GetOrderDetailRes;
+import com.github.sleeplessspecialist.peaktime.domain.order.dto.GetOrderListRes;
 import com.github.sleeplessspecialist.peaktime.domain.order.entity.Order;
 import com.github.sleeplessspecialist.peaktime.domain.order.entity.OrderItem;
 import com.github.sleeplessspecialist.peaktime.domain.order.entity.OrderStatus;
@@ -60,13 +67,22 @@ class OrderServiceTest {
 	@Mock
 	private OrderItemRepository orderItemRepository;
 
+	@Mock
+	private EnrollmentRepository enrollmentRepository;
+
 	@Test
 	@DisplayName("createOrder: totalAmount 합산, order/items 저장, 응답 필드 확인")
 	void createOrder_success() {
 		// given
 		Long userId = 1L;
+		Long buyerId = 2L;
 		User user = User.createForSignup("우재", "test@test.com", "password1234", "010-0000-0000");
 		user.addPoint(5000L);
+		ReflectionTestUtils.setField(user, "id", userId);
+
+		User buyer = User.createForSignup("구매자", "buyer@test.com", "pw", "010-...");
+		buyer.addPoint(5000L);
+		ReflectionTestUtils.setField(buyer, "id", buyerId);
 
 		Course course1 = Course.builder()
 			.title("course-1")
@@ -93,10 +109,11 @@ class OrderServiceTest {
 			new BigDecimal("1000")
 		);
 
-		when(userRepository.findById(userId)).thenReturn(java.util.Optional.of(user));
-		when(courseRepository.findById(11L)).thenReturn(java.util.Optional.of(course1));
-		when(courseRepository.findById(12L)).thenReturn(java.util.Optional.of(course2));
-
+		when(userRepository.findById(buyerId)).thenReturn(Optional.of(buyer));
+		when(courseRepository.findAllByIdInWithUser(List.of(11L, 12L)))
+			.thenReturn(List.of(course1, course2));
+		when(enrollmentRepository.existsByUserIdAndCourseIdIn(buyerId, List.of(11L, 12L)))
+			.thenReturn(false);
 		when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
 			Order order = invocation.getArgument(0);
 			ReflectionTestUtils.setField(order, "id", 100L);
@@ -113,7 +130,7 @@ class OrderServiceTest {
 		});
 
 		// when
-		CreateOrderRes response = orderService.createOrder(userId, request);
+		CreateOrderRes response = orderService.createOrder(buyerId, request);
 
 		// then
 		ArgumentCaptor<Order> orderCaptor = ArgumentCaptor.forClass(Order.class);
@@ -125,7 +142,7 @@ class OrderServiceTest {
 		verify(orderItemRepository, times(2)).save(any(OrderItem.class));
 
 		assertThat(response.getOrderId()).isEqualTo(100L);
-		assertThat(response.getUserId()).isEqualTo(userId);
+		assertThat(response.getUserId()).isEqualTo(buyerId);
 		assertThat(response.getTotalAmount()).isEqualByComparingTo("25000");
 		assertThat(response.getUsePoint()).isEqualByComparingTo("1000");
 		assertThat(response.getItems()).hasSize(2);
@@ -222,7 +239,7 @@ void createOrder_insufficientPoint() {
 		when(orderItemRepository.findAllByOrderId(orderId)).thenReturn(List.of(item1, item2));
 
 		// when
-		GetOrderDetailRes response = orderService.getOrder(userId, orderId);
+		GetOrderDetailRes response = orderService.getOrderDetail(userId, orderId);
 
 		// then
 		assertThat(response.getOrderId()).isEqualTo(orderId);
@@ -265,9 +282,70 @@ void createOrder_insufficientPoint() {
 		when(orderRepository.findById(orderId)).thenReturn(java.util.Optional.of(order));
 
 		// when / then
-		assertThatThrownBy(() -> orderService.getOrder(userId, orderId))
+		assertThatThrownBy(() -> orderService.getOrderDetail(userId, orderId))
 			.isInstanceOf(CustomException.class)
 			.satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
 				.isEqualTo(OrderErrorCode.UNAUTHORIZED_ACCESS));
 	}
+
+	@Test
+	@DisplayName("getAllOrder: 주문 전체 조회 성공")
+	void getAllOrder_success() {
+		// given
+		Long userId = 1L;
+
+		User user = User.createForSignup("tester", "test@test.com", "encoded", "010-0000-0000");
+		ReflectionTestUtils.setField(user, "id", userId);
+
+		Order order1 = Order.builder()
+			.user(user)
+			.totalAmount(new BigDecimal("20000"))
+			.usePoint(new BigDecimal("1000"))
+			.build();
+		ReflectionTestUtils.setField(order1, "id", 100L);
+		ReflectionTestUtils.setField(order1, "status", OrderStatus.PENDING_PAYMENT);
+		ReflectionTestUtils.setField(order1, "createdAt", java.time.LocalDateTime.of(2026, 1, 27, 9, 0));
+
+		Order order2 = Order.builder()
+			.user(user)
+			.totalAmount(new BigDecimal("15000"))
+			.usePoint(new BigDecimal("500"))
+			.build();
+		ReflectionTestUtils.setField(order2, "id", 101L);
+		ReflectionTestUtils.setField(order2, "status", OrderStatus.PENDING_PAYMENT);
+		ReflectionTestUtils.setField(order2, "createdAt", java.time.LocalDateTime.of(2026, 1, 27, 10, 0));
+
+		PageRequest pageable = PageRequest.of(0, 2, Sort.by(Sort.Direction.DESC, "createdAt"));
+		Page<Order> orderPage = new PageImpl<>(List.of(order1, order2), pageable, 4);
+
+		when(userRepository.findById(userId)).thenReturn(java.util.Optional.of(user));
+		when(orderRepository.findByUser(user, pageable)).thenReturn(orderPage);
+
+		// when
+		GetOrderListRes response = orderService.getAllOrder(userId, 1, 2);
+
+		// then
+		assertThat(response.getOrders()).hasSize(2);
+
+		assertThat(response.getOrders().get(0).getOrderId()).isEqualTo(100L);
+		assertThat(response.getOrders().get(0).getUserId()).isEqualTo(userId);
+		assertThat(response.getOrders().get(0).getTotalAmount()).isEqualByComparingTo("20000");
+		assertThat(response.getOrders().get(0).getUsePoint()).isEqualByComparingTo("1000");
+		assertThat(response.getOrders().get(0).getOrderStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT);
+		assertThat(response.getOrders().get(0).getCreateAt()).isEqualTo(java.time.LocalDateTime.of(2026, 1, 27, 9, 0));
+
+		assertThat(response.getOrders().get(1).getOrderId()).isEqualTo(101L);
+		assertThat(response.getOrders().get(1).getUserId()).isEqualTo(userId);
+		assertThat(response.getOrders().get(1).getTotalAmount()).isEqualByComparingTo("15000");
+		assertThat(response.getOrders().get(1).getUsePoint()).isEqualByComparingTo("500");
+		assertThat(response.getOrders().get(1).getOrderStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT);
+		assertThat(response.getOrders().get(1).getCreateAt()).isEqualTo(java.time.LocalDateTime.of(2026, 1, 27, 10, 0));
+
+		assertThat(response.getPage()).isEqualTo(0);
+		assertThat(response.getSize()).isEqualTo(2);
+		assertThat(response.getTotalElements()).isEqualTo(4);
+		assertThat(response.getTotalPages()).isEqualTo(2);
+		assertThat(response.isHasNext()).isTrue();
+	}
+
 }

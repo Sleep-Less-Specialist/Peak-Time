@@ -16,6 +16,12 @@ services:
     command: >
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_0900_ai_ci
+    # MySQL 체크
+    healthcheck:
+      test: [ "CMD", "mysqladmin" ,"ping", "-h", "localhost" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
@@ -25,7 +31,41 @@ services:
       - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis-data:/data
-    command: ["redis-server", "--appendonly", "yes"]
+    command: [ "redis-server", "--appendonly", "yes" ]
+    # Redis 체크
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  #스프링 부트 서버
+  application:
+    container_name: peaktime-app
+    image: ${DOCKER_USERNAME}/peak-time:latest
+    restart: on-failure
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+      DB_DDL_AUTO: ${DB_DDL_AUTO:-update}
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET}
+      AWS_ACCESS_KEY: ${AWS_ACCESS_KEY}
+      AWS_SECRET_KEY: ${AWS_SECRET_KEY}
+      TOSS_CLIENT_KEY: ${TOSS_CLIENT_KEY}
+      TOSS_SECRET_KEY: ${TOSS_SECRET_KEY}
+      GMAIL_ID: ${GMAIL_ID}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
 volumes:
   mysql-data:

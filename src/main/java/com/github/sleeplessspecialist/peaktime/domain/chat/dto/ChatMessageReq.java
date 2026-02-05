@@ -17,10 +17,9 @@ import lombok.NoArgsConstructor;
  * @since 2026.01.22
  */
 @Getter
-@NoArgsConstructor
 @AllArgsConstructor
 public class ChatMessageReq {
 
-    private String message;
-    private String email;
+    private final String message;
+    private final String email;
 }

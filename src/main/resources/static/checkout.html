@@ -1,75 +1,217 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="utf-8"/>
+    <meta charset="utf-8" />
     <script src="https://js.tosspayments.com/v2/standard"></script>
 </head>
 <body>
-<div>
-    <input type="checkbox" id="coupon-box"/>
-    <label for="coupon-box"> 100원 쿠폰 적용 </label>
+
+<div style="margin-bottom: 16px;">
+    <label for="accessToken-input" style="display:block; margin-bottom:6px;">
+        Access Token 입력
+    </label>
+
+    <input
+            id="accessToken-input"
+            type="text"
+            placeholder="Bearer 없이 토큰만 붙여넣기"
+            style="width: 420px; padding: 8px;"
+    />
+
+    <button id="accessToken-apply-button" style="margin-left: 8px; padding: 8px 12px;">
+        적용
+    </button>
+
+    <div style="margin-top: 8px; font-size: 12px; color: #666;">
+        현재 상태: <span id="accessToken-status">미적용</span>
+    </div>
 </div>
-<div id="payment-method"></div>
-<div id="agreement"></div>
-<button class="button" id="payment-button" style="margin-top: 30px">결제하기</button>
+
+<!-- 주문 조회 영역 -->
+<div style="margin-bottom: 16px;">
+    <label for="orderId-input" style="display:block; margin-bottom:6px;">
+        주문번호(orderId) 입력
+    </label>
+
+    <input
+            id="orderId-input"
+            type="text"
+            placeholder="예) ORDER_1738048123123_ab12cd34"
+            style="width: 420px; padding: 8px;"
+    />
+
+    <button id="orderId-check-button" style="margin-left: 8px; padding: 8px 12px;">
+        확인
+    </button>
+
+    <!-- 총 결제 금액 표시 -->
+    <div style="margin-top: 12px; padding: 10px; border: 1px solid #ddd; width: 420px;">
+        <strong>총 결제 금액</strong> :
+        <span id="final-amount">-</span> 원
+    </div>
+</div>
+
+<div id="payment-method" style="margin-top: 16px;"></div>
+<div id="agreement" style="margin-top: 16px;"></div>
+
+<button class="button" id="payment-button" style="margin-top: 30px">
+    결제하기
+</button>
 
 <script>
+    const API_BASE_URL = "http://localhost:8080";
+    const ACCESS_TOKEN_STORAGE_KEY = "peaktime_access_token";
+
     main();
 
     async function main() {
+        // DOM 요소
         const button = document.getElementById("payment-button");
-        const coupon = document.getElementById("coupon-box");
-        // ------  결제위젯 초기화 ------
-        const clientKey = "test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm";
-        const tossPayments = TossPayments(clientKey);
-        // 회원 결제
-        const customerKey = "oXWHeo1gUCwx-FikAAUCGF";
-        const widgets = tossPayments.widgets({
-            customerKey,
-        });
+        const orderIdInput = document.getElementById("orderId-input");
+        const orderIdCheckButton = document.getElementById("orderId-check-button");
+        const finalAmountSpan = document.getElementById("final-amount");
 
-        // ------ 주문의 결제 금액 설정 ------
-        await widgets.setAmount({
-            currency: "KRW",
-            value: 1000,
-        });
+        const accessTokenInput = document.getElementById("accessToken-input");
+        const accessTokenApplyButton = document.getElementById("accessToken-apply-button");
+        const accessTokenStatus = document.getElementById("accessToken-status");
 
-        await Promise.all([
-            // ------  결제 UI 렌더링 ------
-            widgets.renderPaymentMethods({
-                selector: "#payment-method",
-                variantKey: "DEFAULT",
-            }),
-            // ------  이용약관 UI 렌더링 ------
-            widgets.renderAgreement({selector: "#agreement", variantKey: "AGREEMENT"}),
-        ]);
+        // ✅ 현재 적용된 토큰(메모리)
+        let currentAccessToken = null;
 
-        // ------  주문서의 결제 금액이 변경되었을 경우 결제 금액 업데이트 ------
-        coupon.addEventListener("change", async function () {
-            ㅌ
-            if (coupon.checked) {
-                await widgets.setAmount({
-                    currency: "KRW",
-                    value: 1000 - 100,
-                });
+        // ✅ localStorage에 저장된 토큰 자동 로드
+        const savedToken = localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
+        if (savedToken) {
+            currentAccessToken = savedToken;
+            accessTokenInput.value = savedToken;
+            accessTokenStatus.textContent = "적용됨";
+        }
 
+        // ✅ 토큰 적용 버튼
+        accessTokenApplyButton.addEventListener("click", () => {
+            const token = accessTokenInput.value.trim();
+
+            if (!token) {
+                currentAccessToken = null;
+                localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+                accessTokenStatus.textContent = "미적용";
+                alert("Access Token이 비어있어 적용 해제되었습니다.");
                 return;
             }
 
-            await widgets.setAmount({
-                currency: "KRW",
-                value: 1000,
-            });
+            currentAccessToken = token;
+            localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, token);
+            accessTokenStatus.textContent = "적용됨";
+            alert("Access Token 적용 완료");
         });
 
-        // ------ '결제하기' 버튼 누르면 결제창 띄우기 ------
-        button.addEventListener("click", async function () {
-            // 결제 버튼을 누를 때마다 새로운 orderId를 생성합니다.
-            const newOrderId = "ORDER-" + generateRandomString();
+        // Toss 위젯 초기화
+        const clientKey = "test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm";
+        const tossPayments = TossPayments(clientKey);
+        const customerKey = "oXWHeo1gUCwx-FikAAUCGF";
+        const widgets = tossPayments.widgets({ customerKey });
+
+        /**
+         * 현재 결제 금액 (서버 주문 조회 후 설정됨)
+         */
+        let currentAmount = null;
+        let orderId = null;
+
+        // 최초 위젯 금액 (임시값)
+        await widgets.setAmount({ currency: "KRW", value: 1000 });
+
+        await Promise.all([
+            widgets.renderPaymentMethods({ selector: "#payment-method", variantKey: "DEFAULT" }),
+            widgets.renderAgreement({ selector: "#agreement", variantKey: "AGREEMENT" }),
+        ]);
+
+        /**
+         * 주문 조회
+         * GET /api/v1/orders/{orderId}
+         */
+        orderIdCheckButton.addEventListener("click", async () => {
+            orderId = orderIdInput.value.trim();
+
+            if (!orderId) {
+                alert("orderId를 입력해주세요.");
+                return;
+            }
+
+            // ✅ 토큰 없으면 막기(원하면 이 체크 제거 가능)
+            if (!currentAccessToken) {
+                alert("먼저 Access Token을 입력 후 적용해주세요.");
+                return;
+            }
+
+            try {
+                const response = await fetch(
+                    `${API_BASE_URL}/api/v1/orders/${encodeURIComponent(orderId)}`,
+                    {
+                        method: "GET",
+                        headers: {
+                            Accept: "application/json",
+                            // ✅ 입력받은 토큰 반영
+                            Authorization: `Bearer ${currentAccessToken}`
+                        }
+                    }
+                );
+
+                const json = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    alert("주문 조회 실패: " + JSON.stringify(json));
+                    finalAmountSpan.textContent = "-";
+                    return;
+                }
+
+                const data = json.data ?? json;
+
+                const totalAmount = Number(data.totalAmount);
+                const usePoint = Number(data.usePoint);
+
+                if (!Number.isFinite(totalAmount) || !Number.isFinite(usePoint)) {
+                    alert("서버 응답 형식이 올바르지 않습니다.");
+                    finalAmountSpan.textContent = "-";
+                    return;
+                }
+
+                // ✅ 최종 결제 금액 계산
+                const finalAmount = totalAmount - usePoint;
+                currentAmount = finalAmount;
+
+                // 화면 표시
+                finalAmountSpan.textContent = finalAmount.toLocaleString();
+
+                // ✅ Toss 위젯 결제 금액 동기화
+                await widgets.setAmount({ currency: "KRW", value: finalAmount });
+
+                alert(
+                    `주문 조회 성공\n` +
+                    `totalAmount = ${totalAmount}\n` +
+                    `usePoint = ${usePoint}\n` +
+                    `총 결제 금액 = ${finalAmount}`
+                );
+
+            } catch (err) {
+                console.error(err);
+                alert("주문 조회 중 오류 발생");
+                finalAmountSpan.textContent = "-";
+            }
+        });
+
+        /**
+         * 결제 버튼
+         */
+        button.addEventListener("click", async () => {
+            if (currentAmount === null) {
+                alert("먼저 orderId 조회를 해주세요.");
+                return;
+            }
+
+            const newOrderId = generateSafeOrderId(orderId);
 
             await widgets.requestPayment({
-                orderId: newOrderId, // 여기서 랜덤 ID 사용
-                orderName: "토스 티셔츠 외 2건",
+                orderId: newOrderId,
+                orderName: "벡엔드 개발자를 위한 redis 외 1건",
                 successUrl: window.location.origin + "/success.html",
                 failUrl: window.location.origin + "/fail.html",
                 customerEmail: "customer123@gmail.com",
@@ -79,10 +221,22 @@
         });
     }
 
-    // 랜덤 문자열 생성 함수 (UUID 역할)
-    function generateRandomString() {
-        return window.btoa(Math.random()).slice(0, 20); // 랜덤한 문자열 생성
+    /**
+     * 안전한 orderId 생성
+     * 형식: ORDER_yyyyMMddHHmmss_{orderId}_{random}
+     */
+    function generateSafeOrderId(orderId) {
+        const timestamp = new Date().toISOString()
+            .replace(/[-:.TZ]/g, "")
+            .slice(0, 14); // yyyyMMddHHmmss
+
+        const random = crypto.getRandomValues(new Uint32Array(1))[0]
+            .toString(36)
+            .slice(0, 8);
+
+        return `ORDER_${timestamp}_${orderId}_${random}`;
     }
 </script>
+
 </body>
 </html>

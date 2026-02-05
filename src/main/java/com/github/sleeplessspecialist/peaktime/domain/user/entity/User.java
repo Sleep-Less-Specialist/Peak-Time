@@ -45,7 +45,8 @@ import lombok.NoArgsConstructor;
 @Table(
 	name = "users",
 	uniqueConstraints = {
-		@UniqueConstraint(name = "uk_users_email", columnNames = "email")
+		@UniqueConstraint(name = "uk_users_email", columnNames = "email"),
+		@UniqueConstraint(name = "uk_users_provider", columnNames = {"auth_provider", "provider_id"})
 	}
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -58,13 +59,33 @@ public class User extends BaseTimeEntity {
 	@Column(nullable = false, length = 100)
 	private String name;
 
-	@Column(name = "password_hash", nullable = false, length = 200)
+	@Column(name = "password_hash", length = 200)
 	private String passwordHash;
 
 	@Column(nullable = false, length = 150)
 	private String email;
 
-	@Column(name = "phone_number", nullable = false, length = 20)
+	/**
+	 * 인증 제공자(Local / OAuth2).
+	 * <p>
+	 * LOCAL  : 자체 회원가입 (이메일/비밀번호)
+	 * KAKAO  : 카카오 OAuth2
+	 * GOOGLE : 구글 OAuth2 (확장 예정)
+	 * </p>
+	 */
+	@Column(name = "auth_provider", nullable = false, length = 20)
+	private String authProvider;
+
+	/**
+	 * OAuth2 인증 제공자에서 발급하는 고유 사용자 식별자입니다.
+	 * <p>
+	 * LOCAL 회원가입 사용자는 null 입니다.
+	 * </p>
+	 */
+	@Column(name = "provider_id", length = 50)
+	private String providerId;
+
+	@Column(name = "phone_number", length = 20)
 	private String phoneNumber;
 
 	@PositiveOrZero
@@ -100,8 +121,36 @@ public class User extends BaseTimeEntity {
 		User user = new User();
 		user.name = name;
 		user.email = email;
+		user.authProvider = "LOCAL";
+		user.providerId = null;
 		user.passwordHash = passwordHash;
 		user.phoneNumber = phoneNumber;
+		user.point = 0L;
+		user.role = UserRole.STUDENT;
+		user.status = UserStatus.ACTIVE;
+
+		return user;
+	}
+
+	/**
+	 * OAuth2 로그인 사용자 엔티티를 생성합니다.
+	 * <p>
+	 * OAuth2 사용자는 최초 로그인 시점에 비밀번호 및 전화번호가 없을 수 있으며, 추가 정보 입력(Onboarding) 단계에서 보완됩니다.
+	 * </p>
+	 */
+	public static User createForOAuth2(
+		String name,
+		String email,
+		String provider,
+		String providerId
+	) {
+		User user = new User();
+		user.name = name;
+		user.email = email;
+		user.authProvider = provider;
+		user.providerId = providerId;
+		user.passwordHash = null;
+		user.phoneNumber = null;
 		user.point = 0L;
 		user.role = UserRole.STUDENT;
 		user.status = UserStatus.ACTIVE;
@@ -128,6 +177,13 @@ public class User extends BaseTimeEntity {
 		this.point = updated;
 	}
 
+	public void changeStatus(UserStatus newStatus) {
+		if (this.status == newStatus) {
+			return;
+		}
+		this.status = newStatus;
+	}
+
 	/**
 	 * 프로필 정보 수정
 	 */
@@ -149,5 +205,31 @@ public class User extends BaseTimeEntity {
 			.findFirst()
 			.map(ProfileImage::getUrl)
 			.orElse(null);
+	}
+
+	/**
+	 * OAuth 인증 제공자 정보를 사용자 계정에 연동합니다.
+	 *
+	 * <p>
+	 * OAuth 로그인 시 전달된 이메일이 기존 사용자 계정과 동일한 경우
+	 * 해당 사용자 계정에 OAuth 인증 제공자 정보를 연결하기 위해 사용됩니다.
+	 * </p>
+	 *
+	 * <p>주의사항</p>
+	 * <ul>
+	 *   <li>
+	 *       이메일 동일성을 기준으로 자동 연동을 수행하므로,
+	 *       OAuth 제공자가 이메일 소유를 신뢰할 수 있는 경우에만 사용해야 합니다.</li>
+	 *   <li>
+	 *       추후 보안 정책 강화 시, 연동 전 추가 인증(step-up) 로직이 이 메서드 호출 이전에
+	 *       수행되도록 확장할 수 있습니다.</li>
+	 * </ul>
+	 *
+	 * @param authProvider OAuth 인증 제공자 (예: KAKAO, GOOGLE)
+	 * @param providerId   OAuth 제공자에서 발급한 사용자 고유 식별자
+	 */
+	public void updateOAuthProvider(String authProvider, String providerId) {
+		this.authProvider = authProvider;
+		this.providerId = providerId;
 	}
 }

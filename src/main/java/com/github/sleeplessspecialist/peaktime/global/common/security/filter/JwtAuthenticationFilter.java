@@ -121,7 +121,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 		ErrorResponse errorResponse = ErrorResponse.from(errorCode);
 
 		response.setStatus(errorCode.getHttpStatus().value());
+		response.setCharacterEncoding("UTF-8");
 		response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+		response.setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8");
 		objectMapper.writeValue(response.getWriter(), errorResponse);
 
 	}

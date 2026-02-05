@@ -4,10 +4,8 @@ import java.time.LocalDateTime;
 
 import com.github.sleeplessspecialist.peaktime.domain.chat.entity.ChatRoomStatus;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 
 /**

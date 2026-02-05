@@ -12,8 +12,10 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import com.github.sleeplessspecialist.peaktime.global.common.security.filter.JwtAuthenticationFilter;
+import com.github.sleeplessspecialist.peaktime.global.common.security.handler.OAuth2SuccessHandler;
 import com.github.sleeplessspecialist.peaktime.global.common.security.handler.RestAccessDeniedHandler;
 import com.github.sleeplessspecialist.peaktime.global.common.security.handler.RestAuthenticationEntryPoint;
+import com.github.sleeplessspecialist.peaktime.global.common.security.oauth2.CustomOAuth2UserService;
 import com.github.sleeplessspecialist.peaktime.global.common.security.policy.SecurityPathPolicy;
 
 import lombok.RequiredArgsConstructor;
@@ -43,6 +45,9 @@ public class SecurityConfig {
 	private final RestAuthenticationEntryPoint authenticationEntryPoint;
 	private final RestAccessDeniedHandler accessDeniedHandler;
 	private final JwtAuthenticationFilter jwtAuthenticationFilter;
+	private final CustomOAuth2UserService customOAuth2UserService;
+	private final OAuth2SuccessHandler oAuth2SuccessHandler;
+
 
 	/**
 	 * Spring Security 필터 체인을 정의합니다.
@@ -68,6 +73,21 @@ public class SecurityConfig {
 			.exceptionHandling(exception -> exception
 				.authenticationEntryPoint(authenticationEntryPoint)
 				.accessDeniedHandler(accessDeniedHandler)
+			)
+
+			// OAuth2 Login configuration (Kakao)
+			// OAuth2 인증 흐름은 서버에서 처리하고, 로그인 성공 후 JWT를 발급한다.
+			.oauth2Login(oauth2 -> oauth2
+				// 카카오 Redirect URI: /api/v1/oauth2/code/kakao
+				.redirectionEndpoint(redirection -> redirection
+					.baseUri("/api/v1/oauth2/code/*")
+				)
+				// 사용자 정보 매핑
+				.userInfoEndpoint(userInfo -> userInfo
+					.userService(customOAuth2UserService)
+				)
+				// 로그인 성공 시 JWT 발급 처리
+				.successHandler(oAuth2SuccessHandler)
 			)
 
 			.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)

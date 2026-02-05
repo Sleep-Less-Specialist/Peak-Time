@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>PeakTime - 로그인</title>
+    <style>
+        :root {
+            --bg: #f6f7fb;
+            --card: #ffffff;
+            --text: #111827;
+            --muted: #6b7280;
+            --border: #e5e7eb;
+            --shadow: 0 8px 24px rgba(17, 24, 39, 0.08);
+            --radius: 14px;
+            --focus: 0 0 0 3px rgba(59, 130, 246, 0.25);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            margin: 0;
+            font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans KR, Apple SD Gothic Neo, "맑은 고딕", Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: grid;
+            place-items: center;
+            padding: 24px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 420px;
+        }
+
+        .brand {
+            text-align: center;
+            margin-bottom: 16px;
+            display: grid;
+            justify-items: center;
+            gap: 10px;
+        }
+
+        .brand-logo {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover; /* 박스에 꽉 차게 */
+        }
+
+        .brand-desc {
+            margin: 0;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.65;
+        }
+
+        .brand h1 {
+            font-size: 22px;
+            margin: 0;
+            letter-spacing: -0.2px;
+        }
+
+        .brand-logo-wrap {
+            width: 132px;
+            aspect-ratio: 1 / 1;
+            border-radius: 18px;
+            border: 1px solid var(--border);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(246, 247, 251, 0.9));
+            box-shadow: 0 10px 26px rgba(17, 24, 39, 0.10);
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+        }
+
+        .brand-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.8);
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .brand-badge-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(59, 130, 246, 0.65);
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 18px;
+            animation: fadeUp 0.35s ease-out;
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section + .section {
+            margin-top: 14px;
+        }
+
+        .section-title {
+            font-size: 13px;
+            color: var(--muted);
+            margin: 0 0 10px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            margin-bottom: 6px;
+            color: var(--muted);
+        }
+
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            height: 44px;
+            padding: 0 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            outline: none;
+            font-size: 14px;
+            background: #fff;
+        }
+
+        input[type="email"]:focus,
+        input[type="password"]:focus {
+            box-shadow: var(--focus);
+            border-color: rgba(59, 130, 246, 0.55);
+        }
+
+        .field + .field {
+            margin-top: 10px;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .btn {
+            height: 44px;
+            width: 100%;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: #fff;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .btn-primary {
+            border-color: rgba(59, 130, 246, 0.35);
+            background: rgba(59, 130, 246, 0.10);
+        }
+
+        .divider {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 10px;
+            align-items: center;
+            margin: 14px 0;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: "";
+            height: 1px;
+            background: var(--border);
+            display: block;
+        }
+
+        .oauth {
+            display: grid;
+            gap: 10px;
+        }
+
+        .oauth a {
+            text-decoration: none;
+            display: block;
+        }
+
+        .btn-oauth {
+            display: grid;
+            grid-template-columns: 22px 1fr;
+            align-items: center;
+            gap: 10px;
+            padding: 0 12px;
+            height: 46px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: #fff;
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--text);
+        }
+
+        .logo {
+            width: 22px;
+            height: 22px;
+            display: grid;
+            place-items: center;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            font-size: 12px;
+            color: var(--muted);
+            background: #fff;
+        }
+
+        .hint {
+            margin-top: 12px;
+            font-size: 12px;
+            color: var(--muted);
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        /* Mobile: keep same structure, just a bit more breathing room */
+        @media (max-width: 380px) {
+            .card {
+                padding: 16px;
+            }
+
+            .row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<main class="container" aria-label="메인 로그인 화면">
+    <header class="brand">
+        <div class="brand-logo-wrap" aria-hidden="true">
+            <img src="images/PeakTime_light _simple.png"
+                 alt="PeakTime 로고"
+                 class="brand-logo"
+            />
+        </div>
+
+        <div class="brand-badge" aria-label="서비스 소개">
+            <span class="brand-badge-dot" aria-hidden="true"></span>
+            온라인 교육 플랫폼
+        </div>
+
+        <h1>PeakTime</h1>
+
+        <p class="brand-desc">
+            어서오세요 👋<br/>
+            PeakTime은 <strong>학습의 몰입이 가장 높은 순간</strong>을
+            <br/>
+            만들어주는 온라인 교육 플랫폼입니다.<br/>
+            <br/>
+            지금 로그인하고, 나만의 학습 여정을 시작해보세요.
+        </p>
+    </header>
+
+    <section class="card">
+        <!-- Email / Password -->
+        <div class="section" aria-label="이메일 비밀번호 로그인">
+            <p class="section-title">이메일 로그인</p>
+
+            <!-- NOTE: action은 임시. 서버 엔드포인트 확정되면 변경하세요. -->
+            <form id="loginForm" method="post" action="/api/v1/auth/login">
+                <div class="field">
+                    <label for="email">이메일</label>
+                    <input id="email" name="email" type="email" autocomplete="email" placeholder="example@domain.com"
+                           required/>
+                </div>
+
+                <div class="field">
+                    <label for="password">비밀번호</label>
+                    <input id="password" name="password" type="password" autocomplete="current-password"
+                           placeholder="비밀번호를 입력하세요" required/>
+                </div>
+
+                <div class="row" role="group" aria-label="회원가입 및 로그인 버튼">
+                    <button class="btn" type="button" id="signupBtn">회원가입</button>
+                    <button class="btn btn-primary" type="submit" id="loginBtn">로그인</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="divider" aria-hidden="true">또는</div>
+
+        <!-- OAuth -->
+        <div class="section" aria-label="소셜 로그인">
+            <p class="section-title">소셜 로그인</p>
+
+            <div class="oauth">
+                <!-- Google OAuth2 (spring security 기본 경로) -->
+                <a href="/oauth2/authorization/google" aria-label="구글로 로그인">
+                    <div class="btn-oauth">
+                        <div class="logo">G</div>
+                        <div>Google로 계속하기</div>
+                    </div>
+                </a>
+
+                <!-- Kakao OAuth2 -->
+                <a href="/oauth2/authorization/kakao" aria-label="카카오로 로그인">
+                    <div class="btn-oauth">
+                        <div class="logo">K</div>
+                        <div>Kakao로 계속하기</div>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <p class="hint">
+            * 이 페이지는 반응형으로 동일한 레이아웃을 유지합니다.<br/>
+        </p>
+    </section>
+</main>
+
+<script>
+    // 회원가입 버튼: 아직 회원가입 화면이 없다면 임시로 signup API 문서/페이지로 보내거나 alert 처리
+    document.getElementById("signupBtn").addEventListener("click", () => {
+        // 필요 시: window.location.href = "/signup.html";
+        window.location.href = "signup.html";
+    });
+
+</script>
+</body>
+</html>

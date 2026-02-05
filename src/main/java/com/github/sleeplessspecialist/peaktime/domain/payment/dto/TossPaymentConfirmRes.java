@@ -1,5 +1,7 @@
 package com.github.sleeplessspecialist.peaktime.domain.payment.dto;
 
+import java.math.BigDecimal;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -23,7 +25,7 @@ public class TossPaymentConfirmRes {
 	private final String orderName;   // 주문명 (예: "토스 티셔츠 외 2건")
 	private final String status;      // 결제 상태 (DONE, CANCELED, ABORTED, PARTIAL_CANCELED)
 	private final String method;      // 결제 수단 (카드, 가상계좌, 간편결제)
-	private final Long totalAmount;   // 결제된 총 금액
+	private final BigDecimal totalAmount;   // 결제된 총 금액
 	private final String requestedAt; // 결제 요청 시각 (ISO 8601)
 	private final String approvedAt;  // 결제 승인 시각 (ISO 8601)
 }

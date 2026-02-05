@@ -1,0 +1,88 @@
+name: CD - Deploy to EC2
+
+on:
+  workflow_run:
+    workflows: [ "CI - Build and Push to Docker Hub" ]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Copy docker-compose to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_SSH_PORT || 22 }}
+          source: "docker-compose.yml"
+          target: "/home/${{ secrets.EC2_USERNAME }}/peak-time"
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          #ddl 환경변수 추가
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+          GMAIL_ID: ${{ secrets.GMAIL_ID }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+          TOSS_CLIENT_KEY: ${{ secrets.TOSS_CLIENT_KEY }}
+          TOSS_SECRET_KEY: ${{ secrets.TOSS_SECRET_KEY }}
+          KAKAO_CLIENT_ID: ${{ secrets.KAKAO_CLIENT_ID }}
+          KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_SSH_PORT || 22 }}
+          envs: MYSQL_DATABASE,MYSQL_USER,MYSQL_PASSWORD,MYSQL_ROOT_PASSWORD,DOCKER_USERNAME,DOCKER_PASSWORD,GMAIL_ID,SMTP_PASSWORD,AWS_S3_BUCKET,AWS_ACCESS_KEY,AWS_SECRET_KEY,JWT_SECRET_KEY,TOSS_CLIENT_KEY,TOSS_SECRET_KEY,KAKAO_CLIENT_ID,KAKAO_CLIENT_SECRET,GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET
+          script: |
+            cd /home/${{ secrets.EC2_USERNAME }}/peak-time
+            
+            # .env 파일 생성 (printf 사용으로 특수문자 안전하게 처리)
+            printf "MYSQL_DATABASE=%s\n" "$MYSQL_DATABASE" > .env
+            printf "MYSQL_USER=%s\n" "$MYSQL_USER" >> .env
+            printf "MYSQL_PASSWORD=%s\n" "$MYSQL_PASSWORD" >> .env
+            printf "MYSQL_ROOT_PASSWORD=%s\n" "$MYSQL_ROOT_PASSWORD" >> .env
+            printf "DOCKER_USERNAME=%s\n" "$DOCKER_USERNAME" >> .env
+            printf "GMAIL_ID=%s\n" "$GMAIL_ID" >> .env
+            printf "SMTP_PASSWORD=%s\n" "$SMTP_PASSWORD" >> .env
+            printf "AWS_S3_BUCKET=%s\n" "$AWS_S3_BUCKET" >> .env
+            printf "AWS_ACCESS_KEY=%s\n" "$AWS_ACCESS_KEY" >> .env
+            printf "AWS_SECRET_KEY=%s\n" "$AWS_SECRET_KEY" >> .env
+            printf "JWT_SECRET_KEY=%s\n" "$JWT_SECRET_KEY" >> .env
+            printf "TOSS_CLIENT_KEY=%s\n" "$TOSS_CLIENT_KEY" >> .env
+            printf "TOSS_SECRET_KEY=%s\n" "$TOSS_SECRET_KEY" >> .env
+            printf "KAKAO_CLIENT_ID=%s\n" "$KAKAO_CLIENT_ID" >> .env
+            printf "KAKAO_CLIENT_SECRET=%s\n" "$KAKAO_CLIENT_SECRET" >> .env
+            printf "GOOGLE_CLIENT_ID=%s\n" "$GOOGLE_CLIENT_ID" >> .env
+            printf "GOOGLE_CLIENT_SECRET=%s\n" "$GOOGLE_CLIENT_SECRET" >> .env
+            printf "DB_DDL_AUTO=update\n" >> .env
+            
+            # Docker 로그인
+            echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+            
+            # Docker Compose 실행
+            docker compose pull
+            docker compose down
+            docker compose up -d
+            
+            # 정리
+            docker image prune -af

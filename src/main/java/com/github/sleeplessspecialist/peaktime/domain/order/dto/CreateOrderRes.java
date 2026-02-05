@@ -11,7 +11,7 @@ import lombok.RequiredArgsConstructor;
 /**
  * 주문 생성 완료 후 클라이언트에게 반환되는 응답 DTO
  * <p>
- *
+ * 생성된 주문 항목의 기본 정보를 포함한다.
  * </p>
  *
  * @author 주우재

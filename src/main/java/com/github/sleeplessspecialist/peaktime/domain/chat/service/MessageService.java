@@ -128,10 +128,6 @@ public class MessageService {
 		}
 	}
 
-
-	/**
-	 * 다음 페이지 커서(nextCursor) 계산
-	 */
 	private Long calculateNextCursor(List<ChatMessage> content, boolean hasNext) {
 		if (!hasNext || content.isEmpty()) {
 			return null;

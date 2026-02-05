@@ -1,5 +1,12 @@
 package com.github.sleeplessspecialist.peaktime.domain.auth.controller;
 
+import java.time.Duration;
+import java.util.UUID;
+
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
+import org.springframework.lang.Nullable;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -12,9 +19,12 @@ import com.github.sleeplessspecialist.peaktime.domain.auth.dto.request.SignupReq
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.response.LoginRes;
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.response.RefreshRes;
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.response.SignupRes;
+import com.github.sleeplessspecialist.peaktime.domain.auth.exception.AuthErrorCode;
 import com.github.sleeplessspecialist.peaktime.domain.auth.service.AuthService;
+import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
 import com.github.sleeplessspecialist.peaktime.global.common.response.ApiResponse;
 
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -59,9 +69,14 @@ public class AuthController {
 	 * @return JWT 토큰 정보 응답
 	 */
 	@PostMapping("/login")
-	public ApiResponse<LoginRes> login(@Valid @RequestBody LoginReq request) {
-		final LoginRes response = authService.login(request);
-		return ApiResponse.ok(response);
+	public ApiResponse<LoginRes> login(
+		@Valid @RequestBody LoginReq request,
+		@CookieValue(name = "deviceId", required = false) String deviceId,
+		HttpServletResponse response
+	) {
+		final String ensuredDeviceId = ensureDeviceId(deviceId, response);
+		final LoginRes loginRes = authService.login(request, ensuredDeviceId);
+		return ApiResponse.ok(loginRes);
 	}
 
 	/**
@@ -75,9 +90,14 @@ public class AuthController {
 	 * @return 새로 발급된 토큰 정보 응답
 	 */
 	@PostMapping("/refresh")
-	public ApiResponse<RefreshRes> refresh(@Valid @RequestBody RefreshReq request) {
-		final RefreshRes response = authService.refreshToken(request);
-		return ApiResponse.ok(response);
+	public ApiResponse<RefreshRes> refresh(
+		@Valid @RequestBody RefreshReq request,
+		@CookieValue(name = "deviceId", required = false) String deviceId,
+		HttpServletResponse response
+	) {
+		final String ensuredDeviceId = ensureDeviceId(deviceId, response);
+		final RefreshRes refreshRes = authService.refreshToken(request, ensuredDeviceId);
+		return ApiResponse.ok(refreshRes);
 	}
 
 	/**
@@ -91,13 +111,47 @@ public class AuthController {
 	 * Access Token은 Stateless(JWT) 특성상 서버에 저장되지 않으므로, 로그아웃 이후에도 만료 시점까지는 유효할 수 있습니다.
 	 * </p>
 	 *
-	 * @param request 로그아웃 대상 Refresh Token을 포함한 요청 DTO
+	 * @param deviceId 기기 식별자 쿠키 (필수)
+	 * @param cookieRefreshToken 쿠키에서 전달된 Refresh Token (선택)
+	 * @param request 요청 본문에서 전달된 Refresh Token (선택)
 	 * @return 로그아웃 성공 시 204 No Content
 	 */
 	@PostMapping("/logout")
-	public ApiResponse<Void> logout(@Valid @RequestBody LogoutReq request) {
-		authService.logout(request.getRefreshToken());
+	public ApiResponse<Void> logout(
+		@CookieValue(name = "deviceId", required = false) String deviceId,
+		@CookieValue(name = "refreshToken", required = false) String cookieRefreshToken,
+		@Nullable @RequestBody(required = false) LogoutReq request
+	) {
+		if (deviceId == null || deviceId.isBlank()) {
+			throw new CustomException(AuthErrorCode.INVALID_CREDENTIALS);
+		}
+
+		final String refreshToken = (cookieRefreshToken != null && !cookieRefreshToken.isBlank())
+			? cookieRefreshToken
+			: (request != null ? request.getRefreshToken() : null);
+
+		authService.logout(refreshToken, deviceId);
 		return ApiResponse.noContent();
 
+	}
+
+	private String ensureDeviceId(String deviceId, HttpServletResponse response) {
+		if (deviceId != null && !deviceId.isBlank()) {
+			return deviceId;
+		}
+
+		// 로컬/프론트 MVP: 신규 deviceId 발급 후 쿠키로 내려준다.
+		String newDeviceId = UUID.randomUUID().toString().replace("-", "").substring(0, 32);
+
+		ResponseCookie cookie = ResponseCookie.from("deviceId", newDeviceId)
+			.path("/")
+			.httpOnly(false)
+			.secure(false) // 로컬 개발 기준. 운영에서는 true(HTTPS)
+			.sameSite("Lax")
+			.maxAge(Duration.ofDays(30))
+			.build();
+
+		response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+		return newDeviceId;
 	}
 }
