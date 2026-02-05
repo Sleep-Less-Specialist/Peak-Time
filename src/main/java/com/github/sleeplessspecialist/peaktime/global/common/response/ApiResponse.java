@@ -58,7 +58,7 @@ public final class ApiResponse<T> {
 	}
 
 	/**
-	 * 리소스 생성 성공 응답 (201 Created)\
+	 * 리소스 생성 성공 응답 (201 Created)
 	 */
 	public static <T> ApiResponse<T> created(T data) {
 		return new ApiResponse<>(
