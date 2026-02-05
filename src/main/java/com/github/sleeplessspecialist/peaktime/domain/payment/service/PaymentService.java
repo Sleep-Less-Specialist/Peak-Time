@@ -13,16 +13,23 @@ import com.github.sleeplessspecialist.peaktime.domain.payment.repository.Payment
 import com.github.sleeplessspecialist.peaktime.domain.payment.utill.OrderIdParser;
 import com.github.sleeplessspecialist.peaktime.domain.point.service.PointService;
 import com.github.sleeplessspecialist.peaktime.domain.refund.service.RefundService;
+import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
+import com.github.sleeplessspecialist.peaktime.domain.user.repository.UserRepository;
 import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
 import com.github.sleeplessspecialist.peaktime.global.infra.payment.TossPaymentClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * 결제 도메인의 비즈니스 로직을 담당하는 서비스 클래스입니다.
@@ -40,6 +47,7 @@ import java.math.BigDecimal;
 @RequiredArgsConstructor
 public class PaymentService {
 
+    private final UserRepository userRepository;
     private final OrderRepository orderRepository;
     private final TossPaymentClient tossPaymentClient;
     private final PointService pointService;
@@ -136,6 +144,39 @@ public class PaymentService {
                 .userId(order.getUser().getId())
                 .build());
 
+    }
+
+    @Transactional(readOnly = true)
+    public GetMyPaymentListRes getMyPayments(Long userId, int page, int size) {
+
+        User user = getUser(userId);
+
+        Pageable pageable = PageRequest.of(
+                page - 1,
+                size,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        Page<Payment> paymentPage =
+                paymentRepository.findPaymentsByUser(user, pageable);
+
+        List<PaymentListItemRes> payments = paymentPage.getContent().stream()
+                .map(PaymentListItemRes::from)
+                .toList();
+
+        return GetMyPaymentListRes.builder()
+                .payments(payments)
+                .page(paymentPage.getNumber())
+                .size(paymentPage.getSize())
+                .totalElements(paymentPage.getTotalElements())
+                .totalPages(paymentPage.getTotalPages())
+                .hasNext(paymentPage.hasNext())
+                .build();
+    }
+
+    private User getUser(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(PaymentErrorCode.USER_NOT_FOUND));
     }
 
     private Order getOrder(Long orderId) {
