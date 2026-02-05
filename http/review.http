@@ -2,6 +2,9 @@
 @host = http://localhost:8080
 @contentType = application/json
 @enrollmentId = 1
+@reviewId = 3
+@page = 1
+@size = 10
 
 ### 리뷰 생성 (인증 제거)
 
@@ -13,3 +16,34 @@ Authorization: Bearer {{accessToken}}
   "rating": 4,
   "content": "전체적으로 만족했습니다."
 }
+
+### 리뷰 상세 조회
+
+GET {{host}}/api/v1/reviews/{{reviewId}}
+Accept: application/json
+Authorization: Bearer {{accessToken}}
+
+
+### 내 리뷰 목록 조회
+
+GET {{host}}/api/v1/reviews?page={{page}}&size={{size}}
+Accept: application/json
+Authorization: Bearer {{accessToken}}
+
+### 리뷰 수정 - 권한 없음
+
+PUT {{host}}/api/v1/reviews/{{reviewId}}
+Content-Type: {{contentType}}
+Authorization: Bearer {{accessToken}}
+
+{
+  "rating": 3,
+  "content": "수정이 잘 반영 되었습니다."
+}
+
+### 리뷰 삭제
+
+DELETE {{host}}/api/v1/reviews/{{reviewId}}
+Accept: application/json
+Authorization: Bearer {{accessToken}}
+
