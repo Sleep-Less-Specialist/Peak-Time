@@ -1,5 +1,7 @@
 package com.github.sleeplessspecialist.peaktime.domain.course.repository;
 
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,4 +16,14 @@ import com.github.sleeplessspecialist.peaktime.domain.course.entity.Course;
  * @since 2026. 1. 22.
  */
 public interface CourseRepository extends JpaRepository<Course, Long> {
+
+	/**
+	 * List<Long> courseId 를 fetch join 으로 user 까지 가지고 오기
+	 */
+	@Query("""
+		select c
+		   from Course c
+		   join fetch c.lecturer u
+		   where c.id in :ids""")
+	List<Course> findAllByIdInWithUser(@Param("ids") List<Long> ids);
 }

@@ -83,15 +83,28 @@ public class Course extends BaseTimeEntity {
 		this.lecturer = lecturer;
 	}
 
-    public void updateRatingWeight(int newRating) {
-        if (this.reviewCount == null) this.reviewCount = 0;
-        if (this.ratingAvg == null) this.ratingAvg = 0.0;
+	public void updateRatingWeight(int newRating) {
+		if (this.reviewCount == null)
+			this.reviewCount = 0;
+		if (this.ratingAvg == null)
+			this.ratingAvg = 0.0;
 
-        this.reviewCount += 1;
+		this.reviewCount += 1;
 
-        int n = this.reviewCount;
-        double oldAvg = this.ratingAvg;
+		int n = this.reviewCount;
+		double oldAvg = this.ratingAvg;
 
-        this.ratingAvg = ((oldAvg * (n - 1)) + newRating) / n;
-    }
+		this.ratingAvg = ((oldAvg * (n - 1)) + newRating) / n;
+	}
+
+	/**
+	 * 강의 정보 수정
+	 */
+	public void update(String title, String description, String category, BigDecimal price, String thumbnailUrl) {
+		this.title = title;
+		this.description = description;
+		this.category = category;
+		this.price = price;
+		this.thumbnailUrl = thumbnailUrl;
+	}
 }
