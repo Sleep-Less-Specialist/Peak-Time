@@ -102,7 +102,7 @@ class UserServiceTest {
 		// then
 		assertThat(result.getName()).isEqualTo("변경한이름");
 		assertThat(result.getPhoneNumber()).isEqualTo("01099998888");
-		assertThat(user.getName()).isEqualTo("변경한이름"); // 엔티티 상태 변경 확인
+		assertThat(user.getName()).isEqualTo("변경한이름");
 	}
 
 	@Test
