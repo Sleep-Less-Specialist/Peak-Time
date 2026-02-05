@@ -61,6 +61,11 @@ services:
       TOSS_SECRET_KEY: ${TOSS_SECRET_KEY}
       GMAIL_ID: ${GMAIL_ID}
       SMTP_PASSWORD: ${SMTP_PASSWORD}
+      KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID}
+      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      BASE_URL: ${BASE_URL}
     depends_on:
       mysql:
         condition: service_healthy
