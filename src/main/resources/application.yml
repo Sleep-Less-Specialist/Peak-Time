@@ -1,6 +1,20 @@
+# 기본(local/dev)에서는 localhost로 동작
 app:
   frontend:
-    base-url: ${FRONTEND_BASE_URL:http://peaktime-edu.xyz:8080}
+    base-url: http://localhost:8080
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+# 운영(prod)에서는 환경변수로 덮어쓰되, 없으면 도메인을 기본값으로 사용
+app:
+  frontend:
+    base-url: ${BASE_URL:http://peaktime-edu.xyz:8080}
+
+---
 
 spring:
   application:
