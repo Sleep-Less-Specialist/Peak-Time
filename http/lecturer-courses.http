@@ -1,0 +1,49 @@
+@host = http://localhost:8080
+@token = eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIyIiwiaWF0IjoxNzcwMjY0NjAyLCJleHAiOjE3NzAyNjgyMDIsInJvbGUiOiJTVFVERU5UIn0.vucnyIdgpqfIjm9wAobYT7d7Ue4rx2CuWkhz-UHkEJ0
+@contentType = application/json
+
+### 1. 지식공유자 - 강의 등록
+# @name registerCourse
+POST {{host}}/api/v1/lecturer/courses
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "title": "스프링 부트 핵심 원리",
+  "description": "스프링 부트의 동작 원리를 깊이 있게 학습합니다.",
+  "category": "BACKEND",
+  "price": 55000,
+  "thumbnailUrl": "https://cdn.peaktime.com/spring-boot-thumbnail.jpg"
+}
+
+> {%
+    // 응답에서 생성된 강의 ID를 변수로 저장 (다음 요청에서 쓰기 위해)
+    client.global.set("courseId", response.body.data.courseId);
+    client.log("등록된 강의 ID: " + response.body.data.courseId);
+%}
+
+### 2. 지식공유자 - 강의 정보 전체 수정
+PUT {{host}}/api/v1/lecturer/courses/{{courseId}}
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "title": "스프링 부트 핵심 원리 (개정판)",
+  "description": "최신 버전(3.x) 내용을 반영하여 내용이 보강되었습니다.",
+  "category": "BACKEND",
+  "price": 68000,
+  "thumbnailUrl": "https://cdn.peaktime.com/spring-boot-v3-new.jpg"
+}
+
+### 3. (403 실패) 권한 없는 유저나 다른 강사의 토큰으로 수정 시도
+PUT {{host}}/api/v1/lecturer/courses/{{courseId}}
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIyIiwiaWF0IjoxNzcwMjY0NjAyLCJleHAiOjE3NzAyNjgyMDIsInJvbGUiOiJTVFVERU5UIn0.vucnyIdgpqfIjm9wAobYT7d7Ue4rx2CuWkhz-UHkEJ0
+Content-Type: {{contentType}}
+
+{
+  "title": "해킹 시도",
+  "description": "이 요청은 실패해야 합니다.",
+  "category": "HACKING",
+  "price": 0,
+  "thumbnailUrl": "null"
+}
