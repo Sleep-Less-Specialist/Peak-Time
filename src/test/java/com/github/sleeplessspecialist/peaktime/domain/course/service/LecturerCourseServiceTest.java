@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
@@ -13,8 +14,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseListRes;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseRegisterReq;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseRegisterRes;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseUpdateReq;
@@ -163,5 +169,41 @@ class LecturerCourseServiceTest {
 			.isInstanceOf(CustomException.class)
 			.extracting("errorCode")
 			.isEqualTo(CourseErrorCode.COURSE_NOT_FOUND);
+	}
+
+	@Test
+	@DisplayName("getMyCourses: 본인이 등록한 강의 목록을 페이징하여 조회한다.")
+	void getMyCourses_Success() {
+		// given
+		Long userId = 1L;
+		Pageable pageable = PageRequest.of(0, 10);
+
+		User lecturer = User.createForSignup("나강사", "tutor@test.com", "pw", "01011112222");
+		ReflectionTestUtils.setField(lecturer, "id", userId);
+		ReflectionTestUtils.setField(lecturer, "name", "나강사");
+
+		Course course = Course.builder()
+			.title("테스트 강의")
+			.description("강의 설명")
+			.price(BigDecimal.valueOf(10000))
+			.category("IT")
+			.lecturer(lecturer)
+			.build();
+		ReflectionTestUtils.setField(course, "id", 100L);
+
+		List<Course> courseList = List.of(course);
+		Page<Course> coursePage = new PageImpl<>(courseList, pageable, 1);
+
+		given(courseRepository.findAllByLecturerId(userId, pageable)).willReturn(coursePage);
+
+		// when
+		Page<CourseListRes> result = lecturerCourseService.getMyCourses(userId, pageable);
+
+		// then
+		assertThat(result.getContent()).hasSize(1);
+		assertThat(result.getContent().get(0).getTitle()).isEqualTo("테스트 강의");
+		assertThat(result.getContent().get(0).getLecturerName()).isEqualTo("나강사");
+
+		verify(courseRepository).findAllByLecturerId(userId, pageable);
 	}
 }

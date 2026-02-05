@@ -17,7 +17,6 @@ Content-Type: {{contentType}}
 }
 
 > {%
-    // 응답에서 생성된 강의 ID를 변수로 저장 (다음 요청에서 쓰기 위해)
     client.global.set("courseId", response.body.data.courseId);
     client.log("등록된 강의 ID: " + response.body.data.courseId);
 %}
@@ -47,3 +46,24 @@ Content-Type: {{contentType}}
   "price": 0,
   "thumbnailUrl": "null"
 }
+
+### 4. 내 강의 목록 조회 (페이징)
+GET {{host}}/api/v1/lecturer/courses?page=0&size=5
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+> {%
+    client.test("Status is 200", function () {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+
+    client.test("응답 데이터 검증", function () {
+        var content = response.body.data.content;
+        client.log("조회된 강의 수: " + content.length);
+
+        if (content.length > 0) {
+            client.log("첫 번째 강의 제목: " + content[0].title);
+            client.log("강사명: " + content[0].lecturerName);
+        }
+    });
+%}
