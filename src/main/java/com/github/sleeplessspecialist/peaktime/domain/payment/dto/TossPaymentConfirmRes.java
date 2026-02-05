@@ -20,7 +20,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class TossPaymentConfirmRes {
 
-	//필요없는 데이터는 빼고 사용하면 됩니다.
 	private final String paymentKey;
 	private final String orderId;
 	private final String orderName;   // 주문명 (예: "토스 티셔츠 외 2건")
