@@ -1,20 +1,11 @@
 package com.github.sleeplessspecialist.peaktime.domain.payment.service;
 
-import java.math.BigDecimal;
-
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.github.sleeplessspecialist.peaktime.domain.order.entity.Order;
 import com.github.sleeplessspecialist.peaktime.domain.order.repository.OrderRepository;
 import com.github.sleeplessspecialist.peaktime.domain.order.service.OrderPaymentCommandService;
-import com.github.sleeplessspecialist.peaktime.domain.payment.dto.PaymentCancelReq;
-import com.github.sleeplessspecialist.peaktime.domain.payment.dto.TossPaymentCancelReq;
-import com.github.sleeplessspecialist.peaktime.domain.payment.dto.TossPaymentCancelRes;
-import com.github.sleeplessspecialist.peaktime.domain.payment.dto.TossPaymentConfirmReq;
-import com.github.sleeplessspecialist.peaktime.domain.payment.dto.TossPaymentConfirmRes;
+import com.github.sleeplessspecialist.peaktime.domain.payment.dto.*;
 import com.github.sleeplessspecialist.peaktime.domain.payment.entity.Payment;
+import com.github.sleeplessspecialist.peaktime.domain.payment.entity.PaymentStatus;
 import com.github.sleeplessspecialist.peaktime.domain.payment.event.PaymentCancelledEvent;
 import com.github.sleeplessspecialist.peaktime.domain.payment.event.PaymentConfirmedEvent;
 import com.github.sleeplessspecialist.peaktime.domain.payment.exception.PaymentErrorCode;
@@ -22,11 +13,23 @@ import com.github.sleeplessspecialist.peaktime.domain.payment.repository.Payment
 import com.github.sleeplessspecialist.peaktime.domain.payment.utill.OrderIdParser;
 import com.github.sleeplessspecialist.peaktime.domain.point.service.PointService;
 import com.github.sleeplessspecialist.peaktime.domain.refund.service.RefundService;
+import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
+import com.github.sleeplessspecialist.peaktime.domain.user.repository.UserRepository;
 import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
 import com.github.sleeplessspecialist.peaktime.global.infra.payment.TossPaymentClient;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * 결제 도메인의 비즈니스 로직을 담당하는 서비스 클래스입니다.
@@ -44,76 +47,160 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class PaymentService {
 
-	private final OrderRepository orderRepository;
-	private final TossPaymentClient tossPaymentClient;
-	private final PointService pointService;
-	private final ApplicationEventPublisher eventPublisher;
-	private final PaymentRepository paymentRepository;
-	private final OrderPaymentCommandService orderPaymentCommandService;
-	private final RefundService refundService;
+    private final UserRepository userRepository;
+    private final OrderRepository orderRepository;
+    private final TossPaymentClient tossPaymentClient;
+    private final PointService pointService;
+    private final ApplicationEventPublisher eventPublisher;
+    private final PaymentRepository paymentRepository;
+    private final OrderPaymentCommandService orderPaymentCommandService;
+    private final RefundService refundService;
 
-	@Transactional
-	public void confirmPayment(TossPaymentConfirmReq req) {
+    /**
+     * 결제 확정
+     */
+    @Transactional
+    public void confirmPayment(TossPaymentConfirmReq req) {
 
-		TossPaymentConfirmRes result = tossPaymentClient.confirm(req); // 1) toss 결제 승인 (동기)
+        TossPaymentConfirmRes result = tossPaymentClient.confirm(req);
 
-		Long  orderId = Long.valueOf(OrderIdParser.extractOrderId(result.getOrderId()));
-		Order order = getOrder(orderId);
-		Long usePoint = order.getUsePoint().longValueExact();
-		BigDecimal finalAmount = result.getTotalAmount();
+        Long orderId = Long.valueOf(OrderIdParser.extractOrderId(result.getOrderId()));
+        Order order = getOrder(orderId);
+        Long usePoint = order.getUsePoint().longValueExact();
+        BigDecimal finalAmount = result.getTotalAmount();
+        String impUid = result.getPaymentKey();
+        String paymentMethod = result.getMethod();
 
-		pointService.spendForOrder(order.getUser(), orderId, usePoint); // 2) 포인트 차감 (동기)
+        try {
+            pointService.spendForOrder(order.getUser(), orderId, usePoint);
 
-		// 3) 비동기 작업 트리거 (커밋 이후 실행되도록 리스너에서 AFTER_COMMIT 사용)
-		eventPublisher.publishEvent(PaymentConfirmedEvent.builder()
-			.orderId(order.getId())
-			.userId(order.getUser().getId())
-			.paymentKey(result.getPaymentKey())
-			.finalAmount(finalAmount)
-			.method(result.getMethod())
-			.build());
-	}
+            Payment payment = Payment.builder()
+                    .order(order)
+                    .amount(finalAmount)
+                    .paymentMethod(paymentMethod)
+                    .status(PaymentStatus.PAID)
+                    .impUid(impUid)
+                    .build();
 
-	@Transactional
-	public void cancelPayment(PaymentCancelReq req)  {
+            savePayment(payment);
 
-		TossPaymentCancelReq tossPaymentCancelReq = TossPaymentCancelReq.builder()
-				.cancelReason(req.getCancelReason())
-				.build();
+            orderPaymentCommandService.markCompleted(orderId);
 
-		// 1) toss 결제 취소(동기)
-		TossPaymentCancelRes result = tossPaymentClient.cancel(req.getPaymentKey(), tossPaymentCancelReq);
+        } catch (Exception afterConfirmFailed) {
+            try {
+                TossPaymentCancelReq cancelReq = TossPaymentCancelReq.builder()
+                        .cancelReason("결제 서버 오류로 인한 취소")
+                        .build();
 
-		Long orderId = Long.valueOf(OrderIdParser.extractOrderId(result.getOrderId()));
-		Order order = getOrder(orderId);
-		Payment payment = getPayment(orderId);
-		String cancelReason = result.getCancelReason();
-		BigDecimal cancelAmount = result.getCancelAmount();
-		Long refundPoint = order.getUsePoint().longValueExact();
+                tossPaymentClient.cancel(impUid, cancelReq);
 
-		pointService.refundForOrder(order.getUser(), orderId, refundPoint); // 2) 포인트 복구 (동기)
+            } catch (Exception cancelFailed) {
+                log.error("보상 취소 실패. orderId={}, paymentKey={}", orderId, impUid, cancelFailed);
+            }
+        }
 
-		// 4. Payment / Order 상태 전이 (동기)
-		payment.refund();
-		orderPaymentCommandService.markCanceled(orderId);
+        eventPublisher.publishEvent(PaymentConfirmedEvent.builder()
+                .orderId(order.getId())
+                .userId(order.getUser().getId())
+                .build());
+    }
 
-		// 5. Refund 저장 (동기)
-		refundService.createRefund(payment, cancelAmount, cancelReason);
+    /**
+     * 결제 취소
+     */
+    @Transactional
+    public void cancelPayment(PaymentCancelReq req) {
 
-		// 6) 비동기 작업 트리거 (커밋 이후 실행되도록 리스너에서 AFTER_COMMIT 사용)
-		eventPublisher.publishEvent(PaymentCancelledEvent.builder()
-			.orderId(orderId)
-			.userId(order.getUser().getId())
-			.build());
-	}
+        TossPaymentCancelReq tossPaymentCancelReq = TossPaymentCancelReq.builder()
+                .cancelReason(req.getCancelReason())
+                .build();
 
-	private Order getOrder(Long orderId) {
-		return orderRepository.findById(orderId)
-			.orElseThrow(() -> new CustomException(PaymentErrorCode.ORDER_NOT_FOUND));
-	}
+        TossPaymentCancelRes result = tossPaymentClient.cancel(req.getPaymentKey(), tossPaymentCancelReq);
 
-	private Payment getPayment(Long orderId) {
-		return paymentRepository.findByOrderId(orderId)
-			.orElseThrow(() -> new CustomException(PaymentErrorCode.PAYMENT_NOT_FOUND));
-	}
+        Long orderId = Long.valueOf(OrderIdParser.extractOrderId(result.getOrderId()));
+        Order order = getOrder(orderId);
+        Payment payment = getPayment(orderId);
+        String cancelReason = result.getCancelReason();
+        BigDecimal cancelAmount = result.getCancelAmount();
+        Long refundPoint = order.getUsePoint().longValueExact();
+
+        try {
+            pointService.refundForOrder(order.getUser(), orderId, refundPoint);
+
+            payment.refund();
+            orderPaymentCommandService.markCanceled(orderId);
+
+            refundService.createRefund(payment, cancelAmount, cancelReason);
+        } catch (Exception localFailed) {
+            log.error(
+                    "결제 취소는 완료되었으나, 후처리 중 오류가 발생했습니다. orderId={}, paymentKey={}, refundPoint={} ",
+                    orderId, req.getPaymentKey(), localFailed
+            );
+            throw localFailed;
+        }
+
+        eventPublisher.publishEvent(PaymentCancelledEvent.builder()
+                .orderId(orderId)
+                .userId(order.getUser().getId())
+                .build());
+    }
+
+    /**
+     * 내 결제 전체 조회
+     */
+    @Transactional(readOnly = true)
+    public GetMyPaymentListRes getMyPayments(Long userId, int page, int size) {
+
+        User user = getUser(userId);
+
+        Pageable pageable = PageRequest.of(
+                page - 1,
+                size,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        Page<Payment> paymentPage =
+                paymentRepository.findPaymentsByUser(user, pageable);
+
+        List<PaymentListItemRes> payments = paymentPage.getContent().stream()
+                .map(PaymentListItemRes::from)
+                .toList();
+
+        return GetMyPaymentListRes.builder()
+                .payments(payments)
+                .page(paymentPage.getNumber())
+                .size(paymentPage.getSize())
+                .totalElements(paymentPage.getTotalElements())
+                .totalPages(paymentPage.getTotalPages())
+                .hasNext(paymentPage.hasNext())
+                .build();
+    }
+
+    private User getUser(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(PaymentErrorCode.USER_NOT_FOUND));
+    }
+
+    private Order getOrder(Long orderId) {
+        return orderRepository.findById(orderId)
+                .orElseThrow(() -> new CustomException(PaymentErrorCode.ORDER_NOT_FOUND));
+    }
+
+    private Payment getPayment(Long orderId) {
+        return paymentRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new CustomException(PaymentErrorCode.PAYMENT_NOT_FOUND));
+    }
+
+    private void savePayment(Payment payment) {
+        try {
+            paymentRepository.save(payment);
+        } catch (DataIntegrityViolationException e) {
+            log.debug(
+                    "이미 결제 완료된 주문 입니다. orderId={}, paymentKey={}",
+                    payment.getOrder().getId(),
+                    payment.getImpUid()
+            );
+            throw new CustomException(PaymentErrorCode.ALREADY_ENROLLED_PAYMENT);
+        }
+    }
 }

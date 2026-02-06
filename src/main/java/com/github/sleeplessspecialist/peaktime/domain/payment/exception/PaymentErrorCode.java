@@ -25,7 +25,8 @@ public enum PaymentErrorCode implements ErrorCode {
 	USER_NOT_FOUND("PM001", "존재하지 않는 사용자입니다.", HttpStatus.NOT_FOUND),
 	ORDER_NOT_FOUND("PM002", "존재하지 않는 주문입니다.", HttpStatus.NOT_FOUND),
 	PAYMENT_NOT_FOUND("PM003", "존재하지 않는 결제입니다.", HttpStatus.NOT_FOUND),
-	INVALID_ORDER_STATUS("PM004","결제 상태 전이 실패." , HttpStatus.CONFLICT);
+	INVALID_ORDER_STATUS("PM004","결제 상태 전이 실패." , HttpStatus.CONFLICT),
+    ALREADY_ENROLLED_PAYMENT("PM005", "이미 결제 완료된 주문 입니다", HttpStatus.CONFLICT),;
 
 	private final String code;
 	private final String message;
