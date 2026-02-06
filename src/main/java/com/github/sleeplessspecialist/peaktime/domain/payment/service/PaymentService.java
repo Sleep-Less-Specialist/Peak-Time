@@ -56,10 +56,13 @@ public class PaymentService {
     private final OrderPaymentCommandService orderPaymentCommandService;
     private final RefundService refundService;
 
+    /**
+     * 결제 확정
+     */
     @Transactional
     public void confirmPayment(TossPaymentConfirmReq req) {
 
-        TossPaymentConfirmRes result = tossPaymentClient.confirm(req); // 1) toss 결제 승인 (동기)
+        TossPaymentConfirmRes result = tossPaymentClient.confirm(req);
 
         Long orderId = Long.valueOf(OrderIdParser.extractOrderId(result.getOrderId()));
         Order order = getOrder(orderId);
@@ -69,9 +72,8 @@ public class PaymentService {
         String paymentMethod = result.getMethod();
 
         try {
-            pointService.spendForOrder(order.getUser(), orderId, usePoint); // 2) 포인트 차감 (동기)
+            pointService.spendForOrder(order.getUser(), orderId, usePoint);
 
-            // 3) payment 생성후 DB 저장 (동기)
             Payment payment = Payment.builder()
                     .order(order)
                     .amount(finalAmount)
@@ -82,9 +84,8 @@ public class PaymentService {
 
             savePayment(payment);
 
-            // 4) order 상태 전이 (동기)
             orderPaymentCommandService.markCompleted(orderId);
-            // 보상 트랜잭션
+
         } catch (Exception afterConfirmFailed) {
             try {
                 TossPaymentCancelReq cancelReq = TossPaymentCancelReq.builder()
@@ -98,13 +99,15 @@ public class PaymentService {
             }
         }
 
-        // 5) 비동기 작업 트리거 (커밋 이후 실행되도록 리스너에서 AFTER_COMMIT 사용)
         eventPublisher.publishEvent(PaymentConfirmedEvent.builder()
                 .orderId(order.getId())
                 .userId(order.getUser().getId())
                 .build());
     }
 
+    /**
+     * 결제 취소
+     */
     @Transactional
     public void cancelPayment(PaymentCancelReq req) {
 
@@ -112,7 +115,6 @@ public class PaymentService {
                 .cancelReason(req.getCancelReason())
                 .build();
 
-        // 1) toss 결제 취소(동기)
         TossPaymentCancelRes result = tossPaymentClient.cancel(req.getPaymentKey(), tossPaymentCancelReq);
 
         Long orderId = Long.valueOf(OrderIdParser.extractOrderId(result.getOrderId()));
@@ -123,13 +125,11 @@ public class PaymentService {
         Long refundPoint = order.getUsePoint().longValueExact();
 
         try {
-            pointService.refundForOrder(order.getUser(), orderId, refundPoint); // 2) 포인트 복구 (동기)
+            pointService.refundForOrder(order.getUser(), orderId, refundPoint);
 
-            // 4) Payment / Order 상태 전이 (동기)
             payment.refund();
             orderPaymentCommandService.markCanceled(orderId);
 
-            // 5) Refund 저장 (동기)
             refundService.createRefund(payment, cancelAmount, cancelReason);
         } catch (Exception localFailed) {
             log.error(
@@ -138,14 +138,16 @@ public class PaymentService {
             );
             throw localFailed;
         }
-        // 6) 비동기 작업 트리거 (커밋 이후 실행되도록 리스너에서 AFTER_COMMIT 사용)
+
         eventPublisher.publishEvent(PaymentCancelledEvent.builder()
                 .orderId(orderId)
                 .userId(order.getUser().getId())
                 .build());
-
     }
 
+    /**
+     * 내 결제 전체 조회
+     */
     @Transactional(readOnly = true)
     public GetMyPaymentListRes getMyPayments(Long userId, int page, int size) {
 
