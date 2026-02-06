@@ -10,6 +10,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import com.github.sleeplessspecialist.peaktime.global.common.security.filter.JwtAuthenticationFilter;
 import com.github.sleeplessspecialist.peaktime.global.common.security.handler.OAuth2SuccessHandler;
@@ -117,5 +119,24 @@ public class SecurityConfig {
 	@Bean
 	public PasswordEncoder passwordEncoder() {
 		return new BCryptPasswordEncoder();
+	}
+
+
+	/**
+	 * 비밀번호 재설정 메일 링크(`/reset-password?token=...`)로 진입하면
+	 * 서버가 JSON(401) 대신 프론트 엔트리 페이지(index.html)를 내려주도록 포워딩합니다.
+	 *
+	 * <p>
+	 * index.html 내부 스크립트가 `token` 쿼리 파라미터를 읽어 '새 비밀번호 설정' 폼(섹션)을 표시합니다.
+	 * </p>
+	 */
+	@Bean
+	public WebMvcConfigurer passwordResetViewForwarder() {
+		return new WebMvcConfigurer() {
+			@Override
+			public void addViewControllers(ViewControllerRegistry registry) {
+				registry.addViewController("/reset-password").setViewName("forward:/index.html");
+			}
+		};
 	}
 }

@@ -22,6 +22,7 @@
 
         html, body {
             height: 100%;
+            min-height: 100dvh;
         }
 
         body {
@@ -77,6 +78,15 @@
             display: grid;
             place-items: center;
             overflow: hidden;
+            position: relative;
+        }
+
+        .brand-logo-wrap.logo-fallback::after {
+            content: "PT";
+            font-weight: 800;
+            font-size: 20px;
+            color: var(--muted);
+            letter-spacing: -0.5px;
         }
 
         .brand-badge {
@@ -155,6 +165,37 @@
 
         .field + .field {
             margin-top: 10px;
+        }
+
+        .helper-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 8px;
+        }
+
+        .link-btn {
+            border: 0;
+            background: transparent;
+            padding: 0;
+            cursor: pointer;
+            font-size: 12px;
+            color: rgba(59, 130, 246, 0.9);
+            text-decoration: underline;
+        }
+
+        .notice {
+            margin-top: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: rgba(59, 130, 246, 0.06);
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.55;
+        }
+
+        .hidden {
+            display: none !important;
         }
 
         .row {
@@ -264,9 +305,12 @@
 <main class="container" aria-label="메인 로그인 화면">
     <header class="brand">
         <div class="brand-logo-wrap" aria-hidden="true">
-            <img src="images/PeakTime_light _simple.png"
+            <img src="images/PeakTime_light%20_simple.png"
                  alt="PeakTime 로고"
                  class="brand-logo"
+                 loading="eager"
+                 decoding="async"
+                 onerror="this.style.display='none'; this.parentElement.classList.add('logo-fallback');"
             />
         </div>
 
@@ -306,6 +350,10 @@
                            placeholder="비밀번호를 입력하세요" required/>
                 </div>
 
+                <div class="helper-row" aria-label="비밀번호 찾기">
+                    <button class="link-btn" type="button" id="forgotPasswordBtn">비밀번호를 잊으셨나요?</button>
+                </div>
+
                 <div class="row" role="group" aria-label="회원가입 및 로그인 버튼">
                     <button class="btn" type="button" id="signupBtn">회원가입</button>
                     <button class="btn btn-primary" type="submit" id="loginBtn">로그인</button>
@@ -338,6 +386,58 @@
             </div>
         </div>
 
+        <!-- Password Reset: Request -->
+        <div class="section hidden" id="pwResetRequestSection" aria-label="비밀번호 재설정 요청">
+            <p class="section-title">비밀번호 재설정</p>
+
+            <form id="pwResetRequestForm" method="post" action="/api/v1/auth/password/reset-request">
+                <div class="field">
+                    <label for="pwResetEmail">이메일</label>
+                    <input id="pwResetEmail" name="email" type="email" autocomplete="email"
+                           placeholder="example@domain.com" required/>
+                </div>
+
+                <div class="row" role="group" aria-label="비밀번호 재설정 요청 버튼">
+                    <button class="btn" type="button" id="pwResetRequestCancelBtn">취소</button>
+                    <button class="btn btn-primary" type="submit">재설정 메일 보내기</button>
+                </div>
+
+                <div class="notice" id="pwResetRequestNotice" aria-live="polite">
+                    입력하신 이메일로 비밀번호 재설정 링크를 전송합니다.<br/>
+                </div>
+            </form>
+        </div>
+
+        <!-- Password Reset: Confirm -->
+        <div class="section hidden" id="pwResetConfirmSection" aria-label="비밀번호 재설정 확정">
+            <p class="section-title">새 비밀번호 설정</p>
+
+            <form id="pwResetConfirmForm" method="post" action="/api/v1/auth/password">
+                <input type="hidden" id="pwResetToken" name="token"/>
+
+                <div class="field">
+                    <label for="pwNewPassword">새 비밀번호</label>
+                    <input id="pwNewPassword" name="newPassword" type="password" autocomplete="new-password"
+                           placeholder="새 비밀번호를 입력하세요" required/>
+                </div>
+
+                <div class="field">
+                    <label for="pwNewPasswordConfirm">새 비밀번호 확인</label>
+                    <input id="pwNewPasswordConfirm" type="password" autocomplete="new-password"
+                           placeholder="새 비밀번호를 한 번 더 입력하세요" required/>
+                </div>
+
+                <div class="row" role="group" aria-label="비밀번호 재설정 확정 버튼">
+                    <button class="btn" type="button" id="pwResetConfirmCancelBtn">취소</button>
+                    <button class="btn btn-primary" type="submit">비밀번호 변경</button>
+                </div>
+
+                <div class="notice" id="pwResetConfirmNotice" aria-live="polite">
+                    메일 링크가 만료되었을 경우 다시 비밀번호 재설정을 요청해주세요.
+                </div>
+            </form>
+        </div>
+
         <p class="hint">
             * 이 페이지는 반응형으로 동일한 레이아웃을 유지합니다.<br/>
         </p>
@@ -345,12 +445,212 @@
 </main>
 
 <script>
-    // 회원가입 버튼: 아직 회원가입 화면이 없다면 임시로 signup API 문서/페이지로 보내거나 alert 처리
+    // 회원가입 버튼
     document.getElementById("signupBtn").addEventListener("click", () => {
-        // 필요 시: window.location.href = "/signup.html";
         window.location.href = "signup.html";
     });
 
+
+    const loginSection = document.querySelector('[aria-label="이메일 비밀번호 로그인"]');
+    const oauthSection = document.querySelector('[aria-label="소셜 로그인"]');
+
+    const pwResetRequestSection = document.getElementById("pwResetRequestSection");
+    const pwResetConfirmSection = document.getElementById("pwResetConfirmSection");
+
+    const pwResetRequestNotice = document.getElementById("pwResetRequestNotice");
+    const pwResetConfirmNotice = document.getElementById("pwResetConfirmNotice");
+
+    function showLogin() {
+        loginSection.classList.remove("hidden");
+        oauthSection.classList.remove("hidden");
+        pwResetRequestSection.classList.add("hidden");
+        pwResetConfirmSection.classList.add("hidden");
+
+        pwResetRequestNotice.textContent = "입력하신 이메일로 비밀번호 재설정 링크를 전송합니다.";
+        pwResetConfirmNotice.textContent = "메일 링크가 만료되었을 경우 다시 비밀번호 재설정을 요청해주세요.";
+
+        // URL 정리(토큰 파라미터 제거)
+        const url = new URL(window.location.href);
+
+        // 배포 환경에 따라 /reset-password 같은 라우트는 실제 파일이 아닐 수 있으므로
+        // 취소/복귀 시에는 안전하게 루트(또는 상위 경로)로 돌립니다.
+        if (url.pathname.endsWith("/reset-password")) {
+            const next = url.pathname.replace(/\/reset-password$/, "") || "/";
+            url.pathname = next;
+        }
+
+        url.searchParams.delete("token");
+        window.history.replaceState({}, "", url.toString());
+    }
+
+    function showResetRequest(prefillEmail) {
+        loginSection.classList.add("hidden");
+        oauthSection.classList.add("hidden");
+        pwResetConfirmSection.classList.add("hidden");
+        pwResetRequestSection.classList.remove("hidden");
+
+        if (prefillEmail) {
+            const emailInput = document.getElementById("pwResetEmail");
+            emailInput.value = prefillEmail;
+        }
+    }
+
+    function showResetConfirm(token) {
+        loginSection.classList.add("hidden");
+        oauthSection.classList.add("hidden");
+        pwResetRequestSection.classList.add("hidden");
+        pwResetConfirmSection.classList.remove("hidden");
+
+        document.getElementById("pwResetToken").value = token || "";
+    }
+
+    // 비밀번호 찾기 버튼
+    document.getElementById("forgotPasswordBtn").addEventListener("click", () => {
+        const currentEmail = document.getElementById("email").value;
+        showResetRequest(currentEmail);
+    });
+
+    // 요청 취소/확정 취소
+    document.getElementById("pwResetRequestCancelBtn").addEventListener("click", showLogin);
+    document.getElementById("pwResetConfirmCancelBtn").addEventListener("click", showLogin);
+
+    // 비밀번호 재설정 요청 제출
+    document.getElementById("pwResetRequestForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const email = document.getElementById("pwResetEmail").value;
+
+        try {
+            const res = await fetch("/api/v1/auth/password/reset-request", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
+                body: JSON.stringify({ email })
+            });
+
+            // 성공(200~299)
+            if (res.ok) {
+                pwResetRequestNotice.textContent = "재설정 메일 전송 요청이 처리되었습니다.\n메일함을 확인해주세요.";
+                return;
+            }
+
+            // 실패: 서버가 내려준 메시지를 최대한 노출
+            const contentType = (res.headers.get("content-type") || "").toLowerCase();
+            let detail = "";
+
+            if (contentType.includes("application/json")) {
+                try {
+                    const body = await res.json();
+                    // 프로젝트의 표준 응답(ApiResponse/ErrorResponse) 케이스를 최대한 커버
+                    detail = body?.message || body?.error?.message || body?.error || body?.msg || "";
+                    if (!detail && body?.code) {
+                        detail = `에러 코드: ${body.code}`;
+                    }
+                } catch (_) {
+                    // ignore
+                }
+            } else {
+                try {
+                    const text = await res.text();
+                    detail = text?.slice(0, 200) || "";
+                } catch (_) {
+                    // ignore
+                }
+            }
+
+            // 사용자에게는 과도한 내부정보(상태코드/HTML 등)를 노출하지 않고,
+            // 개발자 콘솔에서만 상세를 확인합니다.
+            pwResetRequestNotice.textContent = "요청 처리 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.";
+
+            // 개발 중 확인용: 콘솔에도 남겨두기
+            console.warn("[password reset-request] failed", {
+                status: res.status,
+                statusText: res.statusText,
+                detail
+            });
+        } catch (err) {
+            pwResetRequestNotice.textContent = "네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+            console.error("[password reset-request] network error", err);
+        }
+    });
+
+    // 비밀번호 재설정 확정 제출
+    document.getElementById("pwResetConfirmForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const token = document.getElementById("pwResetToken").value;
+        const newPassword = document.getElementById("pwNewPassword").value;
+        const newPasswordConfirm = document.getElementById("pwNewPasswordConfirm").value;
+
+        if (!token) {
+            pwResetConfirmNotice.textContent = "유효하지 않은 링크입니다. 다시 비밀번호 재설정을 요청해주세요.";
+            return;
+        }
+
+        if (newPassword !== newPasswordConfirm) {
+            pwResetConfirmNotice.textContent = "새 비밀번호가 일치하지 않습니다.";
+            return;
+        }
+
+        try {
+            const res = await fetch("/api/v1/auth/password", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ token, newPassword })
+            });
+
+            if (res.ok) {
+                pwResetConfirmNotice.textContent = "비밀번호가 변경되었습니다. 로그인 화면으로 이동합니다.";
+                setTimeout(() => showLogin(), 800);
+                return;
+            }
+
+            // 표준 에러 응답(code/message)을 읽어서 사용자 메시지 매핑
+            let body;
+            try {
+                body = await res.json();
+            } catch (_) {
+                body = null;
+            }
+
+            if (res.status === 410 || (body && body.code === "A410")) {
+                pwResetConfirmNotice.textContent = "링크가 만료되었습니다. 다시 비밀번호 재설정을 요청해주세요.";
+                return;
+            }
+
+            if (res.status === 401 || (body && body.code === "G401")) {
+                pwResetConfirmNotice.textContent = "유효하지 않은 링크입니다. 다시 비밀번호 재설정을 요청해주세요.";
+                return;
+            }
+
+            pwResetConfirmNotice.textContent = "요청 처리 중 문제가 발생했습니다. 비밀번호 조건을 확인해주세요.";
+        } catch (err) {
+            pwResetConfirmNotice.textContent = "네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+        }
+    });
+
+    // 메일 링크 진입 처리 및 /reset-password 라우트 지원
+    (function initFromUrl() {
+        const url = new URL(window.location.href);
+        const token = url.searchParams.get("token");
+
+        // token이 있으면 바로 새 비밀번호 설정 화면으로
+        if (token) {
+            showResetConfirm(token);
+            return;
+        }
+
+        // /reset-password 라우트로 들어온 경우(토큰 없음): 재설정 요청 화면으로
+        if (url.pathname.endsWith("/reset-password")) {
+            showResetRequest();
+            return;
+        }
+
+        // 그 외 일반 진입
+        showLogin();
+    })();
 </script>
 </body>
 </html>

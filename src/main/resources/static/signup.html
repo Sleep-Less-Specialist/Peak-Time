@@ -164,8 +164,12 @@
 <main class="container">
     <header class="brand">
         <div class="brand-logo-wrap" aria-hidden="true">
-            <img src="images/PeakTime_light _simple.png"
-                 alt="PeakTime 로고" class="brand-logo"/>
+            <img src="images/PeakTime_light%20_simple.png"
+                 alt="PeakTime 로고" class="brand-logo"
+                 loading="eager"
+                 decoding="async"
+                 onerror="this.style.display='none';"
+            />
         </div>
         <h1>회원가입</h1>
         <p class="brand-desc">
@@ -176,7 +180,7 @@
 
     <section class="card">
         <!-- NOTE: 엔드포인트는 프로젝트 명세에 맞게 조정 -->
-        <form id="signupForm" method="post" action="/api/v1/auth/signup">
+        <form id="signupForm" method="post" action="#">
             <div class="field">
                 <label for="name">이름</label>
                 <input id="name" name="name" type="text" placeholder="이름을 입력하세요" required/>
@@ -220,7 +224,13 @@
 
 <script>
     document.getElementById("backBtn").addEventListener("click", () => {
-        window.location.href = "/index.html";
+        // 배포 경로가 루트가 아닐 수 있으므로 절대경로(/index.html)로 이동하지 않습니다.
+        // 히스토리가 있으면 뒤로, 없으면 상대경로로 index로 이동
+        if (window.history.length > 1) {
+            window.history.back();
+            return;
+        }
+        window.location.href = "index.html";
     });
 
     const msgEl = document.getElementById("signupMsg");
@@ -251,10 +261,11 @@
         try {
             const res = await fetch("/api/v1/auth/signup", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json", "Accept": "application/json" },
                 body: JSON.stringify(payload)
             });
 
+            const contentType = (res.headers.get("content-type") || "").toLowerCase();
             const text = await res.text();
             let body;
             try { body = text ? JSON.parse(text) : null; } catch (_) { body = text; }
@@ -273,7 +284,20 @@
                         }
                     }
                 } else if (typeof body === "string" && body.trim().length > 0) {
-                    detail = body;
+                    // 서버가 JSON이 아닌 HTML(404 페이지 등)을 반환하는 경우가 있어 그대로 노출하지 않습니다.
+                    const trimmed = body.trim();
+                    const looksLikeHtml = contentType.includes("text/html") || /^<!doctype html>|^<html/i.test(trimmed);
+
+                    if (res.status === 404 || looksLikeHtml) {
+                        detail = "회원가입 API 경로를 찾을 수 없습니다(404).\n현재 접속한 주소가 백엔드 서버인지, 또는 /api 프록시가 설정되어 있는지 확인해주세요.";
+                        console.warn("[signup] 404/html response (likely wrong origin or missing proxy)", {
+                            status: res.status,
+                            contentType,
+                            preview: trimmed.slice(0, 120)
+                        });
+                    } else {
+                        detail = trimmed;
+                    }
                 }
 
                 showMsg(detail);
@@ -281,7 +305,7 @@
             }
 
             showMsg("회원가입이 완료되었습니다. 메인 페이지로 이동합니다.");
-            setTimeout(() => (window.location.href = "/index.html"), 700);
+            setTimeout(() => (window.location.href = "index.html"), 700);
         } catch (err) {
             showMsg("네트워크 오류로 회원가입 요청에 실패했습니다.");
         }
