@@ -22,6 +22,7 @@ import com.github.sleeplessspecialist.peaktime.global.common.error.CustomExcepti
 import com.github.sleeplessspecialist.peaktime.global.infra.s3.S3Uploader;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 사용자(User) 도메인의 비즈니스 로직을 처리하는 서비스 클래스입니다.
@@ -32,6 +33,7 @@ import lombok.RequiredArgsConstructor;
  * @version 1.2
  * @since 2026. 1. 28.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -106,16 +108,24 @@ public class UserService {
 		String dirName = "users/" + userId + "/profile";
 		String imageUrl = s3Uploader.upload(file, dirName);
 
-		profileImageRepository.findByUserIdAndIsPrimaryTrue(userId)
-			.ifPresent(oldImage -> oldImage.setPrimary(false));
+		try {
+			profileImageRepository.findByUserIdAndIsPrimaryTrue(userId)
+				.ifPresent(oldImage -> oldImage.setPrimary(false));
 
-		ProfileImage newImage = ProfileImage.builder()
-			.url(imageUrl)
-			.isPrimary(true)
-			.user(user)
-			.build();
+			ProfileImage newImage = ProfileImage.builder()
+				.url(imageUrl)
+				.isPrimary(true)
+				.user(user)
+				.build();
 
-		profileImageRepository.save(newImage);
+			profileImageRepository.save(newImage);
+
+		} catch (RuntimeException e) {
+			log.error("DB 저장 실패로 인한 S3 이미지 삭제: {}", imageUrl);
+			s3Uploader.deleteFile(imageUrl);
+
+			throw e;
+		}
 
 		return ProfileImageRes.builder()
 			.imageUrl(imageUrl)
