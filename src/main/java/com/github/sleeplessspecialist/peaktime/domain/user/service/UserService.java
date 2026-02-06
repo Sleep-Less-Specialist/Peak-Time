@@ -63,11 +63,7 @@ public class UserService {
 	 */
 	@Transactional(readOnly = true)
 	public List<MyCourseRes> getMyCourses(Long userId) {
-
-		if (!userRepository.existsById(userId)) {
-			throw new CustomException(UserErrorCode.USER_NOT_FOUND);
-		}
-
+		
 		List<Enrollment> enrollments = enrollmentRepository.findAllByUserIdAndStatusOrderByCreatedAtDesc(
 			userId, EnrollmentStatus.ENROLLED);
 
