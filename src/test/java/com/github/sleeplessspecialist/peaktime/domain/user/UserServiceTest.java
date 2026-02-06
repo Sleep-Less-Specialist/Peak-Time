@@ -34,7 +34,6 @@ import com.github.sleeplessspecialist.peaktime.domain.user.repository.ProfileIma
 import com.github.sleeplessspecialist.peaktime.domain.user.repository.UserRepository;
 import com.github.sleeplessspecialist.peaktime.domain.user.service.UserService;
 import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
-import com.github.sleeplessspecialist.peaktime.global.common.error.GlobalErrorCode;
 import com.github.sleeplessspecialist.peaktime.global.infra.s3.S3Uploader;
 
 @ExtendWith(MockitoExtension.class)
@@ -189,7 +188,7 @@ class UserServiceTest {
 		assertThatThrownBy(() -> userService.uploadProfileImage(userId, emptyFile))
 			.isInstanceOf(CustomException.class)
 			.extracting("errorCode")
-			.isEqualTo(GlobalErrorCode.INVALID_REQUEST);
+			.isEqualTo(UserErrorCode.EMPTY_FILE_EXCEPTION);
 	}
 
 	@Test
