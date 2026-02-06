@@ -242,4 +242,30 @@ class UserServiceTest {
 			.extracting("errorCode")
 			.isEqualTo(UserErrorCode.USER_NOT_FOUND);
 	}
+
+	@Test
+	@DisplayName("실패: DB 저장 중 에러 발생 시 업로드된 S3 파일을 삭제해야 한다.")
+	void uploadProfileImage_Fail_DbSaveError() {
+		// given
+		Long userId = 1L;
+		User user = User.createForSignup("테스터", "test@test.com", "pw", "01012341234");
+		ReflectionTestUtils.setField(user, "id", userId);
+
+		MockMultipartFile file = new MockMultipartFile(
+			"file", "profile.jpg", "image/jpeg", "dummy-data".getBytes()
+		);
+
+		given(userRepository.findById(userId)).willReturn(Optional.of(user));
+		String uploadedUrl = "https://s3-url.com/uploaded.jpg";
+		given(s3Uploader.upload(any(MultipartFile.class), anyString())).willReturn(uploadedUrl);
+		given(profileImageRepository.save(any(ProfileImage.class)))
+			.willThrow(new RuntimeException("DB Connection Error"));
+
+		// when & then
+		assertThatThrownBy(() -> userService.uploadProfileImage(userId, file))
+			.isInstanceOf(RuntimeException.class)
+			.hasMessage("DB Connection Error");
+		
+		verify(s3Uploader).deleteFile(uploadedUrl);
+	}
 }
