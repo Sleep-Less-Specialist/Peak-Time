@@ -15,20 +15,27 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.github.sleeplessspecialist.peaktime.domain.course.entity.Course;
 import com.github.sleeplessspecialist.peaktime.domain.enrollment.entity.Enrollment;
 import com.github.sleeplessspecialist.peaktime.domain.enrollment.entity.EnrollmentStatus;
 import com.github.sleeplessspecialist.peaktime.domain.enrollment.repository.EnrollmentRepository;
 import com.github.sleeplessspecialist.peaktime.domain.user.dto.MyCourseRes;
+import com.github.sleeplessspecialist.peaktime.domain.user.dto.ProfileImageRes;
 import com.github.sleeplessspecialist.peaktime.domain.user.dto.UserProfileRes;
 import com.github.sleeplessspecialist.peaktime.domain.user.dto.UserUpdateReq;
+import com.github.sleeplessspecialist.peaktime.domain.user.entity.ProfileImage;
 import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
 import com.github.sleeplessspecialist.peaktime.domain.user.exception.UserErrorCode;
+import com.github.sleeplessspecialist.peaktime.domain.user.repository.ProfileImageRepository;
 import com.github.sleeplessspecialist.peaktime.domain.user.repository.UserRepository;
 import com.github.sleeplessspecialist.peaktime.domain.user.service.UserService;
 import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
+import com.github.sleeplessspecialist.peaktime.global.common.error.GlobalErrorCode;
+import com.github.sleeplessspecialist.peaktime.global.infra.s3.S3Uploader;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -41,6 +48,12 @@ class UserServiceTest {
 
 	@Mock
 	private EnrollmentRepository enrollmentRepository;
+
+	@Mock
+	private ProfileImageRepository profileImageRepository;
+
+	@Mock
+	private S3Uploader s3Uploader;
 
 	@Test
 	@DisplayName("성공: 내 정보를 조회하면 UserProfileRes가 반환된다.")
@@ -134,5 +147,100 @@ class UserServiceTest {
 
 		// then
 		assertThat(result).isEmpty();
+	}
+
+	@Test
+	@DisplayName("성공: 프로필 이미지를 업로드하면 S3에 저장되고 DB에 반영된다.")
+	void uploadProfileImage_Success() {
+		// given
+		Long userId = 1L;
+		User user = User.createForSignup("테스터", "test@test.com", "pw", "01012341234");
+		ReflectionTestUtils.setField(user, "id", userId);
+
+		MockMultipartFile file = new MockMultipartFile(
+			"file", "profile.jpg", "image/jpeg", "dummy-image-data".getBytes()
+		);
+
+		ProfileImage oldImage = ProfileImage.builder().url("old.jpg").isPrimary(true).user(user).build();
+
+		given(userRepository.findById(userId)).willReturn(Optional.of(user));
+		given(s3Uploader.upload(any(MultipartFile.class), anyString())).willReturn("https://s3-url.com/new.jpg");
+		given(profileImageRepository.findByUserIdAndIsPrimaryTrue(userId)).willReturn(Optional.of(oldImage));
+
+		// when
+		ProfileImageRes result = userService.uploadProfileImage(userId, file);
+
+		// then
+		assertThat(result.imageUrl()).isEqualTo("https://s3-url.com/new.jpg");
+		assertThat(oldImage.isPrimary()).isFalse();
+
+		verify(s3Uploader).upload(any(MultipartFile.class), eq("users/" + userId + "/profile"));
+		verify(profileImageRepository).save(any(ProfileImage.class));
+	}
+
+	@Test
+	@DisplayName("실패: 빈 파일(Empty)을 업로드하면 예외 발생")
+	void uploadProfileImage_Fail_EmptyFile() {
+		// given
+		Long userId = 1L;
+		MockMultipartFile emptyFile = new MockMultipartFile("file", new byte[0]);
+
+		// when & then
+		assertThatThrownBy(() -> userService.uploadProfileImage(userId, emptyFile))
+			.isInstanceOf(CustomException.class)
+			.extracting("errorCode")
+			.isEqualTo(GlobalErrorCode.INVALID_REQUEST);
+	}
+
+	@Test
+	@DisplayName("실패: 5MB를 초과하는 이미지는 예외 발생")
+	void uploadProfileImage_Fail_SizeLimit() {
+		// given
+		Long userId = 1L;
+
+		byte[] largeData = new byte[5 * 1024 * 1024 + 1];
+		MockMultipartFile largeFile = new MockMultipartFile(
+			"file", "large.jpg", "image/jpeg", largeData
+		);
+
+		// when & then
+		assertThatThrownBy(() -> userService.uploadProfileImage(userId, largeFile))
+			.isInstanceOf(CustomException.class)
+			.extracting("errorCode")
+			.isEqualTo(UserErrorCode.PROFILE_IMAGE_TOO_LARGE);
+	}
+
+	@Test
+	@DisplayName("실패: 이미지가 아닌 파일(txt 등)은 예외 발생")
+	void uploadProfileImage_Fail_InvalidType() {
+		// given
+		Long userId = 1L;
+		MockMultipartFile textFile = new MockMultipartFile(
+			"file", "test.txt", "text/plain", "text-data".getBytes()
+		);
+
+		// when & then
+		assertThatThrownBy(() -> userService.uploadProfileImage(userId, textFile))
+			.isInstanceOf(CustomException.class)
+			.extracting("errorCode")
+			.isEqualTo(UserErrorCode.INVALID_PROFILE_IMAGE_TYPE);
+	}
+
+	@Test
+	@DisplayName("실패: 존재하지 않는 유저는 업로드 불가")
+	void uploadProfileImage_Fail_UserNotFound() {
+		// given
+		Long userId = 99L;
+		MockMultipartFile file = new MockMultipartFile(
+			"file", "profile.jpg", "image/jpeg", "data".getBytes()
+		);
+
+		given(userRepository.findById(userId)).willReturn(Optional.empty());
+
+		// when & then
+		assertThatThrownBy(() -> userService.uploadProfileImage(userId, file))
+			.isInstanceOf(CustomException.class)
+			.extracting("errorCode")
+			.isEqualTo(UserErrorCode.USER_NOT_FOUND);
 	}
 }
