@@ -22,5 +22,4 @@ public class PaymentCancelledEvent {
 
 	private final Long orderId;
 	private final Long userId;
-
 }

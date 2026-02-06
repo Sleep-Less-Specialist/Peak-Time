@@ -1,0 +1,22 @@
+### 환경 변수 설정
+@host = http://localhost:8080
+@contentType = application/json
+@userId = 1
+@page = 1
+@size = 10
+
+### 결제 취소
+
+POST {{host}}/api/v1/payments/cancel
+Content-Type: {{contentType}}
+
+{
+  "paymentKey": "tgen_20260201191100ySm88",
+  "cancelReason": "단순 변심"
+}
+
+### 내 결제 전체 조회
+
+GET {{host}}/api/v1/payments?page={{page}}&size={{size}}
+Accept: {{contentType}}
+Authorization: Bearer {{accessToken}}
