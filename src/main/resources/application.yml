@@ -12,7 +12,7 @@ spring:
 # 운영(prod)에서는 환경변수로 덮어쓰되, 없으면 도메인을 기본값으로 사용
 app:
   frontend:
-    base-url: ${BASE_URL:http://peaktime-edu.xyz:8080}
+    base-url: ${BASE_URL:https://peaktime-edu.xyz}
 
 ---
 
