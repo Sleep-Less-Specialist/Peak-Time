@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
+import java.util.UUID;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.redis.RedisConnectionFailureException;
@@ -121,7 +122,7 @@ public class AuthService {
 	 * 로그인을 처리합니다.
 	 * <p>
 	 * 이메일 / 비밀번호를 검증한 뒤 Access / Refresh Token을 발급합니다.
-	 * Refresh Token은 Redis 화이트리스트에 저장하고 TTL로 만료를 관리합니다.
+	 * Refresh Token은 서버에서 생성한 세션 식별자(sid, UUID)를 포함하며, Redis 화이트리스트를 sid 단위로 저장하고 TTL로 만료를 관리합니다.
 	 * </p>
 	 *
 	 * <p>
@@ -130,8 +131,8 @@ public class AuthService {
 	 * 멀티 디바이스/동시 로그인 제어(단일 세션 강제 등)는 MVP 범위에서 제외하고, RefreshToken을 화이트리스트로 누적 관리합니다.
 	 * </p>
 	 *
-	 * @param request 로그인 요청 DTO
-	 * @param deviceId 디바이스 식별자
+	 * @param request  로그인 요청 DTO
+	 * @param deviceId 디바이스 식별자(현재 세션 식별에는 사용되지 않음, 메타데이터용)
 	 * @return 토큰 정보를 포함한 응답 DTO
 	 * @throws CustomException 인증 실패 또는 보안 정책 위반 시
 	 */
@@ -149,9 +150,9 @@ public class AuthService {
 			final String role = resolveRole(user.getRole());
 
 			final String accessToken = jwtTokenProvider.createAccessToken(userId, role);
-			final String refreshToken = jwtTokenProvider.createRefreshToken(userId);
-
-			saveRefreshTokenWhitelist(userId, deviceId, refreshToken);
+			final String sessionId = UUID.randomUUID().toString().replace("-", "");
+			final String refreshToken = jwtTokenProvider.createRefreshToken(userId, sessionId);
+			saveRefreshTokenWhitelist(userId, sessionId, refreshToken);
 
 			clearLoginAttempts(email);
 
@@ -173,10 +174,8 @@ public class AuthService {
 	 * Refresh Token을 이용해 Access Token과 Refresh Token을 재발급합니다.
 	 *
 	 * <p>
-	 * 전달받은 Refresh Token의 서명 및 만료 여부를 검증한 뒤,
-	 * Redis 화이트리스트에 등록된 토큰인지 확인합니다.
-	 * 검증이 완료되면 기존 Refresh Token을 폐기하고
-	 * 새로운 Access / Refresh Token을 발급합니다. (Refresh Token Rotation)
+	 * 전달받은 Refresh Token의 서명 및 만료 여부를 검증한 뒤, Redis 화이트리스트에 등록된 토큰인지 확인합니다.
+	 * 검증이 완료되면 기존 Refresh Token을 폐기하고 새로운 Access / Refresh Token을 발급합니다. (Refresh Token Rotation)
 	 * </p>
 	 *
 	 * <p>
@@ -184,8 +183,8 @@ public class AuthService {
 	 * 재발급이 허용되지 않습니다.
 	 * </p>
 	 *
-	 * @param request 재발급에 사용할 Refresh Token을 포함한 요청 DTO
-	 * @param deviceId 디바이스 식별자
+	 * @param request  재발급에 사용할 Refresh Token을 포함한 요청 DTO
+	 * @param deviceId 디바이스 식별자(메타데이터용, 세션 식별에는 사용되지 않음)
 	 * @return 새로 발급된 Access / Refresh Token 정보
 	 * @throws CustomException 유효하지 않거나 만료된 Refresh Token인 경우
 	 */
@@ -194,11 +193,30 @@ public class AuthService {
 
 		validateRefreshToken(refreshToken);
 
-		final User user = validateUserByRefreshToken(refreshToken);
+		// 토큰에서 필요한 값들을 한 번만 추출 (중복 파싱 방지)
+		final Long userId = jwtTokenProvider.getUserId(refreshToken);
+		final String sid = jwtTokenProvider.getSessionId(refreshToken);
+		final String jti = jwtTokenProvider.getJti(refreshToken);
 
-		validateRefreshTokenWhitelisted(user.getId(), deviceId, refreshToken);
+		// RTR - Refresh Token 재사용 탐지 (jti 기반)
+		final String usedKey = "rt:used:" + jti;
+		Boolean reused = stringRedisTemplate.hasKey(usedKey);
+		if (Boolean.TRUE.equals(reused)) {
+			// 재사용 감지 시 해당 세션을 즉시 폐기
+			revokeRefreshTokenWhitelist(userId, sid);
+			throw new CustomException(AuthErrorCode.INVALID_REFRESH_TOKEN);
+		}
 
-		return rotateAndIssueTokens(user, deviceId, refreshToken);
+		final User user = userRepository.findById(userId)
+			.orElseThrow(() -> new CustomException(AuthErrorCode.INVALID_REFRESH_TOKEN));
+
+		if (user.getStatus() != UserStatus.ACTIVE) {
+			throw new CustomException(AuthErrorCode.INVALID_REFRESH_TOKEN);
+		}
+
+		validateRefreshTokenWhitelisted(userId, sid, refreshToken);
+
+		return rotateAndIssueTokens(user, sid, refreshToken);
 	}
 
 	private void validateRefreshToken(final String refreshToken) {
@@ -217,7 +235,7 @@ public class AuthService {
 	 * </p>
 	 *
 	 * @param refreshToken 로그아웃 대상 Refresh Token
-	 * @param deviceId 디바이스 식별자
+	 * @param deviceId 디바이스 식별자(메타데이터용, 세션 식별에는 사용되지 않음)
 	 * @throws CustomException 유효하지 않은 Refresh Token 인 경우
 	 */
 	public void logout(final String refreshToken, final String deviceId) {
@@ -226,10 +244,12 @@ public class AuthService {
 		final User user = validateUserByRefreshToken(refreshToken);
 		final Long userId = user.getId();
 
-		validateRefreshTokenWhitelisted(userId, deviceId, refreshToken);
-
-		revokeRefreshTokenWhitelist(userId, deviceId);
+		final String sid = jwtTokenProvider.getSessionId(refreshToken);
+		validateRefreshTokenWhitelisted(userId, sid, refreshToken);
+		revokeRefreshTokenWhitelist(userId, sid);
 	}
+
+
 
 	private User validateUserByRefreshToken(final String refreshToken) {
 		final Long userId;
@@ -249,15 +269,38 @@ public class AuthService {
 		return user;
 	}
 
-	private RefreshRes rotateAndIssueTokens(final User user, final String deviceId, final String oldRefreshToken) {
+	private RefreshRes rotateAndIssueTokens(
+		final User user,
+		final String sid,
+		final String oldRefreshToken) {
 		final Long userId = user.getId();
 		final String role = resolveRole(user.getRole());
 
 		final String newAccessToken = jwtTokenProvider.createAccessToken(userId, role);
-		final String newRefreshToken = jwtTokenProvider.createRefreshToken(userId);
+		final String newRefreshToken = jwtTokenProvider.createRefreshToken(userId, sid);
 
-		revokeRefreshTokenWhitelist(userId, deviceId);
-		saveRefreshTokenWhitelist(userId, deviceId, newRefreshToken);
+		// RTR - 원자적 회전을 위해 기존 해시와 신규 해시를 비교 후 교체
+		final String oldHash = sha256(oldRefreshToken);
+		final String newHash = sha256(newRefreshToken);
+		final Duration ttl = Duration.ofMillis(jwtProperties.getRefreshTokenExpirationMs());
+
+		boolean rotated = refreshTokenStore.rotateIfMatch(
+			userId,
+			sid,
+			oldHash,
+			newHash,
+			ttl
+		);
+
+		if (!rotated) {
+			// 동시 요청 또는 토큰 불일치 → 재사용 또는 레이스로 간주
+			throw new CustomException(AuthErrorCode.INVALID_REFRESH_TOKEN);
+		}
+
+		// RTR - 사용 완료된 Refresh Token의 jti 마킹
+		final String oldJti = jwtTokenProvider.getJti(oldRefreshToken);
+		final String usedKey = "rt:used:" + oldJti;
+		stringRedisTemplate.opsForValue().set(usedKey, sid, ttl);
 
 		return new RefreshRes(
 			newAccessToken,
@@ -308,40 +351,40 @@ public class AuthService {
 		return (int)(accessTokenExpirationMs / 1000);
 	}
 
-	private void validateRefreshTokenWhitelisted(final Long userId, final String deviceId, final String refreshToken) {
+	private void validateRefreshTokenWhitelisted(final Long userId, final String sid, final String refreshToken) {
 		final String refreshTokenHash = sha256(refreshToken);
 
 		try {
-			final SessionEntry entry = refreshTokenStore.find(userId, deviceId)
+			final SessionEntry entry = refreshTokenStore.find(userId, sid)
 				.orElseThrow(() -> new CustomException(AuthErrorCode.INVALID_REFRESH_TOKEN));
 
 			if (!refreshTokenHash.equals(entry.getRefreshTokenHash())) {
 				throw new CustomException(AuthErrorCode.INVALID_REFRESH_TOKEN);
 			}
 		} catch (RedisConnectionFailureException e) {
-			log.error("Redis 장애로 RefreshToken 화이트리스트 검증에 실패했습니다. userId={}, deviceId={}", userId, deviceId, e);
+			log.error("Redis 장애로 RefreshToken 화이트리스트 검증에 실패했습니다. userId={}, sid={}", userId, sid, e);
 			throw e;
 		}
 	}
 
-	private void revokeRefreshTokenWhitelist(final Long userId, final String deviceId) {
+	private void revokeRefreshTokenWhitelist(final Long userId, final String sid) {
 		try {
-			refreshTokenStore.delete(userId, deviceId);
+			refreshTokenStore.delete(userId, sid);
 		} catch (RedisConnectionFailureException e) {
-			log.error("Redis 장애로 RefreshToken 화이트리스트 삭제에 실패했습니다. userId={}, deviceId={}", userId, deviceId, e);
+			log.error("Redis 장애로 RefreshToken 화이트리스트 삭제에 실패했습니다. userId={}, sid={}", userId, sid, e);
 			throw e;
 		}
 	}
 
-	private void saveRefreshTokenWhitelist(final Long userId, final String deviceId, final String refreshToken) {
+	private void saveRefreshTokenWhitelist(final Long userId, final String sid, final String refreshToken) {
 		final Instant now = Instant.now();
 		final String refreshTokenHash = sha256(refreshToken);
 		final Duration ttl = Duration.ofMillis(jwtProperties.getRefreshTokenExpirationMs());
 
 		try {
-			refreshTokenStore.save(new SessionEntry(userId, deviceId, refreshTokenHash, now, ttl));
+			refreshTokenStore.save(new SessionEntry(userId, sid, refreshTokenHash, now, ttl));
 		} catch (RedisConnectionFailureException e) {
-			log.error("Redis 장애로 RefreshToken 화이트리스트 저장에 실패했습니다. userId={}, deviceId={}", userId, deviceId, e);
+			log.error("Redis 장애로 RefreshToken 화이트리스트 저장에 실패했습니다. userId={}, sid={}", userId, sid, e);
 			throw e;
 		}
 	}
