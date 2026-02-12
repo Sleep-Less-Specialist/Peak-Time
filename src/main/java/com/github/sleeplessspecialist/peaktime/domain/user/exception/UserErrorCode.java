@@ -26,6 +26,9 @@ public enum UserErrorCode implements ErrorCode {
 	DUPLICATE_EMAIL("U002", "이미 존재하는 이메일입니다.", HttpStatus.CONFLICT),
 	PASSWORD_NOT_MATCH("U003", "비밀번호가 일치하지 않습니다.", HttpStatus.BAD_REQUEST),
 	ALREADY_DELETED_USER("U004", "이미 탈퇴한 회원입니다.", HttpStatus.BAD_REQUEST),
+	PROFILE_IMAGE_TOO_LARGE("U005", "프로필 이미지는 5MB를 초과할 수 없습니다.", HttpStatus.BAD_REQUEST),
+	INVALID_PROFILE_IMAGE_TYPE("U006", "이미지 파일만 업로드할 수 있습니다.", HttpStatus.BAD_REQUEST),
+	EMPTY_FILE_EXCEPTION("U007", "파일이 존재하지 않습니다.", HttpStatus.BAD_REQUEST),
 	INVALID_STATUS_TRANSITION("U400", "INVALID_STATUS_TRANSITION", HttpStatus.BAD_REQUEST);
 
 	private final String code;
