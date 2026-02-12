@@ -30,18 +30,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class AsyncConfig implements AsyncConfigurer {
 
-
-	@Bean(name = "paymentAsyncExecutor")
-	public Executor paymentAsyncExecutor() {
-		ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-		executor.setCorePoolSize(8);
-		executor.setMaxPoolSize(16);
-		executor.setQueueCapacity(500);
-		executor.setThreadNamePrefix("payment-async-");
-		executor.initialize();
-		return executor;
-	}
-
 	/**
 	 * SMTP 메일 발송 전용 비동기 Executor.
 	 *
