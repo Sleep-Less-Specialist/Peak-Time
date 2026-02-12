@@ -212,7 +212,11 @@ public class PaymentService {
     }
 
     private Long parseOrderId(String tossOrderId) {
-        return Long.valueOf(OrderIdParser.extractOrderId(tossOrderId));
+        try {
+            return Long.valueOf(OrderIdParser.extractOrderId(tossOrderId));
+        } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
+            throw new CustomException(PaymentErrorCode.INVALID_ORDER_ID_FORMAT);
+        }
     }
 
     private void savePayment(Payment payment) {

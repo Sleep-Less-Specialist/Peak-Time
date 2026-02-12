@@ -36,7 +36,7 @@ public class OutBoxService {
      * 이벤트를 재시도 대상으로 유지하면서, Backoff 정보 갱신 메서드
      */
     @Transactional
-    public void markPendingWithBackoff(Long eventId, int  nextRetry, LocalDateTime nextRunAt) {
+    public void markPendingWithBackoff(Long eventId, int nextRetry, LocalDateTime nextRunAt) {
 
         OutboxEvent e = getOutboxEvent(eventId);
         e.markPendingWithBackoff(nextRetry, nextRunAt);

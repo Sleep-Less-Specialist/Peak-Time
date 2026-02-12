@@ -43,7 +43,7 @@ public class EventHandler {
     /**
      * 결제 확정 이벤트에 대한 비동기 후처리를 수행 handler 메서드
      */
-    public void handlePaymentConfirmed(OutboxEvent event) {
+    private void handlePaymentConfirmed(OutboxEvent event) {
 
         Long aggregateId = event.getAggregateId();
 
@@ -57,7 +57,7 @@ public class EventHandler {
     /**
      * 결제 취소 이벤트에 대한 비동기 후처리를 수행 handler 메서드
      */
-    public void handlePaymentCanceled(OutboxEvent event) {
+    private void handlePaymentCanceled(OutboxEvent event) {
 
         Long aggregateId = event.getAggregateId();
 
