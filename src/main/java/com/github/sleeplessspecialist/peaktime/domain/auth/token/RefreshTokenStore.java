@@ -1,6 +1,7 @@
 package com.github.sleeplessspecialist.peaktime.domain.auth.token;
 
 import java.util.Optional;
+import java.time.Duration;
 
 /**
  * RefreshToken 화이트리스트(세션) 저장소 인터페이스입니다.
@@ -10,7 +11,7 @@ import java.util.Optional;
  * </p>
  *
  * <p>
- * 키 규칙: session:{userId}:{deviceId}
+ * 키 규칙: session:{userId}:{sid}
  * 저장 값: refreshTokenHash, lastActivityAt, TTL
  * </p>
  *
@@ -56,5 +57,28 @@ public interface RefreshTokenStore {
 	 */
 	void touch(Long userId, String deviceId, long lastActivityAt);
 
+
+	/**
+	 * 기존 Refresh Token 해시와 일치하는 경우에만 새로운 해시로 교체합니다. (원자적 회전)
+	 *
+	 * <p>
+	 * 동시 요청/레이스 컨디션 상황에서 delete+save 방식의 비원자성을 방지하기 위해,
+	 * 저장소 단에서 비교-교체(compare-and-set) 형태로 회전을 수행합니다.
+	 * </p>
+	 *
+	 * @param userId 사용자 식별자
+	 * @param sid 세션 식별자
+	 * @param expectedHash 기존 Refresh Token 해시
+	 * @param newHash 새 Refresh Token 해시
+	 * @param ttl 만료 시간
+	 * @return 교체 성공 시 true, 실패 시 false
+	 */
+	boolean rotateIfMatch(
+		Long userId,
+		String sid,
+		String expectedHash,
+		String newHash,
+		Duration ttl
+	);
 
 }
