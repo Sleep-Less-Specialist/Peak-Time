@@ -1,31 +1,11 @@
 package com.github.sleeplessspecialist.peaktime.domain.payment.service;
 
-import java.math.BigDecimal;
-import java.util.List;
-
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.github.sleeplessspecialist.peaktime.domain.order.entity.Order;
 import com.github.sleeplessspecialist.peaktime.domain.order.repository.OrderRepository;
 import com.github.sleeplessspecialist.peaktime.domain.order.service.OrderPaymentCommandService;
-import com.github.sleeplessspecialist.peaktime.domain.payment.dto.GetMyPaymentListRes;
-import com.github.sleeplessspecialist.peaktime.domain.payment.dto.PaymentCancelReq;
-import com.github.sleeplessspecialist.peaktime.domain.payment.dto.PaymentListItemRes;
-import com.github.sleeplessspecialist.peaktime.domain.payment.dto.TossPaymentCancelReq;
-import com.github.sleeplessspecialist.peaktime.domain.payment.dto.TossPaymentCancelRes;
-import com.github.sleeplessspecialist.peaktime.domain.payment.dto.TossPaymentConfirmReq;
-import com.github.sleeplessspecialist.peaktime.domain.payment.dto.TossPaymentConfirmRes;
+import com.github.sleeplessspecialist.peaktime.domain.payment.dto.*;
 import com.github.sleeplessspecialist.peaktime.domain.payment.entity.Payment;
 import com.github.sleeplessspecialist.peaktime.domain.payment.entity.PaymentStatus;
-import com.github.sleeplessspecialist.peaktime.domain.payment.event.PaymentCancelledEvent;
-import com.github.sleeplessspecialist.peaktime.domain.payment.event.PaymentConfirmedEvent;
 import com.github.sleeplessspecialist.peaktime.domain.payment.exception.PaymentErrorCode;
 import com.github.sleeplessspecialist.peaktime.domain.payment.repository.PaymentRepository;
 import com.github.sleeplessspecialist.peaktime.domain.payment.utill.OrderIdParser;
@@ -34,10 +14,22 @@ import com.github.sleeplessspecialist.peaktime.domain.refund.service.RefundServi
 import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
 import com.github.sleeplessspecialist.peaktime.domain.user.repository.UserRepository;
 import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
+import com.github.sleeplessspecialist.peaktime.global.infra.outbox.entity.OutboxEvent;
+import com.github.sleeplessspecialist.peaktime.global.infra.outbox.entity.OutboxEventType;
+import com.github.sleeplessspecialist.peaktime.global.infra.outbox.repository.OutboxRepository;
 import com.github.sleeplessspecialist.peaktime.global.infra.payment.TossPaymentClient;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * 결제 도메인의 비즈니스 로직을 담당하는 서비스 클래스입니다.
@@ -61,37 +53,33 @@ public class PaymentService {
     private final OrderRepository orderRepository;
     private final TossPaymentClient tossPaymentClient;
     private final PointService pointService;
-    private final ApplicationEventPublisher eventPublisher;
     private final PaymentRepository paymentRepository;
     private final OrderPaymentCommandService orderPaymentCommandService;
     private final RefundService refundService;
+    private final OutboxRepository outboxRepository;
 
     /**
      * 결제 확정.
-     *
-     * <p>
-     * 1) Toss 결제 승인(confirm) 호출은 트랜잭션 밖에서 수행합니다. (DB 커넥션/락 점유 방지)
-     * 2) 승인 결과를 바탕으로 로컬 후처리는 별도의 트랜잭션에서 반영합니다.
-     * 3) 로컬 후처리 실패 시 보상 취소(cancel)를 시도합니다. (트랜잭션 밖)
-     * </p>
      */
     public void confirmPayment(TossPaymentConfirmReq req) {
 
         TossPaymentConfirmRes res = tossPaymentClient.confirm(req);
-
         try {
-            confirmPaymentAfterConfirm(res);
+            confirmLocalAndWriteOutbox(res);
         } catch (Exception localFailed) {
             try {
-                tossPaymentClient.cancel(
-                        res.getPaymentKey(),
-                        TossPaymentCancelReq.builder()
-                                .cancelReason("결제 서버 오류로 인한 자동 취소")
-                                .build()
-                );
+                TossPaymentCancelReq cancelReq = TossPaymentCancelReq.builder()
+                        .cancelReason("로컬 후처리 실패로 인한 자동 취소")
+                        .build();
+
+                tossPaymentClient.cancel(res.getPaymentKey(), cancelReq);
             } catch (Exception cancelFailed) {
-                Long orderIdSafe = safeParseOrderId(res.getOrderId());
-                log.error("보상 취소 실패. orderId={}, paymentKey={}", orderIdSafe, res.getPaymentKey(), cancelFailed);
+                log.error(
+                        "[Compensation Required] 로컬 결제 후처리 실패. paymentKey={}, orderId={}",
+                        res.getPaymentKey(),
+                        res.getOrderId(),
+                        localFailed
+                );
             }
             throw localFailed;
         }
@@ -99,11 +87,6 @@ public class PaymentService {
 
     /**
      * 결제 취소.
-     *
-     * <p>
-     * 1) Toss 결제 취소(cancel) 호출은 트랜잭션 밖에서 수행합니다.
-     * 2) 취소 결과를 바탕으로 로컬 후처리는 별도의 트랜잭션에서 반영합니다.
-     * </p>
      */
     public void cancelPayment(PaymentCancelReq req) {
 
@@ -112,20 +95,24 @@ public class PaymentService {
                 TossPaymentCancelReq.builder().cancelReason(req.getCancelReason()).build()
         );
 
-        cancelPaymentAfterCancel(req, res);
+        try {
+            cancelLocalAndWriteOutbox(res);
+        } catch (Exception localFailed) {
+            log.error(
+                    "[Critical Compensation Failure] 외부 결제 취소까지 실패, 원인={}",
+                    localFailed.getMessage(),
+                    localFailed
+            );
+            throw localFailed;
+        }
     }
 
     /**
      * 결제 확정 로컬 후처리 (트랜잭션).
-     *
-     * <p>
-     * - 멱등 가드: 이미 PAID인 주문이면 조용히 종료합니다.
-     * - 포인트 차감 -> Payment 저장 -> 주문 상태 전이
-     * - 성공 시에만 PaymentConfirmedEvent 발행
-     * </p>
+     * - OutBox DB 에 저장
      */
     @Transactional
-    protected void confirmPaymentAfterConfirm(TossPaymentConfirmRes res) {
+    protected void confirmLocalAndWriteOutbox(TossPaymentConfirmRes res) {
 
         Long orderId = parseOrderId(res.getOrderId());
         Order order = getOrder(orderId);
@@ -143,24 +130,21 @@ public class PaymentService {
 
         savePayment(payment);
         orderPaymentCommandService.markCompleted(orderId);
-        eventPublisher.publishEvent(PaymentConfirmedEvent.builder()
-                .orderId(orderId)
-                .userId(order.getUser().getId())
-                .build());
+
+        outboxRepository.save(
+                OutboxEvent.pending(
+                        OutboxEventType.PAYMENT_CONFIRMED,
+                        orderId
+                )
+        );
     }
+
     /**
      * 결제 취소 로컬 후처리 (트랜잭션).
-     *
-     * <p>
-     * - 포인트 환불
-     * - Payment 상태 전이(환불)
-     * - 주문 상태 전이(취소)
-     * - 환불 내역 생성
-     * - 성공 시에만 PaymentCancelledEvent 발행
-     * </p>
+     * - OutBox DB 에 저장
      */
     @Transactional
-    protected void cancelPaymentAfterCancel(PaymentCancelReq req, TossPaymentCancelRes res) {
+    protected void cancelLocalAndWriteOutbox(TossPaymentCancelRes res) {
 
         Long orderId = parseOrderId(res.getOrderId());
         Order order = getOrder(orderId);
@@ -174,10 +158,12 @@ public class PaymentService {
         orderPaymentCommandService.markCanceled(orderId);
         refundService.createRefund(payment, cancelAmount, cancelReason);
 
-        eventPublisher.publishEvent(PaymentCancelledEvent.builder()
-                .orderId(orderId)
-                .userId(order.getUser().getId())
-                .build());
+        outboxRepository.save(
+                OutboxEvent.pending(
+                        OutboxEventType.PAYMENT_CANCELED,
+                        orderId
+                )
+        );
     }
 
     /**
@@ -227,14 +213,6 @@ public class PaymentService {
 
     private Long parseOrderId(String tossOrderId) {
         return Long.valueOf(OrderIdParser.extractOrderId(tossOrderId));
-    }
-
-    private Long safeParseOrderId(String tossOrderId) {
-        try {
-            return parseOrderId(tossOrderId);
-        } catch (Exception e) {
-            return null;
-        }
     }
 
     private void savePayment(Payment payment) {
