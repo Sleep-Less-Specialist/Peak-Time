@@ -49,7 +49,7 @@ public class NoticeService {
         Order order = getOrder(orderId);
 
         String buyerName = order.getUser().getName();
-        List<OrderItem> orderItems = orderItemRepository.findAllByOrderId(orderId);
+        List<OrderItem> orderItems = orderItemRepository.findOrderItemsWithCourseAndLecturerByOrderId(orderId);
 
         for (OrderItem orderItem : orderItems) {
 
@@ -86,7 +86,7 @@ public class NoticeService {
         Order order = getOrder(orderId);
 
         String buyerName = order.getUser().getName();
-        List<OrderItem> orderItems = orderItemRepository.findAllByOrderId(orderId);
+        List<OrderItem> orderItems = orderItemRepository.findOrderItemsWithCourseAndLecturerByOrderId(orderId);
 
         for (OrderItem orderItem : orderItems) {
 
@@ -108,7 +108,7 @@ public class NoticeService {
                         "Notice 중복 생성 감지 (멱등 처리). orderId={}, courseId={}, type={}",
                         orderId,
                         course.getId(),
-                        "PAYMENT_CONFIRMED"
+                        "PAYMENT_CANCELED"
                 );
             }
         }

@@ -236,7 +236,7 @@ void createOrder_insufficientPoint() {
 
 		when(userRepository.findById(userId)).thenReturn(java.util.Optional.of(user));
 		when(orderRepository.findById(orderId)).thenReturn(java.util.Optional.of(order));
-		when(orderItemRepository.findAllByOrderId(orderId)).thenReturn(List.of(item1, item2));
+		when(orderItemRepository.findOrderItemWithCourseByOrderId(orderId)).thenReturn(List.of(item1, item2));
 
 		// when
 		GetOrderDetailRes response = orderService.getOrderDetail(userId, orderId);
