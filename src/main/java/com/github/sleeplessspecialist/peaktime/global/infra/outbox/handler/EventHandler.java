@@ -1,6 +1,7 @@
 package com.github.sleeplessspecialist.peaktime.global.infra.outbox.handler;
 
 import com.github.sleeplessspecialist.peaktime.domain.enrollment.service.EnrollmentService;
+import com.github.sleeplessspecialist.peaktime.domain.notice.service.NoticeService;
 import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
 import com.github.sleeplessspecialist.peaktime.global.infra.outbox.entity.OutboxEvent;
 import com.github.sleeplessspecialist.peaktime.global.infra.outbox.exception.OutBoxErrorCode;
@@ -25,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class EventHandler {
 
     private final EnrollmentService enrollmentService;
+    private final NoticeService noticeService;
 
     /**
      * OutBox 이벤트를 처리하는 메서드
@@ -35,7 +37,7 @@ public class EventHandler {
 
         switch (event.getEventType()) {
             case PAYMENT_CONFIRMED -> handlePaymentConfirmed(event);
-            case PAYMENT_CANCELED  -> handlePaymentCanceled(event);
+            case PAYMENT_CANCELED -> handlePaymentCanceled(event);
             default -> throw new CustomException(OutBoxErrorCode.UNSUPPORTED_EVENT_TYPE);
         }
     }
@@ -49,7 +51,7 @@ public class EventHandler {
 
         enrollmentService.createEnrollment(aggregateId);
 
-        // notice 발송 후처리 추가
+        noticeService.createPaymentConfirmedNotice(aggregateId);
 
         // 실시간 인기강의 후처리 추가
     }
@@ -63,7 +65,6 @@ public class EventHandler {
 
         enrollmentService.cancelEnrollment(aggregateId);
 
-        // notice 발송 후처리 추가
-
+        noticeService.createPaymentCanceledNotice(aggregateId);
     }
 }
