@@ -61,7 +61,10 @@ public class EnrollmentService {
 	}
 
 	@Transactional
-	public void cancelEnrollment(Long userId, Long orderId) {
+	public void cancelEnrollment(Long orderId) {
+
+        Order order = getOrder(orderId);
+        Long userId = order.getUser().getId();
 
 		List<OrderItem> orderItems = orderItemRepository.findAllByOrderId(orderId);
 
@@ -82,6 +85,4 @@ public class EnrollmentService {
 		return orderRepository.findById(orderId)
 			.orElseThrow(() -> new CustomException(EnrollmentErrorCode.ORDER_NOT_FOUND));
 	}
-
-
 }
