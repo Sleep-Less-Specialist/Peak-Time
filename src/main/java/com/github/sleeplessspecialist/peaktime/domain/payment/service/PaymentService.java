@@ -6,8 +6,6 @@ import com.github.sleeplessspecialist.peaktime.domain.order.service.OrderPayment
 import com.github.sleeplessspecialist.peaktime.domain.payment.dto.*;
 import com.github.sleeplessspecialist.peaktime.domain.payment.entity.Payment;
 import com.github.sleeplessspecialist.peaktime.domain.payment.entity.PaymentStatus;
-import com.github.sleeplessspecialist.peaktime.domain.payment.event.PaymentCancelledEvent;
-import com.github.sleeplessspecialist.peaktime.domain.payment.event.PaymentConfirmedEvent;
 import com.github.sleeplessspecialist.peaktime.domain.payment.exception.PaymentErrorCode;
 import com.github.sleeplessspecialist.peaktime.domain.payment.repository.PaymentRepository;
 import com.github.sleeplessspecialist.peaktime.domain.payment.utill.OrderIdParser;
@@ -16,10 +14,12 @@ import com.github.sleeplessspecialist.peaktime.domain.refund.service.RefundServi
 import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
 import com.github.sleeplessspecialist.peaktime.domain.user.repository.UserRepository;
 import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
+import com.github.sleeplessspecialist.peaktime.global.infra.outbox.entity.OutboxEvent;
+import com.github.sleeplessspecialist.peaktime.global.infra.outbox.entity.OutboxEventType;
+import com.github.sleeplessspecialist.peaktime.global.infra.outbox.repository.OutboxRepository;
 import com.github.sleeplessspecialist.peaktime.global.infra.payment.TossPaymentClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -33,14 +33,16 @@ import java.util.List;
 
 /**
  * 결제 도메인의 비즈니스 로직을 담당하는 서비스 클래스입니다.
+ *
  * <p>
- * 결제 승인 요청 시 트랜잭션을 관리하며, 외부 결제 클라이언트(TossPaymentClient)를 호출하여
- * 실제 결제 승인을 수행하고 결과를 반환합니다. 추후 주문 상태 업데이트 로직이 포함됩니다.
+ * 외부 결제사(Toss) 호출은 네트워크 I/O로 지연/실패 가능성이 높으므로 DB 트랜잭션과 분리하여 수행합니다.
+ * 로컬 반영(포인트/결제/주문 상태 전이/환불 생성)은 짧은 트랜잭션으로 처리하며,
+ * 로컬 반영이 성공한 경우에만 이벤트를 발행합니다.
  * </p>
  *
  * @author 기섭, 주우재
- * @version 1.1
- * @since 2026. 1. 31.
+ * @version 1.2
+ * @since 2026.02.08
  */
 @Slf4j
 @Service
@@ -51,98 +53,117 @@ public class PaymentService {
     private final OrderRepository orderRepository;
     private final TossPaymentClient tossPaymentClient;
     private final PointService pointService;
-    private final ApplicationEventPublisher eventPublisher;
     private final PaymentRepository paymentRepository;
     private final OrderPaymentCommandService orderPaymentCommandService;
     private final RefundService refundService;
+    private final OutboxRepository outboxRepository;
 
     /**
-     * 결제 확정
+     * 결제 확정.
      */
-    @Transactional
     public void confirmPayment(TossPaymentConfirmReq req) {
 
-        TossPaymentConfirmRes result = tossPaymentClient.confirm(req);
-
-        Long orderId = Long.valueOf(OrderIdParser.extractOrderId(result.getOrderId()));
-        Order order = getOrder(orderId);
-        Long usePoint = order.getUsePoint().longValueExact();
-        BigDecimal finalAmount = result.getTotalAmount();
-        String impUid = result.getPaymentKey();
-        String paymentMethod = result.getMethod();
-
+        TossPaymentConfirmRes res = tossPaymentClient.confirm(req);
         try {
-            pointService.spendForOrder(order.getUser(), orderId, usePoint);
-
-            Payment payment = Payment.builder()
-                    .order(order)
-                    .amount(finalAmount)
-                    .paymentMethod(paymentMethod)
-                    .status(PaymentStatus.PAID)
-                    .impUid(impUid)
-                    .build();
-
-            savePayment(payment);
-
-            orderPaymentCommandService.markCompleted(orderId);
-
-        } catch (Exception afterConfirmFailed) {
+            confirmLocalAndWriteOutbox(res);
+        } catch (Exception localFailed) {
             try {
                 TossPaymentCancelReq cancelReq = TossPaymentCancelReq.builder()
-                        .cancelReason("결제 서버 오류로 인한 취소")
+                        .cancelReason("로컬 후처리 실패로 인한 자동 취소")
                         .build();
 
-                tossPaymentClient.cancel(impUid, cancelReq);
-
+                tossPaymentClient.cancel(res.getPaymentKey(), cancelReq);
             } catch (Exception cancelFailed) {
-                log.error("보상 취소 실패. orderId={}, paymentKey={}", orderId, impUid, cancelFailed);
+                log.error(
+                        "[Compensation Required] 로컬 결제 후처리 실패. paymentKey={}, orderId={}",
+                        res.getPaymentKey(),
+                        res.getOrderId(),
+                        localFailed
+                );
             }
+            throw localFailed;
         }
-
-        eventPublisher.publishEvent(PaymentConfirmedEvent.builder()
-                .orderId(order.getId())
-                .userId(order.getUser().getId())
-                .build());
     }
 
     /**
-     * 결제 취소
+     * 결제 취소.
      */
-    @Transactional
     public void cancelPayment(PaymentCancelReq req) {
 
-        TossPaymentCancelReq tossPaymentCancelReq = TossPaymentCancelReq.builder()
-                .cancelReason(req.getCancelReason())
-                .build();
-
-        TossPaymentCancelRes result = tossPaymentClient.cancel(req.getPaymentKey(), tossPaymentCancelReq);
-
-        Long orderId = Long.valueOf(OrderIdParser.extractOrderId(result.getOrderId()));
-        Order order = getOrder(orderId);
-        Payment payment = getPayment(orderId);
-        String cancelReason = result.getCancelReason();
-        BigDecimal cancelAmount = result.getCancelAmount();
-        Long refundPoint = order.getUsePoint().longValueExact();
+        TossPaymentCancelRes res = tossPaymentClient.cancel(
+                req.getPaymentKey(),
+                TossPaymentCancelReq.builder().cancelReason(req.getCancelReason()).build()
+        );
 
         try {
-            pointService.refundForOrder(order.getUser(), orderId, refundPoint);
-
-            payment.refund();
-            orderPaymentCommandService.markCanceled(orderId);
-
-            refundService.createRefund(payment, cancelAmount, cancelReason);
+            cancelLocalAndWriteOutbox(res);
         } catch (Exception localFailed) {
             log.error(
-                    "결제 취소는 완료되었으나, 후처리 중 오류가 발생했습니다. orderId={}, paymentKey={}, refundPoint={} ",
-                    orderId, req.getPaymentKey(), localFailed
+                    "[Critical Compensation Failure] 외부 결제 취소까지 실패, 원인={}",
+                    localFailed.getMessage(),
+                    localFailed
             );
             throw localFailed;
         }
+    }
 
-        eventPublisher.publishEvent(PaymentCancelledEvent.builder()
-                .orderId(orderId)
-                .userId(order.getUser().getId())
-                .build());
+    /**
+     * 결제 확정 로컬 후처리 (트랜잭션).
+     * - OutBox DB 에 저장
+     */
+    @Transactional
+    protected void confirmLocalAndWriteOutbox(TossPaymentConfirmRes res) {
+
+        Long orderId = parseOrderId(res.getOrderId());
+        Order order = getOrder(orderId);
+        Long usePoint = order.getUsePoint().longValueExact();
+        BigDecimal finalAmount = res.getTotalAmount();
+
+        pointService.spendForOrder(order.getUser(), orderId, usePoint);
+        Payment payment = Payment.builder()
+                .order(order)
+                .amount(finalAmount)
+                .paymentMethod(res.getMethod())
+                .status(PaymentStatus.PAID)
+                .impUid(res.getPaymentKey())
+                .build();
+
+        savePayment(payment);
+        orderPaymentCommandService.markCompleted(orderId);
+
+        outboxRepository.save(
+                OutboxEvent.pending(
+                        OutboxEventType.PAYMENT_CONFIRMED,
+                        orderId
+                )
+        );
+    }
+
+    /**
+     * 결제 취소 로컬 후처리 (트랜잭션).
+     * - OutBox DB 에 저장
+     */
+    @Transactional
+    protected void cancelLocalAndWriteOutbox(TossPaymentCancelRes res) {
+
+        Long orderId = parseOrderId(res.getOrderId());
+        Order order = getOrder(orderId);
+        Payment payment = getPayment(orderId);
+        Long refundPoint = order.getUsePoint().longValueExact();
+        BigDecimal cancelAmount = res.getCancelAmount();
+        String cancelReason = res.getCancelReason();
+
+        pointService.refundForOrder(order.getUser(), orderId, refundPoint);
+        payment.refund();
+        orderPaymentCommandService.markCanceled(orderId);
+        refundService.createRefund(payment, cancelAmount, cancelReason);
+
+        outboxRepository.save(
+                OutboxEvent.pending(
+                        OutboxEventType.PAYMENT_CANCELED,
+                        orderId
+                )
+        );
     }
 
     /**
@@ -159,8 +180,7 @@ public class PaymentService {
                 Sort.by(Sort.Direction.DESC, "createdAt")
         );
 
-        Page<Payment> paymentPage =
-                paymentRepository.findPaymentsByUser(user, pageable);
+        Page<Payment> paymentPage = paymentRepository.findPaymentsByUser(user, pageable);
 
         List<PaymentListItemRes> payments = paymentPage.getContent().stream()
                 .map(PaymentListItemRes::from)
@@ -191,12 +211,20 @@ public class PaymentService {
                 .orElseThrow(() -> new CustomException(PaymentErrorCode.PAYMENT_NOT_FOUND));
     }
 
+    private Long parseOrderId(String tossOrderId) {
+        try {
+            return Long.valueOf(OrderIdParser.extractOrderId(tossOrderId));
+        } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
+            throw new CustomException(PaymentErrorCode.INVALID_ORDER_ID_FORMAT);
+        }
+    }
+
     private void savePayment(Payment payment) {
         try {
             paymentRepository.save(payment);
         } catch (DataIntegrityViolationException e) {
             log.debug(
-                    "이미 결제 완료된 주문 입니다. orderId={}, paymentKey={}",
+                    "이미 결제 완료된 주문입니다. orderId={}, paymentKey={}",
                     payment.getOrder().getId(),
                     payment.getImpUid()
             );
