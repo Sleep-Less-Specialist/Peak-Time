@@ -1,5 +1,6 @@
 package com.github.sleeplessspecialist.peaktime.domain.notice.service;
 
+import com.github.sleeplessspecialist.peaktime.domain.course.entity.Course;
 import com.github.sleeplessspecialist.peaktime.domain.notice.entity.Notice;
 import com.github.sleeplessspecialist.peaktime.domain.notice.exception.NoticeErrorCode;
 import com.github.sleeplessspecialist.peaktime.domain.notice.repository.NoticeRepository;
@@ -7,8 +8,11 @@ import com.github.sleeplessspecialist.peaktime.domain.order.entity.Order;
 import com.github.sleeplessspecialist.peaktime.domain.order.entity.OrderItem;
 import com.github.sleeplessspecialist.peaktime.domain.order.repository.OrderItemRepository;
 import com.github.sleeplessspecialist.peaktime.domain.order.repository.OrderRepository;
+import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
 import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +33,7 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class NoticeService {
 
     private final OrderRepository orderRepository;
@@ -48,21 +53,27 @@ public class NoticeService {
 
         for (OrderItem orderItem : orderItems) {
 
-            String title = orderItem.getCourse().getTitle();
-            var lecturer = orderItem.getCourse().getLecturer();
+            Course course = orderItem.getCourse();
+            User lecturer = orderItem.getCourse().getLecturer();
 
-            String content = String.format(
-                    "%s 님이 강의 %s 을(를) 구매했습니다.",
+            Notice notice = Notice.paymentConfirmed(
+                    lecturer,
                     buyerName,
-                    title
+                    course.getTitle(),
+                    orderId,
+                    course.getId()
             );
 
-            Notice notice = Notice.builder()
-                    .user(lecturer)
-                    .content(content)
-                    .build();
-
-            noticeRepository.save(notice);
+            try {
+                noticeRepository.save(notice);
+            } catch (DataIntegrityViolationException e) {
+                log.debug(
+                        "Notice 중복 생성 감지 (멱등 처리). orderId={}, courseId={}, type={}",
+                        orderId,
+                        course.getId(),
+                        "PAYMENT_CONFIRMED"
+                );
+            }
         }
     }
 
@@ -79,21 +90,27 @@ public class NoticeService {
 
         for (OrderItem orderItem : orderItems) {
 
-            String title = orderItem.getCourse().getTitle();
-            var lecturer = orderItem.getCourse().getLecturer();
+            Course course = orderItem.getCourse();
+            User lecturer = orderItem.getCourse().getLecturer();
 
-            String content = String.format(
-                    "%s 님이 강의 %s 을(를) 결제 취소했습니다.",
+            Notice notice = Notice.paymentCanceled(
+                    lecturer,
                     buyerName,
-                    title
+                    course.getTitle(),
+                    orderId,
+                    course.getId()
             );
 
-            Notice notice = Notice.builder()
-                    .user(lecturer)
-                    .content(content)
-                    .build();
-
-            noticeRepository.save(notice);
+            try {
+                noticeRepository.save(notice);
+            } catch (DataIntegrityViolationException e) {
+                log.debug(
+                        "Notice 중복 생성 감지 (멱등 처리). orderId={}, courseId={}, type={}",
+                        orderId,
+                        course.getId(),
+                        "PAYMENT_CONFIRMED"
+                );
+            }
         }
     }
 
