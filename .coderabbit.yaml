@@ -1,0 +1,58 @@
+language: ko-KR
+
+tone_instructions: >
+  당신은 Spring Boot 백엔드 코드리뷰어입니다.
+  단순 스타일/포매팅 지적은 최소화하고, 트랜잭션 무결성, 외부 I/O(S3/SMTP/외부 API),
+  보안(JWT/OAuth2), 예외 처리 일관성, 성능(N+1/쿼리), 테스트 누락을 우선 점검하세요.
+  코멘트는 Critical/High 우선순위 위주로 작성하고, 각 항목에 대해 "왜 문제인지"와 "개선 방법"을 함께 제시하세요.
+  사소한 개선은 묶어서 제안하세요.
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+
+  high_level_summary: true
+  changed_files_summary: false
+  sequence_diagrams: false
+
+  assess_linked_issues: true
+  related_issues: false
+  related_prs: false
+
+  suggested_labels: false
+  auto_apply_labels: false
+  suggested_reviewers: false
+  auto_assign_reviewers: false
+
+  poem: false
+
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    ignore_title_keywords:
+      - WIP
+      - DRAFT
+      - DO NOT MERGE
+
+  path_instructions:
+    - path: "**/src/main/java/**"
+      instructions: |
+        1) @Transactional 경계와 외부 I/O(S3, SMTP, 외부 API) 혼합 리스크를 우선 점검해주세요.
+        2) JPA N+1, 불필요한 조회, 페이징(Page vs Slice), 인덱스 영향 가능성을 검토해주세요.
+        3) JWT/OAuth2 처리에서 토큰/민감정보 로그 노출, 인증/인가 경로, 상태코드(401/403) 일관성을 확인해주세요.
+        4) ErrorCode/GlobalExceptionHandler 기반 예외 응답 규격과 HTTP 상태코드가 정확한지 확인해주세요.
+        5) soft delete/화이트리스트 정책이 조회·갱신·삭제 전 구간에서 일관되게 적용되는지 확인해주세요.
+        6) 변경된 로직에 대해 필요한 테스트(단위/통합)를 구체적인 케이스로 제안해주세요.
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  web_search:
+    enabled: false
+  learnings:
+    scope: local
+  issues:
+    scope: local
+  pull_requests:
+    scope: local
