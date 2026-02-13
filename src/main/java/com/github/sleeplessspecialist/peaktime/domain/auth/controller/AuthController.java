@@ -1,6 +1,9 @@
 package com.github.sleeplessspecialist.peaktime.domain.auth.controller;
 
-import org.springframework.lang.Nullable;
+import java.time.Duration;
+
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -8,8 +11,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.request.LoginReq;
-import com.github.sleeplessspecialist.peaktime.domain.auth.dto.request.LogoutReq;
-import com.github.sleeplessspecialist.peaktime.domain.auth.dto.request.RefreshReq;
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.request.SignupReq;
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.response.LoginRes;
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.response.RefreshRes;
@@ -18,7 +19,9 @@ import com.github.sleeplessspecialist.peaktime.domain.auth.exception.AuthErrorCo
 import com.github.sleeplessspecialist.peaktime.domain.auth.service.AuthService;
 import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
 import com.github.sleeplessspecialist.peaktime.global.common.response.ApiResponse;
+import com.github.sleeplessspecialist.peaktime.global.common.security.jwt.JwtProperties;
 
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -38,6 +41,7 @@ import lombok.RequiredArgsConstructor;
 public class AuthController {
 
 	private final AuthService authService;
+	private final JwtProperties jwtProperties;
 
 	/**
 	 * 회원가입을 처리합니다.
@@ -68,50 +72,64 @@ public class AuthController {
 	}
 
 	/**
-	 * Refresh Token을 기반으로 Access Token(및 Refresh Token)을 재발급합니다.
+	 * HttpOnly Cookie로 전달된 Refresh Token을 이용해 Access Token을 재발급합니다.
 	 * <p>
-	 * 클라이언트가 전달한 Refresh Token의 유효성(서명/만료)과 Redis 화이트리스트 존재 여부를 검증한 뒤,
-	 * 새 토큰을 발급합니다.
+	 * Refresh Token의 rotation과 재사용 탐지, 원자적 처리가 수행되며,
+	 * 새로운 Refresh Token은 HttpOnly Cookie로 설정됩니다.
+	 * 응답 본문에는 Access Token만 포함됩니다.
 	 * </p>
 	 *
-	 * @param request 토큰 재발급 요청 정보 (refreshToken)
-	 * @return 새로 발급된 토큰 정보 응답
+	 * @param refreshToken HttpOnly Cookie로 전달된 Refresh Token
+	 * @param response HTTP 응답 객체 (Set-Cookie 헤더 설정용)
+	 * @return 새로 발급된 Access Token 정보 응답
 	 */
-	@PostMapping("/refresh")
-	public ApiResponse<RefreshRes> refresh(@Valid @RequestBody RefreshReq request) {
-		final RefreshRes refreshRes = authService.refreshToken(request);
-		return ApiResponse.ok(refreshRes);
+	@PostMapping("/reissue")
+	public ApiResponse<RefreshRes> reissue(
+		@CookieValue(name = "refreshToken", required = false) String refreshToken,
+		HttpServletResponse response
+	) {
+		if (refreshToken == null || refreshToken.isBlank()) {
+			throw new CustomException(AuthErrorCode.INVALID_REFRESH_TOKEN);
+		}
+
+		final RefreshRes reissued = authService.reissue(refreshToken);
+
+		ResponseCookie cookie = ResponseCookie.from("refreshToken", reissued.getRefreshToken())
+			.httpOnly(true)
+			.secure(true)
+			.sameSite("Lax")
+			.path("/")
+			.maxAge(Duration.ofMillis(jwtProperties.getRefreshTokenExpirationMs()))
+			.build();
+		response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+
+		// refreshToken은 HttpOnly Cookie로만 전달
+		return ApiResponse.ok(reissued);
 	}
 
 	/**
 	 * 로그아웃을 수행합니다.
 	 *
 	 * <p>
-	 * 클라이언트로부터 전달받은 Refresh Token을 Redis 화이트리스트에서 삭제하여 이후 토큰 재발급을 차단합니다.
+	 * HttpOnly Cookie로 전달받은 Refresh Token을 Redis 화이트리스트에서 삭제하여 이후 토큰 재발급을 차단합니다.
 	 * </p>
 	 *
 	 * <p>
 	 * Access Token은 Stateless(JWT) 특성상 서버에 저장되지 않으므로, 로그아웃 이후에도 만료 시점까지는 유효할 수 있습니다.
 	 * </p>
 	 *
-	 * @param cookieRefreshToken 쿠키에서 전달된 Refresh Token (선택)
-	 * @param request 요청 본문에서 전달된 Refresh Token (선택)
+	 * @param cookieRefreshToken 쿠키에서 전달된 Refresh Token (필수)
 	 * @return 로그아웃 성공 시 204 No Content
 	 */
 	@PostMapping("/logout")
 	public ApiResponse<Void> logout(
-		@CookieValue(name = "refreshToken", required = false) String cookieRefreshToken,
-		@Nullable @RequestBody(required = false) LogoutReq request
+		@CookieValue(name = "refreshToken", required = false) String cookieRefreshToken
 	) {
-		final String refreshToken = (cookieRefreshToken != null && !cookieRefreshToken.isBlank())
-			? cookieRefreshToken
-			: (request != null ? request.getRefreshToken() : null);
-
-		if (refreshToken == null || refreshToken.isBlank()) {
-			throw new CustomException(AuthErrorCode.INVALID_CREDENTIALS);
+		if (cookieRefreshToken == null || cookieRefreshToken.isBlank()) {
+			throw new CustomException(AuthErrorCode.INVALID_REFRESH_TOKEN);
 		}
 
-		authService.logout(refreshToken);
+		authService.logout(cookieRefreshToken);
 		return ApiResponse.noContent();
 	}
 }
