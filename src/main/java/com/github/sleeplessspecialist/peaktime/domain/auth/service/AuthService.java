@@ -132,11 +132,10 @@ public class AuthService {
 	 * </p>
 	 *
 	 * @param request  로그인 요청 DTO
-	 * @param deviceId 디바이스 식별자(현재 세션 식별에는 사용되지 않음, 메타데이터용)
 	 * @return 토큰 정보를 포함한 응답 DTO
 	 * @throws CustomException 인증 실패 또는 보안 정책 위반 시
 	 */
-	public LoginRes login(final LoginReq request, final String deviceId) {
+	public LoginRes login(final LoginReq request) {
 		final String email = normalizeEmail(request.getEmail());
 
 		validateLoginAttemptAllowed(email);
@@ -184,11 +183,10 @@ public class AuthService {
 	 * </p>
 	 *
 	 * @param request  재발급에 사용할 Refresh Token을 포함한 요청 DTO
-	 * @param deviceId 디바이스 식별자(메타데이터용, 세션 식별에는 사용되지 않음)
 	 * @return 새로 발급된 Access / Refresh Token 정보
 	 * @throws CustomException 유효하지 않거나 만료된 Refresh Token인 경우
 	 */
-	public RefreshRes refreshToken(final RefreshReq request, final String deviceId) {
+	public RefreshRes refreshToken(final RefreshReq request) {
 		final String refreshToken = request.getRefreshToken();
 
 		validateRefreshToken(refreshToken);
@@ -235,10 +233,9 @@ public class AuthService {
 	 * </p>
 	 *
 	 * @param refreshToken 로그아웃 대상 Refresh Token
-	 * @param deviceId 디바이스 식별자(메타데이터용, 세션 식별에는 사용되지 않음)
 	 * @throws CustomException 유효하지 않은 Refresh Token 인 경우
 	 */
-	public void logout(final String refreshToken, final String deviceId) {
+	public void logout(final String refreshToken) {
 		validateRefreshToken(refreshToken);
 
 		final User user = validateUserByRefreshToken(refreshToken);
