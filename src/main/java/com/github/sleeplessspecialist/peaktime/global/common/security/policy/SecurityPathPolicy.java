@@ -39,16 +39,16 @@ public final class SecurityPathPolicy {
 		"/images/**",
 
 		// 인증/인가(비로그인 가능)
-		"/api/v1/auth/signup",
-		"/api/v1/auth/login",
-		"/api/v1/auth/refresh",
-		"/api/v1/auth/logout",
-		"/api/v1/auth/password/**",
+		"/api/v2/auth/signup",
+		"/api/v2/auth/login",
+		"/api/v2/auth/refresh",
+		"/api/v2/auth/logout",
+		"/api/v2/auth/password/**",
 
 		// OAuth2
 		"/oauth2/**",
 		"/login/oauth2/**",
-		"/api/v1/oauth2/**"
+		"/api/v2/oauth2/**"
 	};
 
 	/**
