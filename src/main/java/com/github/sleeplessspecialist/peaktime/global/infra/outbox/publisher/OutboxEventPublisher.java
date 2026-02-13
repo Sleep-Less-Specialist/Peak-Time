@@ -25,12 +25,18 @@ public class OutboxEventPublisher implements OutboxPublisher {
 
     private final OutboxRepository outboxRepository;
 
+    /**
+     * 단일 Outbox 이벤트를 발행(영속화) 하는 메서드
+     */
     @Transactional
     @Override
     public void publish(OutboxEvent event) {
         outboxRepository.save(event);
     }
 
+    /**
+     * 복수 Outbox 이벤트를 일괄 발행(영속화) 하는 메서드
+     */
     @Transactional
     @Override
     public void publishAll(List<OutboxEvent> events) {
