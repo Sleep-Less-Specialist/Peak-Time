@@ -41,7 +41,7 @@ public final class SecurityPathPolicy {
 		// 인증/인가(비로그인 가능)
 		"/api/v2/auth/signup",
 		"/api/v2/auth/login",
-		"/api/v2/auth/refresh",
+		"/api/v2/auth/reissue",
 		"/api/v2/auth/logout",
 		"/api/v2/auth/password/**",
 
