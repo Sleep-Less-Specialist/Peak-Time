@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.Executor;
 
 /**
  * Outbox 테이블에 적재된 이벤트를 주기적으로 조회하여
@@ -40,7 +41,7 @@ public class OutboxWorker {
     private final OutboxRepository outboxRepository;
     private final EventHandler eventHandler;
     private final OutBoxService outBoxService;
-
+    private final Executor outboxExecutor;
     /**
      * 실행 가능한 OutBox 를 polling 하여 처리(process) 한다.
      */
@@ -51,11 +52,13 @@ public class OutboxWorker {
         List<OutboxEvent> events = outboxRepository.findRunnable(now, PageRequest.of(0, BATCH_SIZE));
 
         for (OutboxEvent e : events) {
-            try {
-                process(e.getId(), now);
-            } catch (Exception ex) {
-                log.warn("Outbox 이벤트 처리에 실패했습니다. eventId={}", e.getId(), ex);
-            }
+            outboxExecutor.execute(() -> {
+                try {
+                    process(e.getId(), LocalDateTime.now());
+                } catch (Exception ex) {
+                    log.warn("Outbox 처리 스레드 실패. eventId={}", e.getId(), ex);
+                }
+            });
         }
     }
 
