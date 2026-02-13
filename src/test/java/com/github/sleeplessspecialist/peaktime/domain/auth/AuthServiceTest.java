@@ -2,6 +2,7 @@ package com.github.sleeplessspecialist.peaktime.domain.auth;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.*;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -19,10 +21,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.request.LoginReq;
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.request.SignupReq;
-import com.github.sleeplessspecialist.peaktime.domain.auth.dto.response.LoginRes;
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.response.SignupRes;
 import com.github.sleeplessspecialist.peaktime.domain.auth.exception.AuthErrorCode;
 import com.github.sleeplessspecialist.peaktime.domain.auth.service.AuthService;
+import com.github.sleeplessspecialist.peaktime.domain.auth.service.TokenBundle;
+import com.github.sleeplessspecialist.peaktime.domain.auth.token.RefreshTokenStore;
+import com.github.sleeplessspecialist.peaktime.domain.auth.token.SessionEntry;
 import com.github.sleeplessspecialist.peaktime.domain.point.service.PointService;
 import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
 import com.github.sleeplessspecialist.peaktime.domain.user.entity.UserRole;
@@ -58,6 +62,9 @@ public class AuthServiceTest {
 
 	@Mock
 	private JwtTokenProvider jwtTokenProvider;
+
+	@Mock
+	private RefreshTokenStore refreshTokenStore;
 
 	@Mock
 	private StringRedisTemplate stringRedisTemplate;
@@ -119,9 +126,6 @@ public class AuthServiceTest {
 		// given
 		LoginReq request = new LoginReq("User@Example.com", "P@ssw0rd!234");
 		String normalizedEmail = "user@example.com";
-
-		when(stringRedisTemplate.opsForValue()).thenReturn(valueOperations);
-
 		// 브루트포스 잠금 없음
 		when(stringRedisTemplate.hasKey("login:lock:" + normalizedEmail)).thenReturn(false);
 
@@ -134,27 +138,35 @@ public class AuthServiceTest {
 
 		when(passwordEncoder.matches("P@ssw0rd!234", "hashed")).thenReturn(true);
 
-		when(jwtTokenProvider.createAccessToken(1L, "STUDENT")).thenReturn("access-token");
-		when(jwtTokenProvider.createRefreshToken(1L)).thenReturn("refresh-token");
+		when(jwtTokenProvider.createAccessToken(1L, "STUDENT"))
+			.thenReturn("access-token");
+
+		// ✅ refreshToken은 sid 기반으로 발급되므로 (sid는 내부 생성) anyString()으로 처리
+		when(jwtTokenProvider.createRefreshToken(eq(1L), anyString()))
+			.thenReturn("refresh-token");
 
 		when(jwtProperties.getRefreshTokenExpirationMs()).thenReturn(600_000L);
 		when(jwtProperties.getAccessTokenExpirationMs()).thenReturn(1_800_000L);
 
 		// when
-		LoginRes result = authService.login(request, "test-user-agent");
+		TokenBundle bundle = authService.login(request);
 
-		// then
-		assertThat(result.getAccessToken()).isEqualTo("access-token");
-		assertThat(result.getRefreshToken()).isEqualTo("refresh-token");
-		assertThat(result.getTokenType()).isEqualTo("Bearer");
-		assertThat(result.getExpiresIn()).isEqualTo(1800);
+		// then (서비스 반환은 TokenBundle: controller가 cookie로 심기 위함)
+		assertThat(bundle.getAccessToken()).isEqualTo("access-token");
+		assertThat(bundle.getRefreshToken()).isEqualTo("refresh-token");
+		assertThat(bundle.getTokenType()).isEqualTo("Bearer");
+		assertThat(bundle.getExpiresIn()).isEqualTo(1800);
 
-		// RefreshToken 화이트리스트 저장(TTL 포함)
-		verify(valueOperations).set(
-			eq("refresh:1:refresh-token"),
-			eq("1"),
-			eq(Duration.ofMillis(600_000L))
-		);
+		ArgumentCaptor<SessionEntry> captor = ArgumentCaptor.forClass(SessionEntry.class);
+		verify(refreshTokenStore).save(captor.capture());
+		SessionEntry saved = captor.getValue();
+		assertThat(saved.getUserId()).isEqualTo(1L);
+		assertThat(saved.getSid()).isNotBlank();
+
+		String savedHash = saved.getRefreshTokenHash();
+		assertThat(savedHash).isNotBlank();
+		assertThat(savedHash).isNotEqualTo("refresh-token"); // 원문 저장 X
+		assertThat(savedHash).matches("^[0-9a-f]{64}$");      // 현재 구현(sha256 hex) 기준
 
 		// 로그인 성공 시 시도 횟수 초기화
 		verify(stringRedisTemplate).delete("login:attempt:" + normalizedEmail);
@@ -178,7 +190,7 @@ public class AuthServiceTest {
 		// when
 		CustomException ex = Assertions.<CustomException>assertThrows(
 			CustomException.class,
-			() -> authService.login(request, "test-user-agent")
+			() -> authService.login(request)
 		);
 
 		// then
@@ -210,7 +222,7 @@ public class AuthServiceTest {
 		// when
 		CustomException ex = Assertions.<CustomException>assertThrows(
 			CustomException.class,
-			() -> authService.login(request, "test-user-agent")
+			() -> authService.login(request)
 		);
 
 		// then
