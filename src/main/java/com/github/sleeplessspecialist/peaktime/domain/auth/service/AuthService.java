@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.request.LoginReq;
-import com.github.sleeplessspecialist.peaktime.domain.auth.dto.request.RefreshReq;
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.request.SignupReq;
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.response.LoginRes;
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.response.RefreshRes;
@@ -170,25 +169,23 @@ public class AuthService {
 	}
 
 	/**
-	 * Refresh Token을 이용해 Access Token과 Refresh Token을 재발급합니다.
+	 * HttpOnly Cookie로 전달된 Refresh Token을 이용해 Access Token을 재발급합니다.
 	 *
 	 * <p>
-	 * 전달받은 Refresh Token의 서명 및 만료 여부를 검증한 뒤, Redis 화이트리스트에 등록된 토큰인지 확인합니다.
-	 * 검증이 완료되면 기존 Refresh Token을 폐기하고 새로운 Access / Refresh Token을 발급합니다. (Refresh Token Rotation)
+	 * Refresh Token의 서명/만료를 검증하고, Redis 화이트리스트에 등록된 토큰인지 확인합니다.
+	 * 검증이 완료되면 기존 Refresh Token을 즉시 폐기하고 새로운 Access / Refresh Token을 발급합니다. (Refresh Token Rotation)
+	 * 동시 요청 상황에서도 안전하도록 원자적 회전(rotateIfMatch)으로 처리합니다.
 	 * </p>
 	 *
 	 * <p>
-	 * 유효하지 않거나 화이트리스트에 존재하지 않는 Refresh Token은
-	 * 재발급이 허용되지 않습니다.
+	 * 이미 폐기된 Refresh Token(jti 재사용)이 재사용되면 Refresh Reuse Detection으로 간주하고 요청을 차단합니다.
 	 * </p>
 	 *
-	 * @param request  재발급에 사용할 Refresh Token을 포함한 요청 DTO
+	 * @param refreshToken 재발급에 사용할 Refresh Token
 	 * @return 새로 발급된 Access / Refresh Token 정보
 	 * @throws CustomException 유효하지 않거나 만료된 Refresh Token인 경우
 	 */
-	public RefreshRes refreshToken(final RefreshReq request) {
-		final String refreshToken = request.getRefreshToken();
-
+	public RefreshRes reissue(final String refreshToken) {
 		validateRefreshToken(refreshToken);
 
 		// 토큰에서 필요한 값들을 한 번만 추출 (중복 파싱 방지)
@@ -202,7 +199,7 @@ public class AuthService {
 		if (Boolean.TRUE.equals(reused)) {
 			// 재사용 감지 시 해당 세션을 즉시 폐기
 			revokeRefreshTokenWhitelist(userId, sid);
-			throw new CustomException(AuthErrorCode.INVALID_REFRESH_TOKEN);
+			throw new CustomException(AuthErrorCode.REFRESH_REUSED);
 		}
 
 		final User user = userRepository.findById(userId)
