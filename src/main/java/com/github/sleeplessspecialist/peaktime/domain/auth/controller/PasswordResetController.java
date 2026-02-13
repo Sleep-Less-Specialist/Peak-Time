@@ -20,7 +20,7 @@ import lombok.RequiredArgsConstructor;
  * </p>
  */
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/api/v2/auth")
 @RequiredArgsConstructor
 public class PasswordResetController {
 
