@@ -80,9 +80,8 @@ public class SecurityConfig {
 			// OAuth2 Login configuration (Kakao)
 			// OAuth2 인증 흐름은 서버에서 처리하고, 로그인 성공 후 JWT를 발급한다.
 			.oauth2Login(oauth2 -> oauth2
-				// 카카오 Redirect URI: /api/v1/oauth2/code/kakao
 				.redirectionEndpoint(redirection -> redirection
-					.baseUri("/api/v1/oauth2/code/*")
+					.baseUri("/api/v2/oauth2/code/*")
 				)
 				// 사용자 정보 매핑
 				.userInfoEndpoint(userInfo -> userInfo
