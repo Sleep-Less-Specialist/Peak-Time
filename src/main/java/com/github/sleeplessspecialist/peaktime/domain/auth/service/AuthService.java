@@ -15,8 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.request.LoginReq;
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.request.SignupReq;
-import com.github.sleeplessspecialist.peaktime.domain.auth.dto.response.LoginRes;
-import com.github.sleeplessspecialist.peaktime.domain.auth.dto.response.RefreshRes;
 import com.github.sleeplessspecialist.peaktime.domain.auth.dto.response.SignupRes;
 import com.github.sleeplessspecialist.peaktime.domain.auth.exception.AuthErrorCode;
 import com.github.sleeplessspecialist.peaktime.domain.auth.token.RefreshTokenStore;
@@ -130,11 +128,11 @@ public class AuthService {
 	 * 멀티 디바이스/동시 로그인 제어(단일 세션 강제 등)는 MVP 범위에서 제외하고, RefreshToken을 화이트리스트로 누적 관리합니다.
 	 * </p>
 	 *
-	 * @param request  로그인 요청 DTO
-	 * @return 토큰 정보를 포함한 응답 DTO
+	 * @param request 로그인 요청 DTO
+	 * @return 컨트롤러에 전달할 토큰 묶음(TokenBundle)
 	 * @throws CustomException 인증 실패 또는 보안 정책 위반 시
 	 */
-	public LoginRes login(final LoginReq request) {
+	public TokenBundle login(final LoginReq request) {
 		final String email = normalizeEmail(request.getEmail());
 
 		validateLoginAttemptAllowed(email);
@@ -154,7 +152,7 @@ public class AuthService {
 
 			clearLoginAttempts(email);
 
-			return new LoginRes(
+			return new TokenBundle(
 				accessToken,
 				refreshToken,
 				"Bearer",
@@ -182,10 +180,10 @@ public class AuthService {
 	 * </p>
 	 *
 	 * @param refreshToken 재발급에 사용할 Refresh Token
-	 * @return 새로 발급된 Access / Refresh Token 정보
+	 * @return 새로 발급된 토큰 묶음(TokenBundle)
 	 * @throws CustomException 유효하지 않거나 만료된 Refresh Token인 경우
 	 */
-	public RefreshRes reissue(final String refreshToken) {
+	public TokenBundle reissue(final String refreshToken) {
 		validateRefreshToken(refreshToken);
 
 		// 토큰에서 필요한 값들을 한 번만 추출 (중복 파싱 방지)
@@ -243,8 +241,6 @@ public class AuthService {
 		revokeRefreshTokenWhitelist(userId, sid);
 	}
 
-
-
 	private User validateUserByRefreshToken(final String refreshToken) {
 		final Long userId;
 		try {
@@ -263,7 +259,7 @@ public class AuthService {
 		return user;
 	}
 
-	private RefreshRes rotateAndIssueTokens(
+	private TokenBundle rotateAndIssueTokens(
 		final User user,
 		final String sid,
 		final String oldRefreshToken) {
@@ -296,7 +292,7 @@ public class AuthService {
 		final String usedKey = "rt:used:" + oldJti;
 		stringRedisTemplate.opsForValue().set(usedKey, sid, ttl);
 
-		return new RefreshRes(
+		return new TokenBundle(
 			newAccessToken,
 			newRefreshToken,
 			"Bearer",
