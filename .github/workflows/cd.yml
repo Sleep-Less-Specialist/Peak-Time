@@ -40,8 +40,6 @@ jobs:
           GMAIL_ID: ${{ secrets.GMAIL_ID }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
-          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
-          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
           JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
           TOSS_CLIENT_KEY: ${{ secrets.TOSS_CLIENT_KEY }}
           TOSS_SECRET_KEY: ${{ secrets.TOSS_SECRET_KEY }}
@@ -55,7 +53,7 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           port: ${{ secrets.EC2_SSH_PORT || 22 }}
-          envs: MYSQL_DATABASE,MYSQL_USER,MYSQL_PASSWORD,MYSQL_ROOT_PASSWORD,DOCKER_USERNAME,DOCKER_PASSWORD,GMAIL_ID,SMTP_PASSWORD,AWS_S3_BUCKET,AWS_ACCESS_KEY,AWS_SECRET_KEY,JWT_SECRET_KEY,TOSS_CLIENT_KEY,TOSS_SECRET_KEY,KAKAO_CLIENT_ID,KAKAO_CLIENT_SECRET,GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,BASE_URL,SPRING_REDIS_HOST,SPRING_REDIS_PORT
+          envs: MYSQL_DATABASE,MYSQL_USER,MYSQL_PASSWORD,MYSQL_ROOT_PASSWORD,DOCKER_USERNAME,DOCKER_PASSWORD,GMAIL_ID,SMTP_PASSWORD,AWS_S3_BUCKET,JWT_SECRET_KEY,TOSS_CLIENT_KEY,TOSS_SECRET_KEY,KAKAO_CLIENT_ID,KAKAO_CLIENT_SECRET,GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,BASE_URL,SPRING_REDIS_HOST,SPRING_REDIS_PORT
           script: |
             cd /home/${{ secrets.EC2_USERNAME }}/peak-time
             
@@ -70,8 +68,6 @@ jobs:
             printf "GMAIL_ID=%s\n" "$GMAIL_ID" >> .env
             printf "SMTP_PASSWORD=%s\n" "$SMTP_PASSWORD" >> .env
             printf "AWS_S3_BUCKET=%s\n" "$AWS_S3_BUCKET" >> .env
-            printf "AWS_ACCESS_KEY=%s\n" "$AWS_ACCESS_KEY" >> .env
-            printf "AWS_SECRET_KEY=%s\n" "$AWS_SECRET_KEY" >> .env
             printf "JWT_SECRET_KEY=%s\n" "$JWT_SECRET_KEY" >> .env
             printf "TOSS_CLIENT_KEY=%s\n" "$TOSS_CLIENT_KEY" >> .env
             printf "TOSS_SECRET_KEY=%s\n" "$TOSS_SECRET_KEY" >> .env
@@ -79,7 +75,7 @@ jobs:
             printf "KAKAO_CLIENT_SECRET=%s\n" "$KAKAO_CLIENT_SECRET" >> .env
             printf "GOOGLE_CLIENT_ID=%s\n" "$GOOGLE_CLIENT_ID" >> .env
             printf "GOOGLE_CLIENT_SECRET=%s\n" "$GOOGLE_CLIENT_SECRET" >> .env
-            printf "DB_DDL_AUTO=update\n" >> .env
+            printf "DB_DDL_AUTO=create-drop\n" >> .env
             printf "SPRING_PROFILES_ACTIVE=prod\n" >> .env
             printf "BASE_URL=%s\n" "$BASE_URL" >> .env
             
@@ -88,7 +84,7 @@ jobs:
             
             # Docker Compose 실행
             docker compose pull
-            docker compose down
+            docker compose down || true
             docker compose up -d
             
             # 정리
