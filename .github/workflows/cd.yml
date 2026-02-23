@@ -32,6 +32,7 @@ jobs:
           MYSQL_USER: ${{ secrets.MYSQL_USER }}
           MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
           MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          DB_DDL_AUTO: ${{ secrets.DB_DDL_AUTO }}
           #ddl 환경변수 추가
           SPRING_REDIS_HOST: ${{secrets.SPRING_REDIS_HOST}}
           SPRING_REDIS_PORT: ${{secrets.SPRING_REDIS_PORT}}
@@ -53,7 +54,7 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           port: ${{ secrets.EC2_SSH_PORT || 22 }}
-          envs: MYSQL_DATABASE,MYSQL_USER,MYSQL_PASSWORD,MYSQL_ROOT_PASSWORD,DOCKER_USERNAME,DOCKER_PASSWORD,GMAIL_ID,SMTP_PASSWORD,AWS_S3_BUCKET,JWT_SECRET_KEY,TOSS_CLIENT_KEY,TOSS_SECRET_KEY,KAKAO_CLIENT_ID,KAKAO_CLIENT_SECRET,GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,BASE_URL,SPRING_REDIS_HOST,SPRING_REDIS_PORT
+          envs: MYSQL_DATABASE,MYSQL_USER,MYSQL_PASSWORD,MYSQL_ROOT_PASSWORD,DB_DDL_AUTO,DOCKER_USERNAME,DOCKER_PASSWORD,GMAIL_ID,SMTP_PASSWORD,AWS_S3_BUCKET,JWT_SECRET_KEY,TOSS_CLIENT_KEY,TOSS_SECRET_KEY,KAKAO_CLIENT_ID,KAKAO_CLIENT_SECRET,GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,BASE_URL,SPRING_REDIS_HOST,SPRING_REDIS_PORT
           script: |
             cd /home/${{ secrets.EC2_USERNAME }}/peak-time
             
@@ -75,7 +76,7 @@ jobs:
             printf "KAKAO_CLIENT_SECRET=%s\n" "$KAKAO_CLIENT_SECRET" >> .env
             printf "GOOGLE_CLIENT_ID=%s\n" "$GOOGLE_CLIENT_ID" >> .env
             printf "GOOGLE_CLIENT_SECRET=%s\n" "$GOOGLE_CLIENT_SECRET" >> .env
-            printf "DB_DDL_AUTO=create-drop\n" >> .env
+            printf "DB_DDL_AUTO=%s\n" "${DB_DDL_AUTO:-update}" >> .env
             printf "SPRING_PROFILES_ACTIVE=prod\n" >> .env
             printf "BASE_URL=%s\n" "$BASE_URL" >> .env
             
