@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -26,7 +27,7 @@ import lombok.extern.slf4j.Slf4j;
  * </p>
  *
  * @author 기섭
- * @version 1.0
+ * @version 1.1
  * @since 2026. 1. 22.
  */
 @Slf4j
@@ -47,6 +48,7 @@ public class S3Uploader {
 	 * @return 업로드된 파일의 전체 URL
 	 */
 	public String upload(MultipartFile file, String dirName) {
+		
 		if (file.isEmpty()) {
 			throw new CustomException(GlobalErrorCode.INVALID_REQUEST);
 		}
@@ -74,7 +76,21 @@ public class S3Uploader {
 	 * S3에 저장된 파일의 전체 URL을 가져옵니다.
 	 */
 	private String getFileUrl(String fileName) {
+
 		return "https://" + bucket + ".s3.ap-northeast-2.amazonaws.com/" + fileName;
+	}
+
+	/**
+	 * Presigned URL(서명된 임시 접근 URL)을 발급합니다.
+	 * 보안이 필요한 영상 스트리밍 등을 위해 사용되며, 30분의 유효기간을 가집니다.
+	 *
+	 * @param filename S3 내부 파일 경로 (Key) (예: video/uuid_file.mp4)
+	 * @return 유효기간이 포함된 전체 URL
+	 */
+	public String getPresignedUrl(String filename) {
+
+		return s3Template.createSignedGetURL(bucket, filename, Duration.ofMinutes(30))
+			.toString();
 	}
 
 	/**
@@ -84,6 +100,7 @@ public class S3Uploader {
 	 * @param fileUrl 삭제할 파일의 전체 URL (예: https://bucket.s3.../video/uuid_file.mp4)
 	 */
 	public void deleteFile(String fileUrl) {
+
 		try {
 			String splitStr = ".com/";
 			String fileName = fileUrl.substring(fileUrl.lastIndexOf(splitStr) + splitStr.length());
