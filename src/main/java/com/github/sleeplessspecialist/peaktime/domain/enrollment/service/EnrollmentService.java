@@ -42,7 +42,7 @@ public class EnrollmentService {
 
 		Order order = getOrder(orderId);
 
-		List<OrderItem> orderItems = orderItemRepository.findAllByOrderId(orderId);
+		List<OrderItem> orderItems = orderItemRepository.findOrderItemWithCourseByOrderId(orderId);
 
 		for (OrderItem item : orderItems) {
 
@@ -61,9 +61,12 @@ public class EnrollmentService {
 	}
 
 	@Transactional
-	public void cancelEnrollment(Long userId, Long orderId) {
+	public void cancelEnrollment(Long orderId) {
 
-		List<OrderItem> orderItems = orderItemRepository.findAllByOrderId(orderId);
+        Order order = getOrder(orderId);
+        Long userId = order.getUser().getId();
+
+		List<OrderItem> orderItems = orderItemRepository.findOrderItemWithCourseByOrderId(orderId);
 
 		List<Long> courseIds = orderItems.stream()
 			.map(orderItem -> orderItem.getCourse().getId())
@@ -82,6 +85,4 @@ public class EnrollmentService {
 		return orderRepository.findById(orderId)
 			.orElseThrow(() -> new CustomException(EnrollmentErrorCode.ORDER_NOT_FOUND));
 	}
-
-
 }

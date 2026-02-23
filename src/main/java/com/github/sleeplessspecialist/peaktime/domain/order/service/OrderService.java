@@ -136,7 +136,7 @@ public class OrderService {
 
 		List<OrderItemRes> items = new ArrayList<>();
 
-		for (OrderItem item : orderItemRepository.findAllByOrderId(orderId)) {
+		for (OrderItem item : orderItemRepository.findOrderItemWithCourseByOrderId(orderId)) {
 			items.add(OrderItemRes.builder()
 				.orderItemId(item.getId())
 				.courseId(item.getCourse().getId())

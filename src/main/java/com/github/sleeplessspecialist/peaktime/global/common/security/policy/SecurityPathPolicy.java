@@ -48,7 +48,7 @@ public final class SecurityPathPolicy {
 		// OAuth2
 		"/oauth2/**",
 		"/login/oauth2/**",
-		"/api/v1/oauth2/**"
+		"/api/v2/oauth2/**"
 	};
 
 	/**
