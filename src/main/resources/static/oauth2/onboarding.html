@@ -46,7 +46,7 @@
     }
 
     async function refreshAccessToken() {
-      const res = await fetch("/api/v1/auth/refresh", {
+      const res = await fetch("/api/v2/auth/reissue", {
         method: "POST",
         credentials: "include", // ✅ 쿠키(RefreshToken) 자동 전송
         headers: {
@@ -64,7 +64,7 @@
           message: "refresh 호출 실패",
           status: parsed.status,
           hint: parsed.status === 401
-            ? "401이면 (1) refreshToken 쿠키가 없음/전송 안됨 (2) /api/v1/auth/refresh가 permitAll이 아님 (3) 서버가 쿠키가 아니라 헤더/바디로 토큰을 기대하는 경우를 확인하세요."
+            ? "401이면 (1) refreshToken 쿠키가 없음/전송 안됨 (2) /api/v2/auth/reissue가 permitAll이 아님 (3) 서버가 쿠키가 아니라 헤더/바디로 토큰을 기대하는 경우를 확인하세요."
             : "응답 본문을 확인하세요.",
           response: parsed.json ?? parsed.text
         };
