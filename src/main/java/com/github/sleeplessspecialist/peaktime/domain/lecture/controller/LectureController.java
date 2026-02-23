@@ -6,7 +6,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.github.sleeplessspecialist.peaktime.domain.lecture.dto.LectureCreateReq;
@@ -30,7 +29,6 @@ import lombok.RequiredArgsConstructor;
  */
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/courses")
 public class LectureController {
 
 	private final LectureService lectureService;
@@ -45,7 +43,7 @@ public class LectureController {
 	 * @param req      업로드할 영상 파일과 제목 정보 (ModelAttribute 바인딩)
 	 * @return 등록된 강의 영상의 ID
 	 */
-	@PostMapping(value = "/{courseId}/lectures", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@PostMapping(value = "/api/v1/courses/{courseId}/lectures", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ApiResponse<Long> uploadLecture(
 		@PathVariable Long courseId,
 		@Valid @ModelAttribute LectureCreateReq req) {
@@ -58,7 +56,7 @@ public class LectureController {
 	 * 강의 영상 재생(스트리밍) 정보를 조회합니다.
 	 * 수강 권한을 확인 후, 30분간 유효한 Presigned URL을 반환합니다.
 	 */
-	@GetMapping("/lectures/{lectureId}/playback")
+	@GetMapping("/api/v1/lectures/{lectureId}/playback")
 	public ApiResponse<LecturePlaybackRes> getPlaybackUrl(
 		@AuthenticationPrincipal Long userId,
 		@PathVariable Long lectureId
