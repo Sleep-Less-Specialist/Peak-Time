@@ -1,24 +1,33 @@
-version: "3.8"
+version: '3.8'
 
 services:
   prometheus:
-    image: prom/prometheus
     container_name: peaktime-prometheus
+    restart: unless-stopped
+    image: prom/prometheus:latest
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
     ports:
       - "9090:9090"
     networks:
       - peak-time_default
 
   grafana:
-    image: grafana/grafana
     container_name: peaktime-grafana
+    restart: unless-stopped
+    image: grafana/grafana:latest
     ports:
       - "3000:3000"
     networks:
       - peak-time_default
+    volumes:
+      - grafana_data:/var/lib/grafana
 
 networks:
   peak-time_default:
     external: true
+
+volumes:
+  prometheus_data:
+  grafana_data:
