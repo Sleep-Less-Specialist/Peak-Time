@@ -24,4 +24,6 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
 	boolean existsByUserIdAndCourseIdIn(Long userId, List<Long> courseIds);
 
 	List<Enrollment> findAllByUserIdAndStatusOrderByCreatedAtDesc(Long userId, EnrollmentStatus status);
+
+	boolean existsByUserIdAndCourseIdAndStatus(Long userId, Long courseId, EnrollmentStatus status);
 }
