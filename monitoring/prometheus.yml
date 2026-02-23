@@ -1,0 +1,30 @@
+# Prometheus 기본 설정 파일
+# Spring Boot의 /actuator/prometheus 엔드포인트에서 메트릭을 가져온다.
+
+# 전역 설정
+global:
+  # 메트릭을 몇 초마다 수집할지 설정 (기본 15초)
+  scrape_interval: 15s
+
+  # 추후 알림/규칙을 사용할 경우 평가 주기
+  evaluation_interval: 15s
+
+# 어떤 대상(target)을 수집할지 정의
+scrape_configs:
+  - job_name: "spring-boot"
+
+    # Spring Boot Actuator의 Prometheus 경로
+    metrics_path: "/actuator/prometheus"
+
+    static_configs:
+      - targets:
+          # 여기에는 메트릭을 수집할 서버 주소를 적는다.
+          # Docker 네트워크 안에서 실행 중이라면
+          # "Spring 컨테이너 이름:포트" 형태로 작성한다.
+          # 예: "application:8080"
+          - "peaktime-app:8080"
+
+        # 구분용 라벨 (나중에 여러 서버를 구분할 때 사용)
+        labels:
+          env: "prod"
+          app: "peaktime"
