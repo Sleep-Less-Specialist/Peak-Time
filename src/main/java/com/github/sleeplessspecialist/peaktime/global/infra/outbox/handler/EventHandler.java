@@ -7,7 +7,6 @@ import com.github.sleeplessspecialist.peaktime.global.infra.outbox.entity.Outbox
 import com.github.sleeplessspecialist.peaktime.global.infra.outbox.exception.OutBoxErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Outbox 이벤트를 수신하여 비동기 후처리를 수행하는 핸들러입니다.
@@ -32,39 +31,20 @@ public class EventHandler {
      * OutBox 이벤트를 처리하는 메서드
      * - EventType 에 맞게 라우팅 해서 처리하는 router
      */
-    @Transactional
     public void handle(OutboxEvent event) {
 
+        Long aggregateId = event.getAggregateId();
         switch (event.getEventType()) {
-            case PAYMENT_CONFIRMED -> handlePaymentConfirmed(event);
-            case PAYMENT_CANCELED -> handlePaymentCanceled(event);
+
+            case PAYMENT_CONFIRMED_ENROLLMENT -> enrollmentService.createEnrollment(aggregateId);
+
+            case PAYMENT_CONFIRMED_NOTICE -> noticeService.createPaymentConfirmedNotice(aggregateId);
+
+            case PAYMENT_CANCELED_ENROLLMENT -> enrollmentService.cancelEnrollment(aggregateId);
+
+            case PAYMENT_CANCELED_NOTICE -> noticeService.createPaymentCanceledNotice(aggregateId);
+
             default -> throw new CustomException(OutBoxErrorCode.UNSUPPORTED_EVENT_TYPE);
         }
-    }
-
-    /**
-     * 결제 확정 이벤트에 대한 비동기 후처리를 수행 handler 메서드
-     */
-    private void handlePaymentConfirmed(OutboxEvent event) {
-
-        Long aggregateId = event.getAggregateId();
-
-        enrollmentService.createEnrollment(aggregateId);
-
-        noticeService.createPaymentConfirmedNotice(aggregateId);
-
-        // 실시간 인기강의 후처리 추가
-    }
-
-    /**
-     * 결제 취소 이벤트에 대한 비동기 후처리를 수행 handler 메서드
-     */
-    private void handlePaymentCanceled(OutboxEvent event) {
-
-        Long aggregateId = event.getAggregateId();
-
-        enrollmentService.cancelEnrollment(aggregateId);
-
-        noticeService.createPaymentCanceledNotice(aggregateId);
     }
 }

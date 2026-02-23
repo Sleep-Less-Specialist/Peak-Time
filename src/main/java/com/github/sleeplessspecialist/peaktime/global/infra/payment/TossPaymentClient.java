@@ -8,6 +8,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.sleeplessspecialist.peaktime.domain.payment.dto.TossErrorDto;
@@ -20,16 +21,6 @@ import com.github.sleeplessspecialist.peaktime.global.common.error.GlobalErrorCo
 
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * 토스 페이먼츠(Toss Payments) 외부 API와의 HTTP 통신을 전담하는 클라이언트 클래스입니다.
- * <p>
- * 결제 승인 요청(Confirm) 전송, 인증 헤더(Basic Auth) 설정, 그리고 응답 에러 핸들링을 수행합니다.
- * </p>
- *
- * @author 기섭, 주우재
- * @version 1.0
- * @since 2026. 1. 26.
- */
 @Slf4j
 @Component
 public class TossPaymentClient {
@@ -54,68 +45,44 @@ public class TossPaymentClient {
 			.build();
 	}
 
-	/**
-	 * 토스 페이먼츠에 결제 승인을 요청합니다.
-	 * 실패 시 4xx, 5xx 에러 바디를 파싱하여 로그를 남깁니다.
-	 *
-	 * @param req 결제 승인 요청 정보 (paymentKey, orderId, amount)
-	 * @return 결제 승인 성공 응답
-	 */
 	public TossPaymentConfirmRes confirm(TossPaymentConfirmReq req) {
-		return restClient.post()
-			.uri("/confirm")
-			.body(req)
-			.retrieve()
-			.onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
-				(request, response) -> {
-
-					String errorBodyStr = new String(response.getBody().readAllBytes(), StandardCharsets.UTF_8);
-
-					log.error("토스 결제 실패 응답: Status={}, Body={}", response.getStatusCode(), errorBodyStr);
-
-					try {
-						TossErrorDto errorDto = objectMapper.readValue(errorBodyStr, TossErrorDto.class);
-						throw new RuntimeException(
-							"토스 결제 실패: " + errorDto.getMessage() + " (" + errorDto.getCode() + ")");
-
-					} catch (Exception e) {
-						throw new CustomException(GlobalErrorCode.INTERNAL_SERVER_ERROR);
-					}
-				})
-			.body(TossPaymentConfirmRes.class);
+		try {
+			return restClient.post()
+				.uri("/confirm")
+				.body(req)
+				.retrieve()
+				.body(TossPaymentConfirmRes.class);
+		} catch (RestClientResponseException e) {
+			handleTossError("confirm", e);
+			throw new CustomException(GlobalErrorCode.INTERNAL_SERVER_ERROR);
+		}
 	}
 
-	/**
-	 * 토스 페이먼츠에 결제 취소를 요청
-	 * <p>
-	 * paymentKey 기준으로 취소 요청을 전송하며, cancelReason 은 필수.
-	 * </p>
-	 *
-	 * @param paymentKey 토스 결제 키
-	 * @param req 취소 요청 바디 (cancelReason 등)
-	 * @return 결제 취소 성공 응답
-	 */
 	public TossPaymentCancelRes cancel(String paymentKey, TossPaymentCancelReq req) {
-		return restClient.post()
-			.uri("/{paymentKey}/cancel", paymentKey)
-			.body(req)
-			.retrieve()
-			.onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
-				(request, response) -> {
+		try {
+			return restClient.post()
+				.uri("/{paymentKey}/cancel", paymentKey)
+				.body(req)
+				.retrieve()
+				.body(TossPaymentCancelRes.class);
+		} catch (RestClientResponseException e) {
+			handleTossError("cancel", e);
+			throw new CustomException(GlobalErrorCode.INTERNAL_SERVER_ERROR);
+		}
+	}
 
-					String errorBodyStr = new String(response.getBody().readAllBytes(), StandardCharsets.UTF_8);
-
-					log.error("토스 결제 취소 실패 응답: Status={}, Body={}", response.getStatusCode(), errorBodyStr);
-
-					try {
-						TossErrorDto errorDto = objectMapper.readValue(errorBodyStr, TossErrorDto.class);
-						throw new RuntimeException(
-							"토스 결제 실패: " + errorDto.getMessage() + " (" + errorDto.getCode() + ")");
-
-					} catch (Exception e) {
-						throw new CustomException(GlobalErrorCode.INTERNAL_SERVER_ERROR);
-					}
-				})
-			.body(TossPaymentCancelRes.class);
+	private void handleTossError(String operation, RestClientResponseException e) {
+		String errorBody = e.getResponseBodyAsString(StandardCharsets.UTF_8);
+		try {
+			TossErrorDto errorDto = objectMapper.readValue(errorBody, TossErrorDto.class);
+			log.error("Toss {} failed. status={}, code={}, message={}",
+				operation,
+				e.getStatusCode(),
+				errorDto.getCode(),
+				errorDto.getMessage());
+			return;
+		} catch (Exception ignored) {
+			log.error("Toss {} failed. status={}, rawBody={}", operation, e.getStatusCode(), errorBody);
+		}
 	}
 }

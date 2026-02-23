@@ -1,5 +1,6 @@
 package com.github.sleeplessspecialist.peaktime.domain.payment;
 
+import static com.github.sleeplessspecialist.peaktime.global.infra.outbox.entity.OutboxEventType.*;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -10,6 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.github.sleeplessspecialist.peaktime.domain.payment.service.PaymentService;
+import com.github.sleeplessspecialist.peaktime.global.infra.outbox.publisher.OutboxPublisher;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -88,6 +90,8 @@ class PaymentServiceTest {
     @Mock
     private OutboxRepository outboxRepository;
 
+    @Mock
+    private OutboxPublisher outboxPublisher;
     /**
      * 결제 승인 성공 케이스를 검증합니다.
      * <p>
@@ -156,11 +160,24 @@ class PaymentServiceTest {
         assertThat(saved.getStatus()).isEqualTo(PaymentStatus.PAID);
         assertThat(saved.getImpUid()).isEqualTo(paymentKey);
 
-        ArgumentCaptor<OutboxEvent> outboxCaptor = ArgumentCaptor.forClass(OutboxEvent.class);
-        verify(outboxRepository).save(outboxCaptor.capture());
-        OutboxEvent outbox = outboxCaptor.getValue();
-        assertThat(outbox.getEventType()).isEqualTo(OutboxEventType.PAYMENT_CONFIRMED);
-        assertThat(outbox.getAggregateId()).isEqualTo(orderId);
+        ArgumentCaptor<List<OutboxEvent>> captor =
+                ArgumentCaptor.forClass(List.class);
+
+        verify(outboxPublisher).publishAll(captor.capture());
+
+        List<OutboxEvent> events = captor.getValue();
+
+        assertThat(events).hasSize(2);
+        assertThat(events)
+                .extracting(OutboxEvent::getEventType)
+                .containsExactlyInAnyOrder(
+                        PAYMENT_CONFIRMED_ENROLLMENT,
+                        PAYMENT_CONFIRMED_NOTICE
+                );
+
+        assertThat(events)
+                .allMatch(e -> e.getAggregateId().equals(orderId));
+
     }
 
     /**
@@ -324,13 +341,23 @@ class PaymentServiceTest {
         verify(orderPaymentCommandService).markCanceled(orderId);
         verify(refundService).createRefund(payment, new BigDecimal("20000"), "user");
 
-        ArgumentCaptor<OutboxEvent> outboxCaptor = ArgumentCaptor.forClass(OutboxEvent.class);
-        verify(outboxRepository).save(outboxCaptor.capture());
-        OutboxEvent outbox = outboxCaptor.getValue();
-        assertThat(outbox.getEventType()).isEqualTo(OutboxEventType.PAYMENT_CANCELED);
-        assertThat(outbox.getAggregateId()).isEqualTo(orderId);
+        ArgumentCaptor<List<OutboxEvent>> captor =
+                ArgumentCaptor.forClass(List.class);
 
-        assertThat(payment.getStatus()).isEqualTo(PaymentStatus.REFUNDED);
+        verify(outboxPublisher).publishAll(captor.capture());
+
+        List<OutboxEvent> events = captor.getValue();
+
+        assertThat(events).hasSize(2);
+        assertThat(events)
+                .extracting(OutboxEvent::getEventType)
+                .containsExactlyInAnyOrder(
+                        PAYMENT_CANCELED_ENROLLMENT,
+                        PAYMENT_CANCELED_NOTICE
+                );
+
+        assertThat(events)
+                .allMatch(e -> e.getAggregateId().equals(orderId));
     }
 
     /**

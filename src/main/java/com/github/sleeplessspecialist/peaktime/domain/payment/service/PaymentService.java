@@ -15,7 +15,7 @@ import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
 import com.github.sleeplessspecialist.peaktime.domain.user.repository.UserRepository;
 import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
 import com.github.sleeplessspecialist.peaktime.global.infra.outbox.entity.OutboxEvent;
-import com.github.sleeplessspecialist.peaktime.global.infra.outbox.entity.OutboxEventType;
+import com.github.sleeplessspecialist.peaktime.global.infra.outbox.publisher.OutboxPublisher;
 import com.github.sleeplessspecialist.peaktime.global.infra.outbox.repository.OutboxRepository;
 import com.github.sleeplessspecialist.peaktime.global.infra.payment.TossPaymentClient;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +30,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+
+import static com.github.sleeplessspecialist.peaktime.global.infra.outbox.entity.OutboxEventType.*;
 
 /**
  * 결제 도메인의 비즈니스 로직을 담당하는 서비스 클래스입니다.
@@ -57,7 +59,7 @@ public class PaymentService {
     private final OrderPaymentCommandService orderPaymentCommandService;
     private final RefundService refundService;
     private final OutboxRepository outboxRepository;
-
+    private final OutboxPublisher outboxPublisher;
     /**
      * 결제 확정.
      */
@@ -131,12 +133,10 @@ public class PaymentService {
         savePayment(payment);
         orderPaymentCommandService.markCompleted(orderId);
 
-        outboxRepository.save(
-                OutboxEvent.pending(
-                        OutboxEventType.PAYMENT_CONFIRMED,
-                        orderId
-                )
-        );
+        outboxPublisher.publishAll(List.of(
+                OutboxEvent.pending(PAYMENT_CONFIRMED_ENROLLMENT, orderId),
+                OutboxEvent.pending(PAYMENT_CONFIRMED_NOTICE, orderId)
+        ));
     }
 
     /**
@@ -158,12 +158,10 @@ public class PaymentService {
         orderPaymentCommandService.markCanceled(orderId);
         refundService.createRefund(payment, cancelAmount, cancelReason);
 
-        outboxRepository.save(
-                OutboxEvent.pending(
-                        OutboxEventType.PAYMENT_CANCELED,
-                        orderId
-                )
-        );
+        outboxPublisher.publishAll(List.of(
+                OutboxEvent.pending(PAYMENT_CANCELED_ENROLLMENT, orderId),
+                OutboxEvent.pending(PAYMENT_CANCELED_NOTICE, orderId)
+        ));
     }
 
     /**

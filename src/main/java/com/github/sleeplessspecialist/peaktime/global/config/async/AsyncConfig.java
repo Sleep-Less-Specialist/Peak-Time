@@ -30,6 +30,40 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class AsyncConfig implements AsyncConfigurer {
 
+    /**
+     * Outbox 이벤트 처리 전용 ThreadPoolTaskExecutor Bean.
+     *
+     * <p>
+     * Core/Max Pool Size를 통해 병렬 처리량을 제어하며,
+     * QueueCapacity를 초과하는 요청에 대해서는 CallerRunsPolicy를 적용하여
+     * 호출 스레드가 직접 실행하도록 하여 과도한 작업 유입을 완충합니다.
+     * </p>
+     *
+     * <p>
+     * 애플리케이션 종료 시 진행 중인 작업을 안전하게 마무리하기 위해
+     * waitForTasksToCompleteOnShutdown 옵션을 활성화합니다.
+     * </p>
+     *
+     * @return Outbox 이벤트 처리용 Executor
+     */
+    @Configuration
+    public class OutboxExecutorConfig {
+
+        @Bean(name = "outboxExecutor")
+        public Executor outboxExecutor() {
+            ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+            executor.setCorePoolSize(4);
+            executor.setMaxPoolSize(8);
+            executor.setQueueCapacity(300);
+            executor.setThreadNamePrefix("outbox-async-");
+            executor.setWaitForTasksToCompleteOnShutdown(true);
+            executor.setAwaitTerminationSeconds(30);
+            executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+            executor.initialize();
+            return executor;
+        }
+    }
+
 	/**
 	 * SMTP 메일 발송 전용 비동기 Executor.
 	 *

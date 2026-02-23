@@ -9,12 +9,15 @@ package com.github.sleeplessspecialist.peaktime.global.infra.outbox.entity;
  * </p>
  *
  * @author 주우재
- * @version 1.0
- * @since 2026. 2. 10.
+ * @version 1.1
+ * @since 2026. 2. 13.
  */
 public enum OutboxEventType {
 
-    PAYMENT_CONFIRMED,
-    PAYMENT_CANCELED
+    PAYMENT_CONFIRMED_ENROLLMENT,
+    PAYMENT_CONFIRMED_NOTICE,
+
+    PAYMENT_CANCELED_ENROLLMENT,
+    PAYMENT_CANCELED_NOTICE
 }
 
