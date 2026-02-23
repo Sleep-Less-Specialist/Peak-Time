@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
@@ -51,17 +52,16 @@ import lombok.extern.slf4j.Slf4j;
  * </p>
  * <ul>
  *   <li>AccessToken / RefreshToken(JWT) 발급</li>
- *   <li>RefreshToken 해시값 Redis 화이트리스트 저장 (userId + deviceId)</li>
+ *   <li>RefreshToken 해시값 Redis 화이트리스트 저장 (userId + sid)</li>
  *   <li>로그인 성공 후 메인 페이지 리다이렉트</li>
  * </ul>
  *
  * <p>
- * 추후 보안 정책 강화 시,
- * 자동 연동 이전에 추가 인증(step-up) 절차를 도입할 수 있도록 확장 가능합니다.
+ * 추후 보안 정책 강화 시, 자동 연동 이전에 추가 인증(step-up) 절차를 도입할 수 있도록 확장 가능합니다.
  * </p>
  *
  * @author 재원
- * @version 1.2
+ * @version 1.3
  * @since 2026. 1. 30.
  */
 @Component
@@ -76,9 +76,8 @@ public class OAuth2SuccessHandler
 	private final RefreshTokenStore refreshTokenStore;
 
 	/**
-	 * OAuth2 인증 제공자를 통한 로그인 인증이 성공했을 때 호출됩니다.
-	 * <p>
-	 * 이후 단계에서 사용자 유형(기존/신규)에 따른 분기 처리, JWT 발급 및 전달 전략(JSON 응답 또는 Redirect)이 이 메서드에 추가될 예정입니다.
+	 * OAuth2 로그인 성공 시 JWT를 발급하고,
+	 * RefreshToken을 Redis에 저장한 뒤 메인 페이지로 리다이렉트합니다.
 	 * </p>
 	 *
 	 * @param request        OAuth2 로그인 성공 요청 정보
@@ -111,7 +110,10 @@ public class OAuth2SuccessHandler
 		setDeviceIdCookie(response, deviceId);
 
 		String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getRole().name());
-		String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
+
+		String sid = UUID.randomUUID().toString().replace("-", "");
+		String refreshToken = jwtTokenProvider.createRefreshToken(user.getId(), sid);
+
 
 		Instant now = Instant.now();
 
@@ -121,7 +123,7 @@ public class OAuth2SuccessHandler
 		refreshTokenStore.save(
 			new SessionEntry(
 				user.getId(),
-				deviceId,
+				sid,
 				refreshTokenHash,
 				now,
 				ttl
@@ -211,7 +213,6 @@ public class OAuth2SuccessHandler
 			}
 			return sb.toString();
 		} catch (Exception e) {
-			// fallback (매우 드문 케이스)
 			return Long.toHexString(System.nanoTime());
 		}
 	}

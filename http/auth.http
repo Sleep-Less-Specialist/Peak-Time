@@ -3,7 +3,7 @@
 @contentType = application/json
 
 ### 1) 회원가입 (정규화 확인용: 대문자 이메일로 가입)
-POST {{baseUrl}}/api/v1/auth/signup
+POST {{baseUrl}}/api/v2/auth/signup
 Content-Type: {{contentType}}
 
 {
@@ -14,7 +14,7 @@ Content-Type: {{contentType}}
 }
 
 ### 2) 로그인 성공 (200) - 대문자 이메일로 보내도 정상 조회되어야 함(정규화 검증)
-POST {{baseUrl}}/api/v1/auth/login
+POST {{baseUrl}}/api/v2/auth/login
 Content-Type: {{contentType}}
 
 {
@@ -23,37 +23,54 @@ Content-Type: {{contentType}}
 }
 
 > {%
-    // accessToken, refreshToken 저장 (ApiResponse 래퍼의 data 하위)
+    // accessToken 저장 (ApiResponse 래퍼의 data 하위)
     client.global.set("accessToken", response.body.data.accessToken);
-    client.global.set("refreshToken", response.body.data.refreshToken);
+
+    // Set-Cookie에서 refreshToken 추출 (쿠키 기반)
+    const setCookie = response.headers.valueOf("Set-Cookie");
+    const match = setCookie && setCookie.match(/refreshToken=([^;]+)/);
+    if (!match) {
+      throw new Error("Set-Cookie에 refreshToken이 없습니다.");
+    }
+    client.global.set("rt_v1", match[1]);
 %}
 
-### 2-1) (공개) 커피챗 전체 조회 - 토큰 없이 200이어야 함
-# sort 필드 오타(createAt)로 500이 날 수 있어 createdAt으로 고정
-GET {{baseUrl}}/api/v1/chat/room?page=0&size=10&sort=createdAt,DESC
+### 2-0) Reissue 1회 성공 (200) - RTR 회전
+POST {{baseUrl}}/api/v2/auth/reissue
+Content-Type: {{contentType}}
+Cookie: refreshToken={{rt_v1}}
 
-### 2-1-1) (공개) 커피챗 전체 조회(정렬 파라미터 없이) - 토큰 없이 200이어야 함
-GET {{baseUrl}}/api/v1/chat/room?page=0&size=10
+> {%
+    // 회전된 refreshToken을 Set-Cookie에서 다시 추출
+    const setCookie = response.headers.valueOf("Set-Cookie");
+    const match = setCookie && setCookie.match(/refreshToken=([^;]+)/);
+    if (!match) {
+      throw new Error("Set-Cookie에 refreshToken이 없습니다.");
+    }
+    client.global.set("rt_v2", match[1]);
+
+    // (명세) 응답 바디에는 accessToken만 내려옴
+    client.global.set("accessToken", response.body.data.accessToken);
+%}
+
+### 2-0-1) 이전 RefreshToken 재사용 시도 (401 예상) - REFRESH_REUSED
+POST {{baseUrl}}/api/v2/auth/reissue
+Content-Type: {{contentType}}
+Cookie: refreshToken={{rt_v1}}
 
 ### 2-A) 로그아웃 (204) - RefreshToken 화이트리스트 삭제
-POST {{baseUrl}}/api/v1/auth/logout
+POST {{baseUrl}}/api/v2/auth/logout
 Content-Type: {{contentType}}
+Cookie: refreshToken={{rt_v2}}
 
-{
-  "refreshToken": "{{refreshToken}}"
-}
-
-### 2-B) 로그아웃 이후 재발급 시도 - 401이어야 함(화이트리스트에서 삭제되었는지 간접 검증)
-POST {{baseUrl}}/api/v1/auth/refresh
+### 2-B) 로그아웃 이후 재발급 시도 (401 예상) - INVALID_REFRESH_TOKEN
+POST {{baseUrl}}/api/v2/auth/reissue
 Content-Type: {{contentType}}
-
-{
-  "refreshToken": "{{refreshToken}}"
-}
+Cookie: refreshToken={{rt_v2}}
 
 ### 2-C) 비밀번호 재설정 요청 (200)
 # 존재하지 않는 이메일도 200으로 응답할 수 있음(보안/명세 일관성)
-POST {{baseUrl}}/api/v1/auth/password/reset-request
+POST {{baseUrl}}/api/v2/auth/password/reset-request
 Content-Type: {{contentType}}
 
 {
@@ -64,7 +81,7 @@ Content-Type: {{contentType}}
 # 메일 링크 예: http://.../reset-password?token=xxxx
 @resetToken = REPLACE_WITH_TOKEN_FROM_EMAIL
 
-POST {{baseUrl}}/api/v1/auth/password
+POST {{baseUrl}}/api/v2/auth/password
 Content-Type: {{contentType}}
 
 {
@@ -73,7 +90,7 @@ Content-Type: {{contentType}}
 }
 
 ### 3) 로그인 실패 (401) - 비밀번호 틀림
-POST {{baseUrl}}/api/v1/auth/login
+POST {{baseUrl}}/api/v2/auth/login
 Content-Type: {{contentType}}
 
 {
@@ -82,10 +99,17 @@ Content-Type: {{contentType}}
 }
 
 ### 브루트포스(429) 유도 - 형식은 통과, 값은 틀린 비밀번호
-POST {{baseUrl}}/api/v1/auth/login
+POST {{baseUrl}}/api/v2/auth/login
 Content-Type: {{contentType}}
 
 {
   "email": "test@example.com",
   "password": "WrongP@ss1!"
 }
+
+### 2-1) (공개) 커피챗 전체 조회 - 토큰 없이 200이어야 함
+# sort 필드 오타(createAt)로 500이 날 수 있어 createdAt으로 고정
+GET {{baseUrl}}/api/v1/chat/room?page=1&size=10&sort=createdAt,DESC
+
+### 2-1-1) (공개) 커피챗 전체 조회(정렬 파라미터 없이) - 토큰 없이 200이어야 함
+GET {{baseUrl}}/api/v1/chat/room?page=1&size=10

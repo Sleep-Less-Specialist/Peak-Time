@@ -337,7 +337,7 @@
             <p class="section-title">이메일 로그인</p>
 
             <!-- NOTE: action은 임시. 서버 엔드포인트 확정되면 변경하세요. -->
-            <form id="loginForm" method="post" action="/api/v1/auth/login">
+            <form id="loginForm" method="post" action="/api/v2/auth/login">
                 <div class="field">
                     <label for="email">이메일</label>
                     <input id="email" name="email" type="email" autocomplete="email" placeholder="example@domain.com"
@@ -390,7 +390,7 @@
         <div class="section hidden" id="pwResetRequestSection" aria-label="비밀번호 재설정 요청">
             <p class="section-title">비밀번호 재설정</p>
 
-            <form id="pwResetRequestForm" method="post" action="/api/v1/auth/password/reset-request">
+            <form id="pwResetRequestForm" method="post" action="/api/v2/auth/password/reset-request">
                 <div class="field">
                     <label for="pwResetEmail">이메일</label>
                     <input id="pwResetEmail" name="email" type="email" autocomplete="email"
@@ -412,7 +412,7 @@
         <div class="section hidden" id="pwResetConfirmSection" aria-label="비밀번호 재설정 확정">
             <p class="section-title">새 비밀번호 설정</p>
 
-            <form id="pwResetConfirmForm" method="post" action="/api/v1/auth/password">
+            <form id="pwResetConfirmForm" method="post" action="/api/v2/auth/password">
                 <input type="hidden" id="pwResetToken" name="token"/>
 
                 <div class="field">
@@ -521,7 +521,7 @@
         const email = document.getElementById("pwResetEmail").value;
 
         try {
-            const res = await fetch("/api/v1/auth/password/reset-request", {
+            const res = await fetch("/api/v2/auth/password/reset-request", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -595,7 +595,7 @@
         }
 
         try {
-            const res = await fetch("/api/v1/auth/password", {
+            const res = await fetch("/api/v2/auth/password", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ token, newPassword })

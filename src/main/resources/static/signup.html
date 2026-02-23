@@ -179,7 +179,7 @@
     </header>
 
     <section class="card">
-        <!-- NOTE: 엔드포인트는 프로젝트 명세에 맞게 조정 -->
+        <!-- NOTE: auth는 v2 엔드포인트(/api/v2/auth/...) 사용 -->
         <form id="signupForm" method="post" action="#">
             <div class="field">
                 <label for="name">이름</label>
@@ -259,7 +259,7 @@
         };
 
         try {
-            const res = await fetch("/api/v1/auth/signup", {
+            const res = await fetch("/api/v2/auth/signup", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Accept": "application/json" },
                 body: JSON.stringify(payload)
