@@ -228,4 +228,67 @@ public class AuthServiceTest {
 		// then
 		assertThat(ex.getErrorCode()).isEqualTo(AuthErrorCode.TOO_MANY_ATTEMPTS);
 	}
+
+	@Test
+	@DisplayName("RTR: 동일 RefreshToken 재사용 시 REFRESH_REUSED 발생 및 세션 즉시 폐기")
+	void refreshToken_reused_shouldThrowRefreshReused_andRevokeSession() {
+		// given
+		String refreshToken = "refresh-token";
+		Long userId = 1L;
+		String sid = "sid-123";
+		String jti = "jti-123";
+
+		doNothing().when(jwtTokenProvider).validateToken(refreshToken);
+		when(jwtTokenProvider.getUserId(refreshToken)).thenReturn(userId);
+		when(jwtTokenProvider.getSessionId(refreshToken)).thenReturn(sid);
+		when(jwtTokenProvider.getJti(refreshToken)).thenReturn(jti);
+
+		String usedKey = "rt:used:" + jti;
+		when(stringRedisTemplate.hasKey(usedKey)).thenReturn(false, true);
+
+		// user active
+		User user = mock(User.class);
+		when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+		when(user.getStatus()).thenReturn(UserStatus.ACTIVE);
+		when(user.getId()).thenReturn(userId);
+		when(user.getRole()).thenReturn(UserRole.STUDENT);
+
+		String refreshHash = sha256Hex(refreshToken);
+		when(refreshTokenStore.find(userId, sid))
+			.thenReturn(Optional.of(new SessionEntry(userId, sid, refreshHash, java.time.Instant.now(), java.time.Duration.ofMinutes(10))));
+
+		when(jwtTokenProvider.createAccessToken(userId, "STUDENT")).thenReturn("new-access");
+		when(jwtTokenProvider.createRefreshToken(eq(userId), eq(sid))).thenReturn("new-refresh");
+		when(jwtProperties.getRefreshTokenExpirationMs()).thenReturn(600_000L);
+		when(jwtProperties.getAccessTokenExpirationMs()).thenReturn(1_800_000L);
+		when(refreshTokenStore.rotateIfMatch(eq(userId), eq(sid), anyString(), anyString(), any(java.time.Duration.class)))
+			.thenReturn(true);
+
+		when(stringRedisTemplate.opsForValue()).thenReturn(valueOperations);
+		doNothing().when(valueOperations).set(eq(usedKey), eq(sid), any(java.time.Duration.class));
+
+		// 1차 정상 재발급
+		TokenBundle first = authService.reissue(refreshToken);
+		assertThat(first.getAccessToken()).isEqualTo("new-access");
+		assertThat(first.getRefreshToken()).isEqualTo("new-refresh");
+
+		// 2차 재사용 감지
+		CustomException ex = Assertions.assertThrows(CustomException.class, () -> authService.reissue(refreshToken));
+		assertThat(ex.getErrorCode()).isEqualTo(AuthErrorCode.REFRESH_REUSED);
+		verify(refreshTokenStore).delete(userId, sid);
+	}
+
+	private String sha256Hex(String raw) {
+		try {
+			java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+			byte[] digest = md.digest(raw.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+			StringBuilder sb = new StringBuilder();
+			for (byte b : digest) {
+				sb.append(String.format("%02x", b));
+			}
+			return sb.toString();
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
 }
