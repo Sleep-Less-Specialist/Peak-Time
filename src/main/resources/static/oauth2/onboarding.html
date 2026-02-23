@@ -86,7 +86,7 @@
     }
 
     async function updatePhone(accessToken, phoneNumber) {
-        const res = await fetch("/api/v2/members/me", {
+        const res = await fetch("/api/v1/members/me", {
             method: "PATCH",
             credentials: "include",
             headers: {
