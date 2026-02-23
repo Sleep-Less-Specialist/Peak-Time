@@ -17,7 +17,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -32,8 +31,6 @@ import com.github.sleeplessspecialist.peaktime.domain.payment.dto.TossPaymentCon
 import com.github.sleeplessspecialist.peaktime.domain.payment.dto.TossPaymentConfirmRes;
 import com.github.sleeplessspecialist.peaktime.domain.payment.entity.Payment;
 import com.github.sleeplessspecialist.peaktime.domain.payment.entity.PaymentStatus;
-import com.github.sleeplessspecialist.peaktime.domain.payment.event.PaymentCancelledEvent;
-import com.github.sleeplessspecialist.peaktime.domain.payment.event.PaymentConfirmedEvent;
 import com.github.sleeplessspecialist.peaktime.domain.payment.exception.PaymentErrorCode;
 import com.github.sleeplessspecialist.peaktime.domain.payment.repository.PaymentRepository;
 import com.github.sleeplessspecialist.peaktime.domain.point.service.PointService;
@@ -41,6 +38,9 @@ import com.github.sleeplessspecialist.peaktime.domain.refund.service.RefundServi
 import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
 import com.github.sleeplessspecialist.peaktime.domain.user.repository.UserRepository;
 import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
+import com.github.sleeplessspecialist.peaktime.global.infra.outbox.entity.OutboxEvent;
+import com.github.sleeplessspecialist.peaktime.global.infra.outbox.entity.OutboxEventType;
+import com.github.sleeplessspecialist.peaktime.global.infra.outbox.repository.OutboxRepository;
 import com.github.sleeplessspecialist.peaktime.global.infra.payment.TossPaymentClient;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -74,9 +74,6 @@ class PaymentServiceTest {
     private PointService pointService;
 
     @Mock
-    private ApplicationEventPublisher eventPublisher;
-
-    @Mock
     private PaymentRepository paymentRepository;
 
     @Mock
@@ -87,6 +84,9 @@ class PaymentServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private OutboxRepository outboxRepository;
 
     /**
      * 결제 승인 성공 케이스를 검증합니다.
@@ -156,12 +156,11 @@ class PaymentServiceTest {
         assertThat(saved.getStatus()).isEqualTo(PaymentStatus.PAID);
         assertThat(saved.getImpUid()).isEqualTo(paymentKey);
 
-        ArgumentCaptor<Object> eventCaptor = ArgumentCaptor.forClass(Object.class);
-        verify(eventPublisher).publishEvent(eventCaptor.capture());
-        assertThat(eventCaptor.getValue()).isInstanceOf(PaymentConfirmedEvent.class);
-        PaymentConfirmedEvent event = (PaymentConfirmedEvent) eventCaptor.getValue();
-        assertThat(event.getOrderId()).isEqualTo(orderId);
-        assertThat(event.getUserId()).isEqualTo(userId);
+        ArgumentCaptor<OutboxEvent> outboxCaptor = ArgumentCaptor.forClass(OutboxEvent.class);
+        verify(outboxRepository).save(outboxCaptor.capture());
+        OutboxEvent outbox = outboxCaptor.getValue();
+        assertThat(outbox.getEventType()).isEqualTo(OutboxEventType.PAYMENT_CONFIRMED);
+        assertThat(outbox.getAggregateId()).isEqualTo(orderId);
     }
 
     /**
@@ -204,7 +203,7 @@ class PaymentServiceTest {
 
         verify(pointService, never()).spendForOrder(any(), anyLong(), anyLong());
         verify(paymentRepository, never()).save(any(Payment.class));
-        verify(eventPublisher, never()).publishEvent(any());
+        verify(outboxRepository, never()).save(any(OutboxEvent.class));
     }
 
     /**
@@ -258,17 +257,16 @@ class PaymentServiceTest {
         when(tossPaymentClient.cancel(eq(paymentKey), any(TossPaymentCancelReq.class)))
                 .thenReturn(TossPaymentCancelRes.builder().orderId(tossOrderId).cancels(List.of()).build());
 
-        // when
-        paymentService.confirmPayment(req);
+        // when / then
+        assertThatThrownBy(() -> paymentService.confirmPayment(req))
+                .isInstanceOf(CustomException.class)
+                .satisfies(ex -> assertThat(((CustomException) ex).getErrorCode())
+                        .isEqualTo(PaymentErrorCode.ALREADY_ENROLLED_PAYMENT));
 
-        // then
         verify(pointService).spendForOrder(user, orderId, 1000L);
         verify(orderPaymentCommandService, never()).markCompleted(anyLong());
         verify(tossPaymentClient).cancel(eq(paymentKey), any(TossPaymentCancelReq.class));
-
-        ArgumentCaptor<Object> eventCaptor = ArgumentCaptor.forClass(Object.class);
-        verify(eventPublisher).publishEvent(eventCaptor.capture());
-        assertThat(eventCaptor.getValue()).isInstanceOf(PaymentConfirmedEvent.class);
+        verify(outboxRepository, never()).save(any(OutboxEvent.class));
     }
 
     /**
@@ -326,9 +324,11 @@ class PaymentServiceTest {
         verify(orderPaymentCommandService).markCanceled(orderId);
         verify(refundService).createRefund(payment, new BigDecimal("20000"), "user");
 
-        ArgumentCaptor<Object> eventCaptor = ArgumentCaptor.forClass(Object.class);
-        verify(eventPublisher).publishEvent(eventCaptor.capture());
-        assertThat(eventCaptor.getValue()).isInstanceOf(PaymentCancelledEvent.class);
+        ArgumentCaptor<OutboxEvent> outboxCaptor = ArgumentCaptor.forClass(OutboxEvent.class);
+        verify(outboxRepository).save(outboxCaptor.capture());
+        OutboxEvent outbox = outboxCaptor.getValue();
+        assertThat(outbox.getEventType()).isEqualTo(OutboxEventType.PAYMENT_CANCELED);
+        assertThat(outbox.getAggregateId()).isEqualTo(orderId);
 
         assertThat(payment.getStatus()).isEqualTo(PaymentStatus.REFUNDED);
     }
@@ -381,7 +381,7 @@ class PaymentServiceTest {
         verify(pointService, never()).refundForOrder(any(), anyLong(), anyLong());
         verify(orderPaymentCommandService, never()).markCanceled(anyLong());
         verify(refundService, never()).createRefund(any(), any(), anyString());
-        verify(eventPublisher, never()).publishEvent(any());
+        verify(outboxRepository, never()).save(any(OutboxEvent.class));
     }
 
     /**
