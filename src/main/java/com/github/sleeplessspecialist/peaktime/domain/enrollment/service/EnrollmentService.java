@@ -42,7 +42,7 @@ public class EnrollmentService {
 
 		Order order = getOrder(orderId);
 
-		List<OrderItem> orderItems = orderItemRepository.findAllByOrderId(orderId);
+		List<OrderItem> orderItems = orderItemRepository.findOrderItemWithCourseByOrderId(orderId);
 
 		for (OrderItem item : orderItems) {
 
@@ -66,7 +66,7 @@ public class EnrollmentService {
         Order order = getOrder(orderId);
         Long userId = order.getUser().getId();
 
-		List<OrderItem> orderItems = orderItemRepository.findAllByOrderId(orderId);
+		List<OrderItem> orderItems = orderItemRepository.findOrderItemWithCourseByOrderId(orderId);
 
 		List<Long> courseIds = orderItems.stream()
 			.map(orderItem -> orderItem.getCourse().getId())

@@ -1,12 +1,11 @@
 package com.github.sleeplessspecialist.peaktime.domain.order.repository;
 
-import java.util.List;
-
+import com.github.sleeplessspecialist.peaktime.domain.order.entity.OrderItem;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import com.github.sleeplessspecialist.peaktime.domain.order.entity.OrderItem;
+import java.util.List;
 
 /**
  * 장바구니(OrderItem) 엔티티에 대한 영속성 처리를 담당하는 Repository 인터페이스.
@@ -20,12 +19,25 @@ import com.github.sleeplessspecialist.peaktime.domain.order.entity.OrderItem;
  */
 public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
 
-	@Query("""
-    select oi
-    from OrderItem oi
-    join fetch oi.course c
-    where oi.order.id = :orderId
-""")
-	List<OrderItem> findAllByOrderId(@Param("orderId") Long orderId);
+    /**
+     *
+     */
+    @Query("""
+                select oi
+                from OrderItem oi
+                join fetch oi.course c
+                where oi.order.id = :orderId
+            """)
+    List<OrderItem> findOrderItemWithCourseByOrderId(@Param("orderId") Long orderId);
 
+    @Query("""
+                select oi
+                from OrderItem oi
+                join fetch oi.course c
+                join fetch c.lecturer l
+                where oi.order.id = :orderId
+            """)
+    List<OrderItem> findOrderItemsWithCourseAndLecturerByOrderId(
+            @Param("orderId") Long orderId
+    );
 }
