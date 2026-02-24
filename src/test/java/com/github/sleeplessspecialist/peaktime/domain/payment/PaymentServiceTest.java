@@ -167,12 +167,13 @@ class PaymentServiceTest {
 
         List<OutboxEvent> events = captor.getValue();
 
-        assertThat(events).hasSize(2);
+        assertThat(events).hasSize(3);
         assertThat(events)
                 .extracting(OutboxEvent::getEventType)
                 .containsExactlyInAnyOrder(
                         PAYMENT_CONFIRMED_ENROLLMENT,
-                        PAYMENT_CONFIRMED_NOTICE
+                        PAYMENT_CONFIRMED_NOTICE,
+                        PAYMENT_CONFIRMED_RANKING
                 );
 
         assertThat(events)
