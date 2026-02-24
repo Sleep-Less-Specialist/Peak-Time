@@ -34,7 +34,7 @@ import lombok.extern.slf4j.Slf4j;
  * 커피쳇(Chat) 도메인의 핵심 비즈니스 로직을 처리하는 서비스 클래스입니다.
  *
  * @author 주우재
- * @version 1.0
+ * @version 1.1
  * @since 2026.01.22
  */
 
@@ -171,11 +171,35 @@ public class ChatService {
 	 * </p>
 	 *
 	 */
-	@Transactional
-	public void addParticipantToChat(Long userId, Long roomId) {
+    @Transactional
+    public void addParticipantToChat(Long userId, Long roomId) {
 
-		ChatRoom chatRoom = getChatRoom(roomId);
-		User user = getUser(userId);
+        ChatRoom chatRoom = getChatRoom(roomId);
+        User user = getUser(userId);
+
+        validateJoinableRoom(chatRoom, roomId, userId);
+        validateNotAlreadyParticipant(chatRoom, user, roomId, userId);
+
+        ChatParticipant chatParticipant = ChatParticipant.builder()
+                .chatRoom(chatRoom)
+                .user(user)
+                .roleInRoom(RoleInRoom.GUEST)
+                .build();
+        chatParticipantRepository.save(chatParticipant);
+
+        chatRoom.matched();
+    }
+
+    /**
+     * 커피쳇 참여 - 비관적 락을 적용한 ver
+     */
+    @Transactional
+	public void addParticipantToChatWithPessimisticLock(Long userId, Long roomId) {
+
+        ChatRoom chatRoom = chatRoomRepository.findByIdForUpdate(roomId)
+                .orElseThrow(() -> new CustomException(ChatErrorCode.CHAT_ROOM_NOT_FOUND));
+
+        User user = getUser(userId);
 
 		validateJoinableRoom(chatRoom, roomId, userId);
 		validateNotAlreadyParticipant(chatRoom, user, roomId, userId);

@@ -74,7 +74,7 @@ public class ChatController {
 		@AuthenticationPrincipal Long userId,
 		@PathVariable @Positive Long roomId) {
 
-		chatService.addParticipantToChat(userId, roomId);
+		chatService.addParticipantToChatWithPessimisticLock(userId, roomId);
 		return ApiResponse.ok();
 	}
 
