@@ -18,10 +18,19 @@ import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseSearchCon
 import com.github.sleeplessspecialist.peaktime.domain.course.exception.CourseErrorCode;
 import com.github.sleeplessspecialist.peaktime.domain.course.service.CourseService;
 import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
+import com.github.sleeplessspecialist.peaktime.domain.ranking.dto.CourseRankingRes;
+import com.github.sleeplessspecialist.peaktime.domain.ranking.service.CourseRankingService;
 import com.github.sleeplessspecialist.peaktime.global.common.response.ApiResponse;
-
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * 강의(Course) 조회 API 컨트롤러입니다.
@@ -41,6 +50,7 @@ import lombok.RequiredArgsConstructor;
 public class CourseController {
 
 	private final CourseService courseService;
+    private final CourseRankingService rankingService;
 
 	/**
 	 * 강의 목록 조회 API
@@ -93,4 +103,19 @@ public class CourseController {
 		CourseDetailRes response = courseService.getCourseDetail(courseId);
 		return ApiResponse.ok(response);
 	}
+
+    /**
+     * 최근 N 일 인기 강의 TOP 랭킹 조회 API
+     *
+     * <p>
+     * 결제(주문) 기반으로 Redis ZSET에 집계된 강의 인기 점수를 조회합니다.
+     *
+     * </p>
+     */
+    @GetMapping("/ranking/last-3-days")
+    public ApiResponse<List<CourseRankingRes>> findCategoryLast3Days() {
+
+        List<CourseRankingRes> response = rankingService.findTopCoursesInLast3Days();
+        return ApiResponse.ok(response);
+    }
 }

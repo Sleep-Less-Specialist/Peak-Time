@@ -3,11 +3,12 @@
 @courseId = 1
 
 ### 1. 강의 생성
-POST {{host}}/api/v1/courses
+POST {{host}}/api/v1/lecturer/courses
 Content-Type: application/json
+Authorization: Bearer {{accessToken}}
 
 {
-  "title": "스프링 부트 완벽 정복",
+  "title": "스프링 부트 완벽 정복1",
   "description": "이 강의 하나면 실무 투입 가능합니다.",
   "category": "BACKEND",
   "price": 55000,
@@ -40,3 +41,7 @@ Accept: application/json
 # page=0 (첫 페이지), size=5 (5개씩 조회)
 GET {{host}}/api/v1/courses?page=0&size=5
 Accept: application/json
+
+### 5. 실시간 인기강의 조회
+GET {{host}}/api/v1/courses/ranking/last-3-days
+Content-Type: application/json
