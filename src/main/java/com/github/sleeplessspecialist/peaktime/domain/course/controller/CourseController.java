@@ -1,9 +1,10 @@
 package com.github.sleeplessspecialist.peaktime.domain.course.controller;
 
+import java.math.BigDecimal;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,7 +14,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseDetailRes;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseListRes;
+import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseSearchCondition;
+import com.github.sleeplessspecialist.peaktime.domain.course.exception.CourseErrorCode;
 import com.github.sleeplessspecialist.peaktime.domain.course.service.CourseService;
+import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
 import com.github.sleeplessspecialist.peaktime.global.common.response.ApiResponse;
 
 import jakarta.validation.constraints.Min;
@@ -51,13 +55,26 @@ public class CourseController {
 	@GetMapping
 	public ApiResponse<Page<CourseListRes>> getCourseList(
 		@RequestParam(defaultValue = "1") @Min(value = 1, message = "페이지는 1 이상이어야 합니다.") int page,
-		@RequestParam(defaultValue = "10") @Min(value = 1, message = "사이즈는 1 이상이어야 합니다.") int size
+		@RequestParam(defaultValue = "10") @Min(value = 1, message = "사이즈는 1 이상이어야 합니다.") int size,
+
+		@RequestParam(required = false) String category,
+		@RequestParam(required = false) String keyword,
+		@RequestParam(required = false) BigDecimal minPrice,
+		@RequestParam(required = false) BigDecimal maxPrice,
+		@RequestParam(required = false) CourseSearchCondition.CourseSortBy sortBy,
+		@RequestParam(required = false) CourseSearchCondition.SortDirection direction
 	) {
+		if (minPrice != null && maxPrice != null && minPrice.compareTo(maxPrice) > 0) {
+			throw new CustomException(CourseErrorCode.INVALID_PRICE_RANGE);
+		}
 
-		Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+		Pageable pageable = PageRequest.of(page - 1, size);
 
-		Page<CourseListRes> response = courseService.getCourseList(pageable);
+		CourseSearchCondition condition = new CourseSearchCondition(
+			category, keyword, minPrice, maxPrice, sortBy, direction
+		);
 
+		Page<CourseListRes> response = courseService.getCourseList(condition, pageable);
 		return ApiResponse.ok(response);
 	}
 
