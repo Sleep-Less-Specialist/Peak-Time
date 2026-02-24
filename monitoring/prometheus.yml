@@ -21,8 +21,8 @@ scrape_configs:
           # 여기에는 메트릭을 수집할 서버 주소를 적는다.
           # Docker 네트워크 안에서 실행 중이라면
           # "Spring 컨테이너 이름:포트" 형태로 작성한다.
-          # 예: "application:8080"
-          - "peaktime-app:8080"
+          # 예: "peaktime-app:9091"
+          - "peaktime-app:9091"
 
         # 구분용 라벨 (나중에 여러 서버를 구분할 때 사용)
         labels:

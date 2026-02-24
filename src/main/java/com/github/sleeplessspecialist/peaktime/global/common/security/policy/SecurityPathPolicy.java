@@ -22,6 +22,13 @@ public final class SecurityPathPolicy {
 	 */
 	public static final String[] PUBLIC_ENDPOINTS = {
 		"/error",
+
+		// ✅ 모니터링(Actuator)
+		"/actuator/health",
+		"/actuator/info",
+		"/actuator/prometheus",
+
+
 		// ✅ 기본 프론트 진입
 		"/",
 		"/index.html",

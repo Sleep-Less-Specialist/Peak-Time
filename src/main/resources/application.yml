@@ -121,6 +121,8 @@ payment:
     secret-key: ${TOSS_SECRET_KEY}
 
 management:
+  server:
+    port: 9091
   endpoints:
     web:
       exposure:
