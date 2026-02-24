@@ -22,6 +22,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseDetailRes;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseListRes;
+import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseSearchCondition;
 import com.github.sleeplessspecialist.peaktime.domain.course.entity.Course;
 import com.github.sleeplessspecialist.peaktime.domain.course.exception.CourseErrorCode;
 import com.github.sleeplessspecialist.peaktime.domain.course.repository.CourseRepository;
@@ -100,30 +101,95 @@ class CourseServiceTest {
 	}
 
 	@Test
-	@DisplayName("성공: 강의 목록을 페이징하여 조회하면, CourseListRes Page가 반환된다.")
+	@DisplayName("성공: 검색 조건과 함께 강의 목록을 페이징 조회하면, CourseListRes Page가 반환된다.")
 	void getCourseList_Success() {
 
 		// given
 		Pageable pageable = PageRequest.of(0, 10);
-		User lecturer = User.createForSignup("이자바", "java@test.com", "hash", "01011112222");
 
-		Course course1 = Course.builder().title("자바").price(BigDecimal.valueOf(10000)).lecturer(lecturer).build();
+		CourseSearchCondition condition = new CourseSearchCondition(
+			null,
+			null,
+			null,
+			null,
+			null,
+			null
+		);
+
+		User lecturer = User.createForSignup("이자바", "java@test.com", "hash", "01011112222");
+		ReflectionTestUtils.setField(lecturer, "id", 10L);
+
+		Course course1 = Course.builder()
+			.title("자바")
+			.description("설명")
+			.category("BACKEND")
+			.price(BigDecimal.valueOf(10000))
+			.thumbnailUrl(null)
+			.lecturer(lecturer)
+			.build();
 		ReflectionTestUtils.setField(course1, "id", 1L);
-		Course course2 = Course.builder().title("JPA").price(BigDecimal.valueOf(20000)).lecturer(lecturer).build();
+
+		Course course2 = Course.builder()
+			.title("JPA")
+			.description("설명")
+			.category("BACKEND")
+			.price(BigDecimal.valueOf(20000))
+			.thumbnailUrl(null)
+			.lecturer(lecturer)
+			.build();
 		ReflectionTestUtils.setField(course2, "id", 2L);
 
 		List<Course> courseList = List.of(course1, course2);
 		Page<Course> mockPage = new PageImpl<>(courseList, pageable, 2);
 
-		given(courseRepository.findAll(any(Pageable.class))).willReturn(mockPage);
+		given(courseRepository.searchCourses(any(CourseSearchCondition.class), any(Pageable.class)))
+			.willReturn(mockPage);
 
 		// when
-		Page<CourseListRes> result = courseService.getCourseList(pageable);
+		Page<CourseListRes> result = courseService.getCourseList(condition, pageable);
 
 		// then
 		assertThat(result.getContent()).hasSize(2);
 		assertThat(result.getContent().get(0).lecturerName()).isEqualTo("이자바");
 
-		verify(courseRepository).findAll(any(Pageable.class));
+		verify(courseRepository).searchCourses(any(CourseSearchCondition.class), any(Pageable.class));
+	}
+
+	@Test
+	@DisplayName("성공: 검색 조건이 repository로 정상 전달된다.")
+	void getCourseList_WithCondition_PassesConditionCorrectly() {
+
+		// given
+		Pageable pageable = PageRequest.of(0, 5);
+
+		CourseSearchCondition condition = new CourseSearchCondition(
+			"BACKEND",
+			"spring",
+			BigDecimal.valueOf(10000),
+			BigDecimal.valueOf(50000),
+			CourseSearchCondition.CourseSortBy.PRICE,
+			CourseSearchCondition.SortDirection.ASC
+		);
+
+		Page<Course> mockPage = Page.empty(pageable);
+		given(courseRepository.searchCourses(any(CourseSearchCondition.class), any(Pageable.class)))
+			.willReturn(mockPage);
+
+		// when
+		courseService.getCourseList(condition, pageable);
+
+		// then
+		var conditionCaptor = org.mockito.ArgumentCaptor.forClass(CourseSearchCondition.class);
+
+		verify(courseRepository).searchCourses(conditionCaptor.capture(), eq(pageable));
+
+		CourseSearchCondition captured = conditionCaptor.getValue();
+
+		assertThat(captured.category()).isEqualTo("BACKEND");
+		assertThat(captured.keyword()).isEqualTo("spring");
+		assertThat(captured.minPrice()).isEqualByComparingTo("10000");
+		assertThat(captured.maxPrice()).isEqualByComparingTo("50000");
+		assertThat(captured.sortBy()).isEqualTo(CourseSearchCondition.CourseSortBy.PRICE);
+		assertThat(captured.direction()).isEqualTo(CourseSearchCondition.SortDirection.ASC);
 	}
 }

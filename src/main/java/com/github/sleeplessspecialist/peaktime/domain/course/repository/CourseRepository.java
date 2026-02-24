@@ -13,11 +13,15 @@ import com.github.sleeplessspecialist.peaktime.domain.course.entity.Course;
 /**
  * 강의 엔티티의 데이터베이스 접근 및 영속성 관리를 담당하는 리포지토리입니다.
  *
+ * <p>
+ * 기본 CRUD 기능은 {@link JpaRepository}를 통해 제공하며,
+ * 검색/필터/정렬 등 복잡한 조회는 {@link CourseRepositoryCustom}의 QueryDSL 구현체를 통해 수행합니다.
+ * </p>
  * @author 기섭
  * @version 1.0
  * @since 2026. 1. 22.
  */
-public interface CourseRepository extends JpaRepository<Course, Long> {
+public interface CourseRepository extends JpaRepository<Course, Long>, CourseRepositoryCustom {
 
 	/**
 	 * List<Long> courseId 를 fetch join 으로 user 까지 가지고 오기
