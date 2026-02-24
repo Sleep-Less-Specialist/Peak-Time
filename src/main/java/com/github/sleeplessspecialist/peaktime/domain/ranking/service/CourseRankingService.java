@@ -51,7 +51,7 @@ public class CourseRankingService {
      * 강의 인기 점수(조회수 등)를 Redis ZSET에 반영합니다.
      *
      * <p>
-     * Redis Sorted Set(course)에 member로 강의 식별자("course:{courseId}")를 저장하고
+     * Redis Sorted Set(course)에 member로 강의 식별자(courseId 문자열)를 저장하고
      * score를 1 증가시킵니다.
      * </p>
      *
@@ -75,8 +75,15 @@ public class CourseRankingService {
                 throw new CustomException(CourseErrorCode.REDIS_UPDATE_FAILED);
             }
         }
-
-        stringRedisTemplate.expire(key, DAILY_KEY_TTL);
+        try {
+            stringRedisTemplate.expire(key, DAILY_KEY_TTL);
+        } catch (RedisConnectionFailureException e) {
+            log.error("Redis 연결 장애로 TTL 설정 실패. key={}", key, e);
+            throw new CustomException(CourseErrorCode.REDIS_UPDATE_FAILED);
+        } catch (Exception e) {
+            log.error("Redis 오류로 TTL 설정 실패. key={}", key, e);
+            throw new CustomException(CourseErrorCode.REDIS_UPDATE_FAILED);
+        }
     }
 
 
