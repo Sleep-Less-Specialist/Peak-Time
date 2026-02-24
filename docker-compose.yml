@@ -43,9 +43,11 @@ services:
   application:
     container_name: peaktime-app
     image: ${DOCKER_USERNAME}/peak-time:latest
-    restart: on-failure
+    restart: unless-stopped
     ports:
       - "8080:8080"
+    expose:
+      - "9091"
 
     # CD에서 생성한 .env를 컨테이너 환경변수로 로드
     env_file:
@@ -58,6 +60,7 @@ services:
 
       DB_DDL_AUTO: ${DB_DDL_AUTO:-update}
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      MANAGEMENT_SERVER_PORT: "9091"
 
       BASE_URL: ${BASE_URL}
 
