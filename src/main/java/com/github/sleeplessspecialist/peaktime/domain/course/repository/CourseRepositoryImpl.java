@@ -3,11 +3,12 @@ package com.github.sleeplessspecialist.peaktime.domain.course.repository;
 import static com.github.sleeplessspecialist.peaktime.domain.course.entity.QCourse.*;
 import static com.github.sleeplessspecialist.peaktime.domain.user.entity.QUser.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.support.PageableExecutionUtils;
 
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseSearchCondition;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseSearchCondition.CourseSortBy;
@@ -16,6 +17,7 @@ import com.github.sleeplessspecialist.peaktime.domain.course.entity.Course;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 
 import lombok.RequiredArgsConstructor;
@@ -28,7 +30,7 @@ import lombok.RequiredArgsConstructor;
  * </p>
  *
  * @author 기섭
- * @version 1.0
+ * @version 1.1
  * @since 2026. 2. 24.
  */
 @RequiredArgsConstructor
@@ -53,7 +55,7 @@ public class CourseRepositoryImpl implements CourseRepositoryCustom {
 			.limit(pageable.getPageSize())
 			.fetch();
 
-		Long total = queryFactory
+		JPAQuery<Long> countQuery = queryFactory
 			.select(course.count())
 			.from(course)
 			.where(
@@ -61,11 +63,9 @@ public class CourseRepositoryImpl implements CourseRepositoryCustom {
 				keywordContains(condition.keyword()),
 				minPriceGoe(condition.minPrice()),
 				maxPriceLoe(condition.maxPrice())
-			)
-			.fetchOne();
+			);
 
-		long totalCount = (total == null) ? 0L : total;
-		return new PageImpl<>(content, pageable, totalCount);
+		return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
 	}
 
 	private BooleanExpression categoryEq(String category) {
@@ -80,17 +80,16 @@ public class CourseRepositoryImpl implements CourseRepositoryCustom {
 			.or(course.description.containsIgnoreCase(k));
 	}
 
-	private BooleanExpression minPriceGoe(java.math.BigDecimal minPrice) {
+	private BooleanExpression minPriceGoe(BigDecimal minPrice) {
 		return (minPrice == null) ? null : course.price.goe(minPrice);
 	}
 
-	private BooleanExpression maxPriceLoe(java.math.BigDecimal maxPrice) {
+	private BooleanExpression maxPriceLoe(BigDecimal maxPrice) {
 		return (maxPrice == null) ? null : course.price.loe(maxPrice);
 	}
 
 	private OrderSpecifier<?> orderBy(CourseSortBy sortBy, SortDirection direction) {
 		Order order = (direction == SortDirection.ASC) ? Order.ASC : Order.DESC;
-
 		CourseSortBy field = (sortBy == null) ? CourseSortBy.CREATED_AT : sortBy;
 
 		return switch (field) {
