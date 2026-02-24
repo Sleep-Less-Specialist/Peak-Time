@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseDetailRes;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseListRes;
+import com.github.sleeplessspecialist.peaktime.domain.course.dto.CourseSearchCondition;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.CurriculumDto;
 import com.github.sleeplessspecialist.peaktime.domain.course.dto.LecturerDto;
 import com.github.sleeplessspecialist.peaktime.domain.course.entity.Course;
@@ -75,13 +76,18 @@ public class CourseService {
 	}
 
 	/**
-	 * 강의 전체 목록을 페이징하여 조회합니다.
+	 * 강의 목록을 검색 조건과 함께 페이징하여 조회합니다.
+	 * <p>
+	 * - 조건(category/keyword/price range)은 선택적으로 적용됩니다.
+	 * - 정렬 기준/방향은 condition의 sortBy/direction 값으로 제어합니다.
+	 * </p>
 	 *
-	 * @param pageable 페이징 정보 (page, size, sort)
+	 * @param condition 검색 조건(카테고리, 키워드, 가격 범위, 정렬 기준/방향)
+	 * @param pageable  페이징 정보(page, size)
 	 * @return 페이징된 강의 목록 DTO
 	 */
-	public Page<CourseListRes> getCourseList(Pageable pageable) {
-		Page<Course> coursePage = courseRepository.findAll(pageable);
+	public Page<CourseListRes> getCourseList(CourseSearchCondition condition, Pageable pageable) {
+		Page<Course> coursePage = courseRepository.searchCourses(condition, pageable);
 
 		return coursePage.map(course -> new CourseListRes(
 			course.getId(),
