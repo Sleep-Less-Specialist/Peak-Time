@@ -135,7 +135,8 @@ public class PaymentService {
 
         outboxPublisher.publishAll(List.of(
                 OutboxEvent.pending(PAYMENT_CONFIRMED_ENROLLMENT, orderId),
-                OutboxEvent.pending(PAYMENT_CONFIRMED_NOTICE, orderId)
+                OutboxEvent.pending(PAYMENT_CONFIRMED_NOTICE, orderId),
+                OutboxEvent.pending(PAYMENT_CONFIRMED_RANKING, orderId)
         ));
     }
 
