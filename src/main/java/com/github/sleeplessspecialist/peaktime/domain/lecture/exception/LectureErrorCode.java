@@ -14,7 +14,7 @@ import lombok.RequiredArgsConstructor;
  * </p>
  *
  * @author 기섭
- * @version 1.0
+ * @version 1.1
  * @since 2026. 1. 23.
  */
 @Getter
@@ -22,7 +22,9 @@ import lombok.RequiredArgsConstructor;
 public enum LectureErrorCode implements ErrorCode {
 
 	INVALID_FILE_EXTENSION("L001", "지원하지 않는 파일 형식입니다.", HttpStatus.BAD_REQUEST),
-	INVALID_FILE_NAME("L002", "파일 이름이 유효하지 않습니다.", HttpStatus.BAD_REQUEST);
+	INVALID_FILE_NAME("L002", "파일 이름이 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
+	LECTURE_NOT_FOUND("L003", "존재하지 않는 강의 영상입니다.", HttpStatus.NOT_FOUND),
+	NOT_ENROLLED_USER("L004", "수강 권한이 없는 사용자입니다.", HttpStatus.FORBIDDEN);
 
 	private final String code;
 	private final String message;

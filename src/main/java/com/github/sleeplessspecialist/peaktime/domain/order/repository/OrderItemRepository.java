@@ -20,7 +20,7 @@ import java.util.List;
 public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
 
     /**
-     *
+     * 특정 주문에 포함된 OrderItem과 강의 정보를 함께 조회합니다.
      */
     @Query("""
                 select oi
@@ -30,6 +30,9 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
             """)
     List<OrderItem> findOrderItemWithCourseByOrderId(@Param("orderId") Long orderId);
 
+    /**
+     * 특정 주문에 포함된 OrderItem과 강의, 강사 정보를 함께 조회합니다.
+     */
     @Query("""
                 select oi
                 from OrderItem oi
@@ -40,4 +43,11 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
     List<OrderItem> findOrderItemsWithCourseAndLecturerByOrderId(
             @Param("orderId") Long orderId
     );
+
+    /**
+     * 특정 주문에 포함된 강의 ID 목록을 조회합니다.
+     */
+    @Query("select oi.course.id from OrderItem oi where oi.order.id = :orderId")
+    List<Long> findCourseIdsByOrderId(@Param("orderId") Long orderId);
+
 }
