@@ -2,6 +2,7 @@ package com.github.sleeplessspecialist.peaktime.global.infra.outbox.handler;
 
 import com.github.sleeplessspecialist.peaktime.domain.enrollment.service.EnrollmentService;
 import com.github.sleeplessspecialist.peaktime.domain.notice.service.NoticeService;
+import com.github.sleeplessspecialist.peaktime.domain.ranking.service.CourseRankingService;
 import com.github.sleeplessspecialist.peaktime.global.common.error.CustomException;
 import com.github.sleeplessspecialist.peaktime.global.infra.outbox.entity.OutboxEvent;
 import com.github.sleeplessspecialist.peaktime.global.infra.outbox.exception.OutBoxErrorCode;
@@ -26,6 +27,7 @@ public class EventHandler {
 
     private final EnrollmentService enrollmentService;
     private final NoticeService noticeService;
+    private final CourseRankingService courseRankingService;
 
     /**
      * OutBox 이벤트를 처리하는 메서드
@@ -39,6 +41,8 @@ public class EventHandler {
             case PAYMENT_CONFIRMED_ENROLLMENT -> enrollmentService.createEnrollment(aggregateId);
 
             case PAYMENT_CONFIRMED_NOTICE -> noticeService.createPaymentConfirmedNotice(aggregateId);
+
+            case PAYMENT_CONFIRMED_RANKING -> courseRankingService.increaseCourseOrderCount(aggregateId);
 
             case PAYMENT_CANCELED_ENROLLMENT -> enrollmentService.cancelEnrollment(aggregateId);
 

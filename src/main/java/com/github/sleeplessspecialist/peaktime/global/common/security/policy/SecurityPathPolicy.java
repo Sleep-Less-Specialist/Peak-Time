@@ -69,7 +69,8 @@ public final class SecurityPathPolicy {
 		"/api/v1/courses/*",
 		"/api/v1/reviews",
 		"/api/v1/reviews/*",
-		"/api/v1/chat/room" // 커피챗 전체 조회(비로그인)
+		"/api/v1/chat/room",
+        "/api/v1/courses/ranking/last-3-days"
 	};
 
 	// 관리자
