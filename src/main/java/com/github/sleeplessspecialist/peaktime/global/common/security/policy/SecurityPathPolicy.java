@@ -22,7 +22,6 @@ public final class SecurityPathPolicy {
 	 */
 	public static final String[] PUBLIC_ENDPOINTS = {
 		"/error",
-        "/**",
 		// ✅ 기본 프론트 진입
 		"/",
 		"/index.html",
