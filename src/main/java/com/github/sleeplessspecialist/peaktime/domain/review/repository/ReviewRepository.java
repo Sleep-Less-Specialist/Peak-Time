@@ -1,10 +1,13 @@
 package com.github.sleeplessspecialist.peaktime.domain.review.repository;
 
-import com.github.sleeplessspecialist.peaktime.domain.review.entity.Review;
-import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import com.github.sleeplessspecialist.peaktime.domain.review.entity.Review;
+import com.github.sleeplessspecialist.peaktime.domain.user.entity.User;
 
 /**
  * 리뷰(Review) 엔티티에 대한 영속성 처리를 담당하는 리포지토리입니다.
@@ -19,5 +22,24 @@ import org.springframework.data.jpa.repository.JpaRepository;
  */
 public interface ReviewRepository extends JpaRepository<Review, Long> {
 
-    Page<Review> findAllByEnrollment_User(User user, Pageable pageable);
+	Page<Review> findAllByEnrollment_User(User user, Pageable pageable);
+
+	@Query(
+		value = """
+			   select r
+			   from Review r
+			   join fetch r.enrollment e
+			   join fetch e.course
+			   where e.user = :user
+			""",
+		countQuery = """
+			   select count(r)
+			   from Review r
+			   where r.enrollment.user = :user
+			"""
+	)
+	Page<Review> findAllByEnrollmentUserWithCourse(
+		@Param("user") User user,
+		Pageable pageable
+	);
 }
