@@ -99,7 +99,6 @@ public class CourseRankingService {
      * @return 상위 강의 랭킹 목록(강의명 + 점수)
      * @throws CustomException Redis 조회 실패 시
      */
-    @Transactional(readOnly = true)
     public List<CourseRankingRes> findTopCoursesInLast3Days() {
 
         LocalDate today = LocalDate.now();
