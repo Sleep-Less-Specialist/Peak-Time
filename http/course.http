@@ -45,4 +45,3 @@ Accept: application/json
 ### 5. 실시간 인기강의 조회
 GET {{host}}/api/v1/courses/ranking/last-3-days
 Content-Type: application/json
-Authorization: Bearer {{accessToken}}
