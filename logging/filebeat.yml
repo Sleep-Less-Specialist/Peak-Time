@@ -1,0 +1,29 @@
+filebeat.inputs:
+  - type: filestream
+    id: peaktime-docker-logs
+    enabled: true
+    paths:
+      - /var/lib/docker/containers/*/*.log
+
+processors:
+  - add_docker_metadata: ~
+
+  # peaktime-app 컨테이너 로그만 수집
+  - drop_event:
+      when:
+        not:
+          equals:
+            container.name: "peaktime-app"
+
+  # JSON 로그일 경우 필드로 파싱
+  - decode_json_fields:
+      fields: ["message"]
+      target: ""
+      overwrite_keys: true
+      add_error_key: true
+
+output.elasticsearch:
+  hosts: ["http://peaktime-elasticsearch:9200"]
+
+setup.kibana:
+  host: "http://peaktime-kibana:5601"
