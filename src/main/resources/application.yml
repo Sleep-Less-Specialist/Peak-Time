@@ -59,7 +59,7 @@ spring:
       ddl-auto: ${DB_DDL_AUTO:create-drop}
     properties:
       hibernate:
-        show_sql: true
+        show_sql: false
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
 
@@ -105,7 +105,7 @@ server:
 
 logging:
   level:
-    org.hibernate.SQL: DEBUG
+    org.hibernate.SQL: INFO
     # Boot 3/Hibernate 6일 때 파라미터 값 로그가 필요하면 아래 사용 고려
     # org.hibernate.orm.jdbc.bind: TRACE
 

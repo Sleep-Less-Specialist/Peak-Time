@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <springProperty scope="context" name="appName" source="spring.application.name" defaultValue="peaktime"/>
+
+    <!-- =========================
+         Appenders
+         ========================= -->
+
+    <!-- (Local/Dev) 사람이 읽기 쉬운 콘솔 로그 -->
+    <appender name="PLAIN_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- (Prod) ELK 적재를 위한 JSON 로그 -->
+    <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"app":"${appName}"}</customFields>
+            <fieldNames>
+                <timestamp>@timestamp</timestamp>
+                <level>level</level>
+                <logger>logger</logger>
+                <thread>thread</thread>
+                <message>message</message>
+                <stackTrace>stack_trace</stackTrace>
+            </fieldNames>
+            <includeMdc>true</includeMdc>
+            <includeContext>false</includeContext>
+            <includeCallerData>false</includeCallerData>
+        </encoder>
+    </appender>
+
+    <!-- =========================
+         Noise reduction (common)
+         ========================= -->
+
+    <logger name="org.hibernate.SQL" level="INFO"/>
+    <logger name="org.hibernate.type.descriptor.sql" level="OFF"/>
+    <logger name="org.hibernate.orm.connections.pooling" level="INFO"/>
+    <logger name="org.hibernate.orm.deprecation" level="WARN"/>
+
+    <logger name="org.springframework.data.repository.config" level="WARN"/>
+    <logger name="org.springframework.web.socket.config.WebSocketMessageBrokerStats" level="WARN"/>
+
+    <logger name="com.github.sleeplessspecialist.peaktime.global.common.aop.RequestLoggingAspect" level="INFO"/>
+
+    <!-- =========================
+         Profile-based root logger
+         ========================= -->
+
+    <!-- prod: JSON -->
+    <springProfile name="prod">
+        <root level="INFO">
+            <appender-ref ref="JSON_CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <!-- default/local/dev: plain text -->
+    <springProfile name="!prod">
+        <root level="INFO">
+            <appender-ref ref="PLAIN_CONSOLE"/>
+        </root>
+    </springProfile>
+
+</configuration>
