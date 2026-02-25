@@ -12,8 +12,10 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 
 import com.github.sleeplessspecialist.peaktime.global.common.security.filter.JwtAuthenticationFilter;
+import com.github.sleeplessspecialist.peaktime.global.common.security.filter.TraceIdAccessLogFilter;
 import com.github.sleeplessspecialist.peaktime.global.common.security.handler.OAuth2SuccessHandler;
 import com.github.sleeplessspecialist.peaktime.global.common.security.handler.RestAccessDeniedHandler;
 import com.github.sleeplessspecialist.peaktime.global.common.security.handler.RestAuthenticationEntryPoint;
@@ -50,7 +52,6 @@ public class SecurityConfig {
 	private final CustomOAuth2UserService customOAuth2UserService;
 	private final OAuth2SuccessHandler oAuth2SuccessHandler;
 
-
 	/**
 	 * Spring Security 필터 체인을 정의합니다.
 	 *
@@ -63,8 +64,8 @@ public class SecurityConfig {
 	 * @throws Exception 보안 설정 과정에서 발생할 수 있는 예외
 	 */
 	@Bean
-	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-
+	public SecurityFilterChain securityFilterChain(HttpSecurity http,
+		TraceIdAccessLogFilter traceIdAccessLogFilter) throws Exception {
 		http
 			.csrf(csrf -> csrf.disable())
 			.sessionManagement(session
@@ -91,6 +92,7 @@ public class SecurityConfig {
 				.successHandler(oAuth2SuccessHandler)
 			)
 
+			.addFilterBefore(traceIdAccessLogFilter, JwtAuthenticationFilter.class)
 			.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 
 			.authorizeHttpRequests(auth -> auth
@@ -120,7 +122,6 @@ public class SecurityConfig {
 		return new BCryptPasswordEncoder();
 	}
 
-
 	/**
 	 * 비밀번호 재설정 메일 링크(`/reset-password?token=...`)로 진입하면
 	 * 서버가 JSON(401) 대신 프론트 엔트리 페이지(index.html)를 내려주도록 포워딩합니다.
@@ -137,5 +138,17 @@ public class SecurityConfig {
 				registry.addViewController("/reset-password").setViewName("forward:/index.html");
 			}
 		};
+	}
+
+	@Bean
+	public FilterRegistrationBean<TraceIdAccessLogFilter> traceIdAccessLogFilterRegistration(TraceIdAccessLogFilter filter) {
+		FilterRegistrationBean<TraceIdAccessLogFilter> registration = new FilterRegistrationBean<>(filter);
+		registration.setEnabled(false);
+		return registration;
+	}
+
+	@Bean
+	public TraceIdAccessLogFilter traceIdAccessLogFilter() {
+		return new TraceIdAccessLogFilter();
 	}
 }
