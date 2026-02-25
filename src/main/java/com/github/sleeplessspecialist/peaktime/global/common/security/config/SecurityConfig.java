@@ -92,8 +92,8 @@ public class SecurityConfig {
 				.successHandler(oAuth2SuccessHandler)
 			)
 
+			.addFilterBefore(traceIdAccessLogFilter, JwtAuthenticationFilter.class)
 			.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-			.addFilterAfter(traceIdAccessLogFilter, JwtAuthenticationFilter.class)
 
 			.authorizeHttpRequests(auth -> auth
 				// 명세 기반 공개 엔드포인트 + 공개 조회(GET)는 permitAll
