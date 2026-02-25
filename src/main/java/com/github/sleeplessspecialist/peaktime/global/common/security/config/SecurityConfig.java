@@ -92,7 +92,9 @@ public class SecurityConfig {
 				.successHandler(oAuth2SuccessHandler)
 			)
 
-			.addFilterBefore(traceIdAccessLogFilter, JwtAuthenticationFilter.class)
+			// traceId/access 로그 필터는 Security 기본 필터 기준으로 순서를 지정해야 합니다.
+			// 커스텀 필터(JwtAuthenticationFilter.class)는 registered order가 없어 기준 필터로 사용할 수 없습니다.
+			.addFilterBefore(traceIdAccessLogFilter, UsernamePasswordAuthenticationFilter.class)
 			.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 
 			.authorizeHttpRequests(auth -> auth
