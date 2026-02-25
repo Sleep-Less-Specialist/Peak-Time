@@ -76,8 +76,8 @@ public class UserService {
 	@Transactional(readOnly = true)
 	public List<MyCourseRes> getMyCourses(Long userId) {
 
-		List<Enrollment> enrollments = enrollmentRepository.findAllByUserIdAndStatusOrderByCreatedAtDesc(
-			userId, EnrollmentStatus.ENROLLED);
+		List<Enrollment> enrollments =
+			enrollmentRepository.findAllWithCourseAndLecturerByUserIdAndStatus(userId, EnrollmentStatus.ENROLLED);
 
 		return enrollments.stream()
 			.map(enrollment -> MyCourseRes.builder()

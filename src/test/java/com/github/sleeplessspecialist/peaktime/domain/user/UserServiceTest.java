@@ -122,7 +122,7 @@ class UserServiceTest {
 			.build();
 		ReflectionTestUtils.setField(enrollment, "createdAt", LocalDateTime.now());
 
-		given(enrollmentRepository.findAllByUserIdAndStatusOrderByCreatedAtDesc(userId, EnrollmentStatus.ENROLLED))
+		given(enrollmentRepository.findAllWithCourseAndLecturerByUserIdAndStatus(userId, EnrollmentStatus.ENROLLED))
 			.willReturn(List.of(enrollment));
 
 		// when
@@ -138,7 +138,7 @@ class UserServiceTest {
 	void getMyCourses_Success_Empty() {
 		// given
 		Long userId = 1L;
-		given(enrollmentRepository.findAllByUserIdAndStatusOrderByCreatedAtDesc(userId, EnrollmentStatus.ENROLLED))
+		given(enrollmentRepository.findAllWithCourseAndLecturerByUserIdAndStatus(userId, EnrollmentStatus.ENROLLED))
 			.willReturn(Collections.emptyList());
 
 		// when
@@ -265,7 +265,7 @@ class UserServiceTest {
 		assertThatThrownBy(() -> userService.uploadProfileImage(userId, file))
 			.isInstanceOf(RuntimeException.class)
 			.hasMessage("DB Connection Error");
-		
+
 		verify(s3Uploader).deleteFile(uploadedUrl);
 	}
 }
