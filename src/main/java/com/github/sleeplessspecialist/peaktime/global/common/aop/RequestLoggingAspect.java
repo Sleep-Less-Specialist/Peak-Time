@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
  * 요청 단위 공통 로그를 남기기 위한 AOP 입니다.
  * <p>
  * 목적 : ELK/Kibana에서 검색/필터링이 가능하도록
- * method, endpoint(URI), params, userId, status, traceId, latencyMs 등의 필드를 일관되게 로그로 남깁니다.
+ * method, endpoint(URI), params, userId, traceId, latencyMs 등의 필드를 일관되게 로그로 남깁니다.
  * </p>
  *
  * @author 재원
@@ -48,7 +48,7 @@ public class RequestLoggingAspect {
 	/**
 	 * {@org.springframework.web.bind.annotation.RestController} 요청을 감싸서 공통 요청 로그를 남깁니다.
 	 * <p>
-	 * 기록 필드:	method / endpoint / params / userId / status / traceId / latencyMs
+	 * 기록 필드:	method / endpoint / params / userId / traceId / latencyMs
 	 * </p>
 	 */
 	@Around("within(@org.springframework.web.bind.annotation.RestController *)")
@@ -65,41 +65,39 @@ public class RequestLoggingAspect {
 		try {
 			Object result = joinPoint.proceed();
 			long latencyMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNs);
-			int status = resolveStatusCode(200);
-			logRequestSuccess(method, endpoint, status, userId, traceId, latencyMs, params);
+			logRequestSuccess(method, endpoint, userId, traceId, latencyMs, params);
 			return result;
 		} catch (Error err) {
 			throw err;
 		} catch (Throwable ex) {
 			long latencyMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNs);
-			int status = resolveStatusCode(500);
-			logRequestFailure(method, endpoint, status, userId, traceId, latencyMs, params, ex);
+			logRequestFailure(method, endpoint, userId, traceId, latencyMs, params, ex);
 			throw ex;
 		}
 	}
 
-	private void logRequestSuccess(String method, String endpoint, int status, Long userId, String traceId,
+	private void logRequestSuccess(String method, String endpoint, Long userId, String traceId,
 		long latencyMs, String params) {
 		if (hasText(params)) {
-			log.info("request method={} endpoint={} status={} userId={} traceId={} latencyMs={} params={}",
-				method, endpoint, status, userId, traceId, latencyMs, params);
+			log.info("request method={} endpoint={} userId={} traceId={} latencyMs={} params={}",
+				method, endpoint, userId, traceId, latencyMs, params);
 			return;
 		}
-		log.info("request method={} endpoint={} status={} userId={} traceId={} latencyMs={}",
-			method, endpoint, status, userId, traceId, latencyMs);
+		log.info("request method={} endpoint={} userId={} traceId={} latencyMs={}",
+			method, endpoint, userId, traceId, latencyMs);
 	}
 
-	private void logRequestFailure(String method, String endpoint, int status, Long userId, String traceId,
+	private void logRequestFailure(String method, String endpoint, Long userId, String traceId,
 		long latencyMs, String params, Throwable ex) {
 		String exName = ex.getClass().getSimpleName();
 
 		if (hasText(params)) {
-			log.warn("request_failed method={} endpoint={} status={} userId={} traceId={} latencyMs={} params={} ex={}",
-				method, endpoint, status, userId, traceId, latencyMs, params, exName);
+			log.warn("request_failed method={} endpoint={} userId={} traceId={} latencyMs={} params={} ex={}",
+				method, endpoint, userId, traceId, latencyMs, params, exName);
 			return;
 		}
-		log.warn("request_failed method={} endpoint={} status={} userId={} traceId={} latencyMs={} ex={}",
-			method, endpoint, status, userId, traceId, latencyMs, exName);
+		log.warn("request_failed method={} endpoint={} userId={} traceId={} latencyMs={} ex={}",
+			method, endpoint, userId, traceId, latencyMs, exName);
 	}
 
 	private HttpServletRequest currentRequest() {
@@ -134,19 +132,6 @@ public class RequestLoggingAspect {
 			return UNKNOWN;
 		}
 		return uri;
-	}
-
-	private int resolveStatusCode(int defaultStatus) {
-		try {
-			ServletRequestAttributes attrs = (ServletRequestAttributes)RequestContextHolder.getRequestAttributes();
-			if (attrs == null || attrs.getResponse() == null) {
-				return defaultStatus;
-			}
-			int status = attrs.getResponse().getStatus();
-			return status > 0 ? status : defaultStatus;
-		} catch (Exception ignored) {
-			return defaultStatus;
-		}
 	}
 
 	private String resolveTraceId() {
