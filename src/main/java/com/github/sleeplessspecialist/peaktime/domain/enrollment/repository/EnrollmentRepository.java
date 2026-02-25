@@ -3,6 +3,8 @@ package com.github.sleeplessspecialist.peaktime.domain.enrollment.repository;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import com.github.sleeplessspecialist.peaktime.domain.enrollment.entity.Enrollment;
 import com.github.sleeplessspecialist.peaktime.domain.enrollment.entity.EnrollmentStatus;
@@ -26,4 +28,18 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
 	List<Enrollment> findAllByUserIdAndStatusOrderByCreatedAtDesc(Long userId, EnrollmentStatus status);
 
 	boolean existsByUserIdAndCourseIdAndStatus(Long userId, Long courseId, EnrollmentStatus status);
+
+	@Query("""
+		   select e
+		   from Enrollment e
+		   join fetch e.course c
+		   join fetch c.lecturer
+		   where e.user.id = :userId
+		     and e.status = :status
+		   order by e.createdAt desc
+		""")
+	List<Enrollment> findAllWithCourseAndLecturerByUserIdAndStatus(
+		@Param("userId") Long userId,
+		@Param("status") EnrollmentStatus status
+	);
 }

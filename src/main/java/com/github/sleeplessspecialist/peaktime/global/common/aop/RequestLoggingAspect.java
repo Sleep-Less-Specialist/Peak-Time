@@ -164,14 +164,18 @@ public class RequestLoggingAspect {
 			if (!hasText(key)) {
 				continue;
 			}
-			String lower = key.toLowerCase();
+			String sanitizedKey = sanitize(key);
+			if (!hasText(sanitizedKey)) {
+				continue;
+			}
+			String lower = sanitizedKey.toLowerCase();
 			boolean sensitive = containsAny(lower, SENSITIVE_KEYWORDS);
 
 			String value = sensitive ? "***" : sanitize(joinAndTruncate(entry.getValue(), 100));
 			if (sb.length() > 0) {
 				sb.append("&");
 			}
-			sb.append(key).append("=").append(value);
+			sb.append(sanitizedKey).append("=").append(value);
 
 			if (sb.length() >= totalMax) {
 				sb.setLength(totalMax);
