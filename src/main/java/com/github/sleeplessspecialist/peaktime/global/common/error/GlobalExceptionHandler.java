@@ -2,9 +2,13 @@ package com.github.sleeplessspecialist.peaktime.global.common.error;
 
 import java.util.List;
 
+import jakarta.persistence.PessimisticLockException;
 import lombok.extern.slf4j.Slf4j;
 
+import org.hibernate.exception.LockAcquisitionException;
+import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -65,6 +69,22 @@ public class GlobalExceptionHandler {
 			.status(GlobalErrorCode.DATA_INTEGRITY_VIOLATION.getHttpStatus())
 			.body(ErrorResponse.from(GlobalErrorCode.DATA_INTEGRITY_VIOLATION));
 	}
+
+    @ExceptionHandler({
+            PessimisticLockException.class,
+            LockAcquisitionException.class,
+            CannotAcquireLockException.class,
+            PessimisticLockingFailureException.class
+    })
+    public ResponseEntity<ErrorResponse> handleLockAcquisitionFailedException(Exception e) {
+
+        log.warn("비관적 락 획득 실패 또는 타임아웃 발생");
+        log.debug("락 예외 상세", e);
+
+        return ResponseEntity
+                .status(GlobalErrorCode.LOCK_ACQUISITION_FAILED.getHttpStatus())
+                .body(ErrorResponse.from(GlobalErrorCode.LOCK_ACQUISITION_FAILED));
+    }
 
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ErrorResponse> handleException(Exception e) {
