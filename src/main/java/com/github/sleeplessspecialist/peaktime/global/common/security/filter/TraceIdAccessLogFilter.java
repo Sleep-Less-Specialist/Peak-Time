@@ -1,5 +1,7 @@
 package com.github.sleeplessspecialist.peaktime.global.common.security.filter;
 
+import static net.logstash.logback.argument.StructuredArguments.*;
+
 import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -81,8 +83,14 @@ public class TraceIdAccessLogFilter extends OncePerRequestFilter {
 			Long userId = resolveUserId();
 
 			// 최종 응답 기준 access log (정확한 status)
-			log.info("access method={} endpoint={} status={} userId={} traceId={} latencyMs={}",
-				method, endpoint, status, userId, traceId, latencyMs);
+			log.info("access",
+				kv("log_type", "access"),
+				kv("method", method),
+				kv("endpoint", endpoint),
+				kv("status", status),
+				kv("userId", userId),
+				kv("latencyMs", latencyMs)
+			);
 
 			// MDC 정리
 			MDC.remove("traceId");

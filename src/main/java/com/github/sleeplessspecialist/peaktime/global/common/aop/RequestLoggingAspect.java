@@ -1,4 +1,5 @@
 package com.github.sleeplessspecialist.peaktime.global.common.aop;
+import static net.logstash.logback.argument.StructuredArguments.kv;
 
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -78,26 +79,54 @@ public class RequestLoggingAspect {
 
 	private void logRequestSuccess(String method, String endpoint, Long userId, String traceId,
 		long latencyMs, String params) {
+
 		if (hasText(params)) {
-			log.info("request method={} endpoint={} userId={} traceId={} latencyMs={} params={}",
-				method, endpoint, userId, traceId, latencyMs, params);
+			log.info("request",
+				kv("log_type", "request"),
+				kv("method", method),
+				kv("endpoint", endpoint),
+				kv("userId", userId),
+				kv("latencyMs", latencyMs),
+				kv("params", params)
+			);
 			return;
 		}
-		log.info("request method={} endpoint={} userId={} traceId={} latencyMs={}",
-			method, endpoint, userId, traceId, latencyMs);
+
+		log.info("request",
+			kv("log_type", "request"),
+			kv("method", method),
+			kv("endpoint", endpoint),
+			kv("userId", userId),
+			kv("latencyMs", latencyMs)
+		);
 	}
 
 	private void logRequestFailure(String method, String endpoint, Long userId, String traceId,
 		long latencyMs, String params, Throwable ex) {
+
 		String exName = ex.getClass().getSimpleName();
 
 		if (hasText(params)) {
-			log.warn("request_failed method={} endpoint={} userId={} traceId={} latencyMs={} params={} ex={}",
-				method, endpoint, userId, traceId, latencyMs, params, exName);
+			log.warn("request_failed",
+				kv("log_type", "request_failed"),
+				kv("method", method),
+				kv("endpoint", endpoint),
+				kv("userId", userId),
+				kv("latencyMs", latencyMs),
+				kv("params", params),
+				kv("exception", exName)
+			);
 			return;
 		}
-		log.warn("request_failed method={} endpoint={} userId={} traceId={} latencyMs={} ex={}",
-			method, endpoint, userId, traceId, latencyMs, exName);
+
+		log.warn("request_failed",
+			kv("log_type", "request_failed"),
+			kv("method", method),
+			kv("endpoint", endpoint),
+			kv("userId", userId),
+			kv("latencyMs", latencyMs),
+			kv("exception", exName)
+		);
 	}
 
 	private HttpServletRequest currentRequest() {
