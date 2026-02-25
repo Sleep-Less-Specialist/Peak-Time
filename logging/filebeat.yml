@@ -1,14 +1,24 @@
 filebeat.inputs:
   - type: filestream
+    id: peaktime-docker-logs
+    enabled: true
     paths:
       - /var/lib/docker/containers/*/*.log
     parsers:
       - ndjson:
           target: "docker"
           message_key: "log"
+          add_error_key: true
 
 processors:
-  - add_docker_metadata: ~
+  # docker.sock을 사용하지 않으므로 docker metadata 프로세서는 제거합니다.
+  # logback(LogstashEncoder)에서 JSON으로 구조화된 앱 로그가 docker.log에 들어오므로
+  # decode_json_fields로 app.* 필드로 파싱합니다.
+  - decode_json_fields:
+      fields: ["docker.log"]
+      target: "app"
+      overwrite_keys: false
+      add_error_key: true
 
 output.elasticsearch:
   hosts: ["http://peaktime-elasticsearch:9200"]
