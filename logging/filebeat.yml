@@ -4,23 +4,53 @@ filebeat.inputs:
     enabled: true
     paths:
       - /var/lib/docker/containers/*/*.log
+    parsers:
+      - ndjson:
+          target: "docker"
+          message_key: "log"
+          add_error_key: true
 
 processors:
   - add_docker_metadata: ~
 
-  # peaktime-app 컨테이너 로그만 수집
   - drop_event:
       when:
         not:
           equals:
             container.name: "peaktime-app"
 
-  # JSON 로그일 경우 필드로 파싱
+  # message가 JSON이면 app.*로 파싱 (추후 JSON 로깅 전환 대비)
   - decode_json_fields:
       fields: ["message"]
-      target: ""
-      overwrite_keys: true
+      target: "app"
+      overwrite_keys: false
       add_error_key: true
+
+  # 지금은 key=value 로그이므로 dissect로 필드 추출 (endpoint/userId/latency 필터용)
+  - dissect:
+      tokenizer: "request method=%{app.method} endpoint=%{app.endpoint} status=%{app.status} userId=%{app.userId} traceId=%{app.traceId} latencyMs=%{app.latencyMs} params=%{app.params}"
+      field: "message"
+      target_prefix: ""
+      ignore_failure: true
+
+  - dissect:
+      tokenizer: "request method=%{app.method} endpoint=%{app.endpoint} status=%{app.status} userId=%{app.userId} traceId=%{app.traceId} latencyMs=%{app.latencyMs}"
+      field: "message"
+      target_prefix: ""
+      ignore_failure: true
+
+  - dissect:
+      tokenizer: "request_failed method=%{app.method} endpoint=%{app.endpoint} status=%{app.status} userId=%{app.userId} traceId=%{app.traceId} latencyMs=%{app.latencyMs} params=%{app.params} ex=%{app.ex}"
+      field: "message"
+      target_prefix: ""
+      ignore_failure: true
+
+  - dissect:
+      tokenizer: "request_failed method=%{app.method} endpoint=%{app.endpoint} status=%{app.status} userId=%{app.userId} traceId=%{app.traceId} latencyMs=%{app.latencyMs} ex=%{app.ex}"
+      field: "message"
+      target_prefix: ""
+      ignore_failure: true
+
 
 output.elasticsearch:
   hosts: ["http://peaktime-elasticsearch:9200"]
