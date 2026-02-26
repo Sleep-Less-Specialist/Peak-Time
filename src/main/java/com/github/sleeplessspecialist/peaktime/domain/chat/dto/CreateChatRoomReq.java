@@ -1,9 +1,7 @@
 package com.github.sleeplessspecialist.peaktime.domain.chat.dto;
 
 import jakarta.validation.constraints.Size;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 /**
  * 채팅방 생성 요청 dto
@@ -13,9 +11,10 @@ import lombok.NoArgsConstructor;
  * @since 2026.01.22
  */
 @Getter
-@AllArgsConstructor
+@RequiredArgsConstructor
+@Builder
 public class CreateChatRoomReq {
 
 	@Size(max = 255)
-	private String description;
+	private final String description;
 }
