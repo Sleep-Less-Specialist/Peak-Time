@@ -34,7 +34,7 @@ import lombok.extern.slf4j.Slf4j;
  * 커피쳇(Chat) 도메인의 핵심 비즈니스 로직을 처리하는 서비스 클래스입니다.
  *
  * @author 주우재
- * @version 1.0
+ * @version 1.1
  * @since 2026.01.22
  */
 
@@ -162,8 +162,8 @@ public class ChatService {
 	 *
 	 * <p>
 	 *    1. 참여 하고자하는 roomId -> room 이 존재하는지 검증
-	 * 	  2. 현재 인증 userId 가 DB 에 존재하는 user 인지 검증
-	 * 	  3. 채팅방이 OPEN 상태인지 검증 (CLOSED, MATCHED) 이면 참여 불가능
+	 * 	  2. 채팅방이 OPEN 상태인지 검증 (CLOSED, MATCHED) 이면 참여 불가능
+	 * 	  3. 현재 인증 userId 가 DB 에 존재하는 user 인지 검증
 	 * 	  	- 정책 에서 이미 MATCHED 라면 participant.size() = 2 임을 보장
 	 * 	  4. chatRoom 에 연관된 participant 에 user 가 존재하는지 검증
 	 * 	  	- 정책 에서 참여자 상태가 host 여야 하지만 room 이 현재 user 를 포함하는지 검증이 더 포괄적인 검증
@@ -171,13 +171,37 @@ public class ChatService {
 	 * </p>
 	 *
 	 */
-	@Transactional
-	public void addParticipantToChat(Long userId, Long roomId) {
+    @Transactional
+    public void addParticipantToChat(Long userId, Long roomId) {
 
-		ChatRoom chatRoom = getChatRoom(roomId);
-		User user = getUser(userId);
+        ChatRoom chatRoom = getChatRoom(roomId);
 
-		validateJoinableRoom(chatRoom, roomId, userId);
+        validateJoinableRoom(chatRoom, roomId, userId);
+        User user = getUser(userId);
+        validateNotAlreadyParticipant(chatRoom, user, roomId, userId);
+
+        ChatParticipant chatParticipant = ChatParticipant.builder()
+                .chatRoom(chatRoom)
+                .user(user)
+                .roleInRoom(RoleInRoom.GUEST)
+                .build();
+        chatParticipantRepository.save(chatParticipant);
+
+        chatRoom.matched();
+    }
+
+    /**
+     * 커피쳇 참여 - 비관적 락을 적용한 ver
+     */
+    @Transactional
+	public void addParticipantToChatWithPessimisticLock(Long userId, Long roomId) {
+
+        ChatRoom chatRoom = chatRoomRepository.findByIdForUpdate(roomId)
+                .orElseThrow(() -> new CustomException(ChatErrorCode.CHAT_ROOM_NOT_FOUND));
+
+        validateJoinableRoom(chatRoom, roomId, userId);
+        User user = getUser(userId);
+
 		validateNotAlreadyParticipant(chatRoom, user, roomId, userId);
 
 		ChatParticipant chatParticipant = ChatParticipant.builder()

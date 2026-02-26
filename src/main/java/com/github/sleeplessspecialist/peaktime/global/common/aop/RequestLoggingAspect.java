@@ -43,7 +43,8 @@ public class RequestLoggingAspect {
 		"password", "passwd", "pwd",
 		"token", "accesstoken", "refreshtoken",
 		"auth", "authorization",
-		"email", "phone", "phonenumber", "mobile"
+		"email", "phone", "phonenumber", "mobile",
+		"code", "state", "client_secret", "secret", "authorization_code"
 	);
 
 	/**
@@ -80,7 +81,7 @@ public class RequestLoggingAspect {
 	private void logRequestSuccess(String method, String endpoint, Long userId, String traceId,
 		long latencyMs, String params) {
 
-		if (hasText(params)) {
+		if (hasText(params) && shouldLogParams(endpoint)) {
 			log.info("request",
 				kv("log_type", "request"),
 				kv("method", method),
@@ -106,7 +107,7 @@ public class RequestLoggingAspect {
 
 		String exName = ex.getClass().getSimpleName();
 
-		if (hasText(params)) {
+		if (hasText(params) && shouldLogParams(endpoint)) {
 			log.warn("request_failed",
 				kv("log_type", "request_failed"),
 				kv("method", method),
@@ -161,6 +162,19 @@ public class RequestLoggingAspect {
 			return UNKNOWN;
 		}
 		return uri;
+	}
+
+	private boolean shouldLogParams(String endpoint) {
+		if (!hasText(endpoint)) {
+			return false;
+		}
+		String e = endpoint.toLowerCase();
+		return !(e.contains("/oauth")
+			|| e.contains("/login")
+			|| e.contains("/signup")
+			|| e.contains("/password")
+			|| e.contains("/reset")
+			|| e.contains("/actuator"));
 	}
 
 	private String resolveTraceId() {
