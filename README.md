@@ -10,8 +10,44 @@ Repository: [Sleep-Less-Specialist/Peak-Time](https://github.com/Sleep-Less-Spec
 - 강의 구매 이후 1:1 커피챗까지의 학습 여정 통합
 - 역할 기반 운영 정책(`STUDENT`, `LECTURER`, `ADMIN`)
 
+## 개발 중점
+- **유지보수하기 쉬운 구조 우선**: 기능 추가 속도보다 책임 분리와 공통화에 집중해 장기적으로 관리 가능한 코드를 지향
+- **프론트 협업을 고려한 API 설계**: 서버사이드 렌더링보다 API 중심 구조를 채택하고, JSON 응답 형식을 일관되게 유지
+- **변경에 강한 설계**: 구현체에 직접 묶이지 않도록 의존성을 분리해 기능 확장 시 기존 코드 수정 범위를 최소화
+- **공통 로직 분리로 중복 최소화**: 로깅/예외 처리/보안 같은 반복 로직은 공통 계층으로 분리해 핵심 비즈니스 로직에 집중
+- **운영 안정성 중심 기술 선택**: 라이브러리나 기능 도입 시 목적과 대안을 비교하고, 실제 운영 안정성에 기여하는지 기준으로 판단
+- **예외/응답 정책 표준화**: 예외 유형과 HTTP 상태 코드를 통일해 클라이언트와의 계약을 명확화
+- **트래픽 증가 상황 대비**: 인증/로그인 처리와 동시성 이슈를 고려해 확장 가능한 구조를 우선적으로 적용
+
+
+## 협업 방식
+- **Branch 전략 기반 병렬 개발**: 기능/개선/수정 단위 브랜치 분리로 충돌 최소화
+- **PR 중심 코드 리뷰 프로세스**: 모든 변경을 PR로 통합하고 설계 의도/영향 범위/품질 기준 상호 검증
+- **GitHub Issue 기반 작업 정의**: 기능/버그/리팩터링/테스트 작업을 이슈로 명세하고 완료 기준 추적
+- **칸반보드 기반 일정/상태 관리**: `Backlog / Ready / hotfix(긴급처리 시) / In progress / In review / Done` 흐름으로 우선순위와 병목 관리
+- **코드 컨벤션 준수**: 네이밍/계층 책임/예외 처리/응답 포맷 기준 통일
+  - 기본 코드 컨벤션은 Naver Code Convention 을 기준으로 진행 
+- **Git 컨벤션 준수**: 브랜치/커밋/PR 템플릿/리뷰 체크리스트 일관 적용
+
+> 협업 관련 캡처(브랜치 전략, PR 템플릿, 이슈 템플릿, 칸반보드)는 Wiki에 상세 정리
+
 ## 아키텍처
 ![System Architecture](images/architecture/system_architecture_after_monitoring.png)
+
+## ERD
+![project_erd.png](images/project_erd.png)
+
+## 와이어프레임
+![PeakTime-Wireframe-v1-1.jpg](images/PeakTime-Wireframe-v1-1.jpg)
+
+> 상세 화면/ 흐름은 Wiki에서 관리
+
+## Swagger 운영현황
+![swagger_ui.png](images/swagger_ui.png)
+### Swagger 접속 경로
+- Local: [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
+- OpenAPI JSON: [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs)
+
 
 ## 핵심 기능
 1. 인증/인가  
@@ -28,19 +64,20 @@ Repository: [Sleep-Less-Specialist/Peak-Time](https://github.com/Sleep-Less-Spec
    사용자 목록/상태 변경, 역할 기반 접근 제한
 
 ## 기술 스택
-- **Java 17**: LTS 기반으로 안정적인 백엔드 런타임 사용
-- **Spring Boot 3.5.9**: API/비즈니스 로직 중심의 애플리케이션 프레임워크
-- **Spring Security + JWT + OAuth2 Client**: 토큰 기반 인증과 소셜 로그인 처리
-- **Spring Data JPA + MySQL**: 도메인 중심 데이터 모델링 및 영속성 관리
-- **Redis**: Refresh Token 저장, 로그인 시도 제한, 임시 데이터 캐시
-- **WebSocket(STOMP, SockJS)**: 커피챗 실시간 메시징 처리
-- **AWS S3**: 프로필/강의 파일 업로드 및 저장
-- **Toss Payments**: 결제 승인/취소 연동
-- **Prometheus + Grafana**: 애플리케이션 메트릭 수집 및 대시보드 모니터링
-- **ELK(Filebeat, Elasticsearch, Kibana)**: 구조화 로그 수집/검색/분석
-- **Docker / Docker Compose**: 로컬/운영 환경의 실행 일관성 확보
-- **GitHub Actions**: CI/CD 자동화 파이프라인 운영
-- **Spring REST Docs + Asciidoctor**: 테스트 기반 API 문서 자동 생성
+| 구분 | 기술 | 사용 목적 |
+|---|---|---|
+| Language | Java 17 | LTS 기반 안정적 런타임 |
+| Framework | Spring Boot 3.5.9 | API/비즈니스 로직 개발 |
+| Security | Spring Security, JWT, OAuth2 Client | 인증/인가 및 소셜 로그인 |
+| Data | Spring Data JPA, MySQL | 도메인 데이터 영속성 |
+| Cache | Redis | Refresh Token 저장, 로그인 시도 제한 |
+| Realtime | WebSocket, STOMP, SockJS | 실시간 커피챗 메시징 |
+| Storage | AWS S3 | 프로필/강의 파일 저장 |
+| Payment | Toss Payments | 결제 승인/취소 연동 |
+| Observability | Prometheus, Grafana, ELK | 메트릭/로그 관측 |
+| Infra | Docker, Docker Compose | 실행 환경 일관성 |
+| CI/CD | GitHub Actions | 빌드/배포 자동화 |
+| Docs | Swagger(OpenAPI), Spring REST Docs, Asciidoctor | 현재 Swagger 운영, REST Docs 기반 자동화 전환 예정 |
 
 ### 테스트 및 문서화
 - **단위 테스트(Unit Test)**: 주요 도메인 서비스/컨트롤러 중심으로 작성 및 유지
@@ -77,14 +114,14 @@ docker compose up -d
 ## 모니터링 / 로깅
 ### Prometheus + Grafana
 ```bash
-cd monitoring
-docker compose -f docker-compose.monitoring.yml up -d
+docker compose -f monitoring/docker-compose.monitoring.yml up -d
 ```
 ### ELK (Elasticsearch + Kibana + Filebeat)
 ```bash
-cd logging
-docker compose -f docker-compose.elk.yml up -d
+docker compose -f logging/docker-compose.elk.yml up -d
 ```
+> monitoring/logging compose는 peak-time_default 외부 네트워크를 사용하므로,
+> 먼저 프로젝트 루트에서 docker compose up -d를 실행해 기본 네트워크를 생성하세요.
 
 ## API 테스트
 `http/` 폴더 시나리오 파일:
