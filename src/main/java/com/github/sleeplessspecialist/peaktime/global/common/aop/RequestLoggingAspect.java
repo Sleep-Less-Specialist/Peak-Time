@@ -1,4 +1,5 @@
 package com.github.sleeplessspecialist.peaktime.global.common.aop;
+import static net.logstash.logback.argument.StructuredArguments.kv;
 
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -42,7 +43,8 @@ public class RequestLoggingAspect {
 		"password", "passwd", "pwd",
 		"token", "accesstoken", "refreshtoken",
 		"auth", "authorization",
-		"email", "phone", "phonenumber", "mobile"
+		"email", "phone", "phonenumber", "mobile",
+		"code", "state", "client_secret", "secret", "authorization_code"
 	);
 
 	/**
@@ -78,26 +80,54 @@ public class RequestLoggingAspect {
 
 	private void logRequestSuccess(String method, String endpoint, Long userId, String traceId,
 		long latencyMs, String params) {
-		if (hasText(params)) {
-			log.info("request method={} endpoint={} userId={} traceId={} latencyMs={} params={}",
-				method, endpoint, userId, traceId, latencyMs, params);
+
+		if (hasText(params) && shouldLogParams(endpoint)) {
+			log.info("request",
+				kv("log_type", "request"),
+				kv("method", method),
+				kv("endpoint", endpoint),
+				kv("userId", userId),
+				kv("latencyMs", latencyMs),
+				kv("params", params)
+			);
 			return;
 		}
-		log.info("request method={} endpoint={} userId={} traceId={} latencyMs={}",
-			method, endpoint, userId, traceId, latencyMs);
+
+		log.info("request",
+			kv("log_type", "request"),
+			kv("method", method),
+			kv("endpoint", endpoint),
+			kv("userId", userId),
+			kv("latencyMs", latencyMs)
+		);
 	}
 
 	private void logRequestFailure(String method, String endpoint, Long userId, String traceId,
 		long latencyMs, String params, Throwable ex) {
+
 		String exName = ex.getClass().getSimpleName();
 
-		if (hasText(params)) {
-			log.warn("request_failed method={} endpoint={} userId={} traceId={} latencyMs={} params={} ex={}",
-				method, endpoint, userId, traceId, latencyMs, params, exName);
+		if (hasText(params) && shouldLogParams(endpoint)) {
+			log.warn("request_failed",
+				kv("log_type", "request_failed"),
+				kv("method", method),
+				kv("endpoint", endpoint),
+				kv("userId", userId),
+				kv("latencyMs", latencyMs),
+				kv("params", params),
+				kv("exception", exName)
+			);
 			return;
 		}
-		log.warn("request_failed method={} endpoint={} userId={} traceId={} latencyMs={} ex={}",
-			method, endpoint, userId, traceId, latencyMs, exName);
+
+		log.warn("request_failed",
+			kv("log_type", "request_failed"),
+			kv("method", method),
+			kv("endpoint", endpoint),
+			kv("userId", userId),
+			kv("latencyMs", latencyMs),
+			kv("exception", exName)
+		);
 	}
 
 	private HttpServletRequest currentRequest() {
@@ -132,6 +162,19 @@ public class RequestLoggingAspect {
 			return UNKNOWN;
 		}
 		return uri;
+	}
+
+	private boolean shouldLogParams(String endpoint) {
+		if (!hasText(endpoint)) {
+			return false;
+		}
+		String e = endpoint.toLowerCase();
+		return !(e.contains("/oauth")
+			|| e.contains("/login")
+			|| e.contains("/signup")
+			|| e.contains("/password")
+			|| e.contains("/reset")
+			|| e.contains("/actuator"));
 	}
 
 	private String resolveTraceId() {

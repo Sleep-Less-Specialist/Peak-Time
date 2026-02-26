@@ -11,66 +11,14 @@ filebeat.inputs:
           add_error_key: true
 
 processors:
-  - add_docker_metadata: ~
-
-  - drop_event:
-      when:
-        not:
-          equals:
-            container.name: "peaktime-app"
-
-  # message가 JSON이면 app.*로 파싱 (추후 JSON 로깅 전환 대비)
+  # docker.sock을 사용하지 않으므로 docker metadata 프로세서는 제거합니다.
+  # logback(LogstashEncoder)에서 JSON으로 구조화된 앱 로그가 docker.log에 들어오므로
+  # decode_json_fields로 app.* 필드로 파싱합니다.
   - decode_json_fields:
-      fields: ["message"]
+      fields: ["docker.log"]
       target: "app"
       overwrite_keys: false
       add_error_key: true
 
-  # AOP 성공 로그 (params 포함)
-  - dissect:
-      tokenizer: "request method=%{app.method} endpoint=%{app.endpoint} userId=%{app.userId} traceId=%{app.traceId} latencyMs=%{app.latencyMs} params=%{app.params}"
-      field: "message"
-      target_prefix: ""
-      ignore_failure: true
-
-  # AOP 성공 로그 (params 없음)
-  - dissect:
-      tokenizer: "request method=%{app.method} endpoint=%{app.endpoint} userId=%{app.userId} traceId=%{app.traceId} latencyMs=%{app.latencyMs}"
-      field: "message"
-      target_prefix: ""
-      ignore_failure: true
-
-  # AOP 실패 로그 (params 포함)
-  - dissect:
-      tokenizer: "request_failed method=%{app.method} endpoint=%{app.endpoint} userId=%{app.userId} traceId=%{app.traceId} latencyMs=%{app.latencyMs} params=%{app.params} ex=%{app.ex}"
-      field: "message"
-      target_prefix: ""
-      ignore_failure: true
-
-  # AOP 실패 로그 (params 없음)
-  - dissect:
-      tokenizer: "request_failed method=%{app.method} endpoint=%{app.endpoint} userId=%{app.userId} traceId=%{app.traceId} latencyMs=%{app.latencyMs} ex=%{app.ex}"
-      field: "message"
-      target_prefix: ""
-      ignore_failure: true
-
-  # Access 로그 (Filter) - 최종 status 포함 (params 없음)
-  - dissect:
-      tokenizer: "access method=%{app.method} endpoint=%{app.endpoint} status=%{app.status} userId=%{app.userId} traceId=%{app.traceId} latencyMs=%{app.latencyMs}"
-      field: "message"
-      target_prefix: ""
-      ignore_failure: true
-
-  # Access 로그 (Filter) - 추가 필드가 붙는 경우 대비 (맨 끝에 남은 문자열을 extra로 수집)
-  - dissect:
-      tokenizer: "access method=%{app.method} endpoint=%{app.endpoint} status=%{app.status} userId=%{app.userId} traceId=%{app.traceId} latencyMs=%{app.latencyMs} %{app.extra}"
-      field: "message"
-      target_prefix: ""
-      ignore_failure: true
-
-
 output.elasticsearch:
   hosts: ["http://peaktime-elasticsearch:9200"]
-
-setup.kibana:
-  host: "http://peaktime-kibana:5601"
