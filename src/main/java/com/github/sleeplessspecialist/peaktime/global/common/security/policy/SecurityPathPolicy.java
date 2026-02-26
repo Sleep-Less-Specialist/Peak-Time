@@ -14,71 +14,78 @@ package com.github.sleeplessspecialist.peaktime.global.common.security.policy;
  */
 public final class SecurityPathPolicy {
 
-	/**
-	 * 공개(permitAll) 엔드포인트 목록입니다.
-	 * <p>
-	 * 인증/인가(비로그인 가능)
-	 * </p>
-	 */
-	public static final String[] PUBLIC_ENDPOINTS = {
-		"/error",
+    /**
+     * 공개(permitAll) 엔드포인트 목록입니다.
+     * <p>
+     * 인증/인가(비로그인 가능)
+     * </p>
+     */
+    public static final String[] PUBLIC_ENDPOINTS = {
+            "/error",
 
-		// ✅ 모니터링(Actuator)
-		"/actuator/health",
-		"/actuator/info",
-		"/actuator/prometheus",
-
-
-		// ✅ 기본 프론트 진입
-		"/",
-		"/index.html",
-		"/signup.html",
-		"/favicon.ico",
-		// ✅ 비밀번호 재설정 화면 진입(메일 링크)
-		"/reset-password",
-		"/reset-password.html",
+            // ✅ 모니터링(Actuator)
+            "/actuator/health",
+            "/actuator/info",
+            "/actuator/prometheus",
 
 
-		// 정적 리소스
-		"/css/**",
-		"/js/**",
-		"/images/**",
+            // ✅ 기본 프론트 진입
+            "/",
+            "/index.html",
+            "/signup.html",
+            "/favicon.ico",
+            // ✅ 비밀번호 재설정 화면 진입(메일 링크)
+            "/reset-password",
+            "/reset-password.html",
 
-		// 인증/인가(비로그인 가능)
-		"/api/v2/auth/signup",
-		"/api/v2/auth/login",
-		"/api/v2/auth/reissue",
-		"/api/v2/auth/logout",
-		"/api/v2/auth/password/**",
 
-		// OAuth2
-		"/oauth2/**",
-		"/login/oauth2/**",
-		"/api/v2/oauth2/**"
-	};
+            // 정적 리소스
+            "/css/**",
+            "/js/**",
+            "/images/**",
 
-	/**
-	 * 공개 조회(GET) 엔드포인트 목록입니다.
-	 * <p>
-	 * 명세에서 "공통(비로그인)"으로 정의된 조회 API만 포함합니다.
-	 * (중요) POST/PATCH/DELETE까지 열리지 않도록 SecurityConfig에서 HttpMethod.GET와 함께 사용해야 합니다.
-	 * </p>
-	 */
-	public static final String[] PUBLIC_GET_ENDPOINTS = {
-		"/api/v1/courses",
-		"/api/v1/courses/*",
-		"/api/v1/reviews",
-		"/api/v1/reviews/*",
-		"/api/v1/chat/room",
-        "/api/v1/courses/ranking/last-3-days"
-	};
+            // swagger
+            "/swagger-ui/**",
+            "/swagger-ui.html",
+            "/v3/api-docs/**",
+            "/webjars/**",
 
-	// 관리자
-	public static final String ADMIN_ENDPOINTS = "/api/v1/admin/**";
+            // 인증/인가(비로그인 가능)
+            "/api/v2/auth/signup",
+            "/api/v2/auth/login",
+            "/api/v2/auth/reissue",
+            "/api/v2/auth/logout",
+            "/api/v2/auth/password/**",
 
-	// 강의자
-	public static final String LECTURER_ENDPOINTS = "/api/v1/lecturer/**";
 
-	private SecurityPathPolicy() {
-	}
+            // OAuth2
+            "/oauth2/**",
+            "/login/oauth2/**",
+            "/api/v2/oauth2/**"
+    };
+
+    /**
+     * 공개 조회(GET) 엔드포인트 목록입니다.
+     * <p>
+     * 명세에서 "공통(비로그인)"으로 정의된 조회 API만 포함합니다.
+     * (중요) POST/PATCH/DELETE까지 열리지 않도록 SecurityConfig에서 HttpMethod.GET와 함께 사용해야 합니다.
+     * </p>
+     */
+    public static final String[] PUBLIC_GET_ENDPOINTS = {
+            "/api/v1/courses",
+            "/api/v1/courses/*",
+            "/api/v1/reviews",
+            "/api/v1/reviews/*",
+            "/api/v1/chat/room",
+            "/api/v1/courses/ranking/last-3-days"
+    };
+
+    // 관리자
+    public static final String ADMIN_ENDPOINTS = "/api/v1/admin/**";
+
+    // 강의자
+    public static final String LECTURER_ENDPOINTS = "/api/v1/lecturer/**";
+
+    private SecurityPathPolicy() {
+    }
 }
